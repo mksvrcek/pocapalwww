@@ -438,8 +438,12 @@ a{color:inherit;text-decoration:none}
   border-radius:44px 44px 0 0;
   margin-top:-44px;
   box-shadow:0 -40px 90px rgba(0,0,0,.55);
+  /* Clips the scenes that run off the sides, sideways only. It has to be
+     clip, not hidden: hidden makes this a scroll container, and the Events
+     blade inside could no longer stick. */
   overflow:hidden;
 }
+@supports (overflow:clip){ .light{overflow:visible;overflow-x:clip} }
 .light .h2{color:var(--text-dark)}
 
 .feature{
@@ -953,6 +957,253 @@ a{color:inherit;text-decoration:none}
   display:block;font-style:normal;font-size:13px;
   color:var(--text-mid);letter-spacing:.01em;
 }
+
+/* ============================================================
+   EVENTS — "Four weeks to go. Then, tonight."
+   The app's NEXT UP card counts down while the page dims in
+   steps like house lights, then it is the night: a sea of
+   lightsticks, a follow-spot, and TONIGHT on the big screen.
+   The lights come up and the card flips to the next show.
+
+   Without .motion this is a still blade: the card at four weeks
+   and the timeline under it. With it, .live becomes a runway
+   (like .story) and JS writes every frame from its progress.
+   ============================================================ */
+.live{
+  --ev-ink:#121214;
+  --ev-sky:#58bcd6;          /* the calendar tile's header and the dots */
+  --ev-line:#86cde4;         /* the card's outline */
+  --ev-grey:#7b8387;
+  --ev-mono:ui-monospace,"SF Mono",SFMono-Regular,"JetBrains Mono",Menlo,Consolas,monospace;
+  --ev-wide:"Archivo","Arial Black","Helvetica Neue",system-ui,sans-serif;
+  --night:#150b20;
+  position:relative;
+  padding-block:clamp(80px,12vh,150px);
+}
+.live-stage{
+  position:relative;
+  display:flex;flex-direction:column;align-items:center;
+  gap:clamp(22px,3.6vh,40px);
+  padding-inline:var(--pad);
+  text-align:center;
+}
+.live-vig,.live-dark,.live-crowd,.live-spot,.live-big{display:none}
+.live-copy{position:relative;z-index:6}
+.live .h2{color:inherit}
+.live-copy .ln{display:block}
+.live-copy .kicker{transition:none}
+
+/* ---- the card, measured off the app: everything is in --u, a hundredth of
+        its width, so it keeps its proportions from a phone to a desktop ---- */
+.ev-zone{position:relative;z-index:5;perspective:1400px}
+.ev-card{
+  --w:min(90vw,700px,125vh);
+  --u:calc(var(--w) / 100);
+  position:relative;
+  width:var(--w);max-width:100%;
+  aspect-ratio:1030 / 236;
+  transform-style:preserve-3d;
+  text-align:left;
+}
+.ev-glow{
+  position:absolute;inset:-6%;border-radius:calc(var(--u) * 7);
+  background:radial-gradient(ellipse at center, rgba(255,46,139,.55), rgba(122,76,255,.25) 55%, transparent 72%);
+  filter:blur(calc(var(--u) * 4));
+  opacity:0;
+  transform:translateZ(-1px);
+}
+.ev-face{
+  position:absolute;inset:0;
+  display:flex;align-items:center;gap:calc(var(--u) * 3.8);
+  padding:0 calc(var(--u) * 4.2) 0 calc(var(--u) * 3.9);
+  border-radius:calc(var(--u) * 3.9);
+  border:max(1.5px, calc(var(--u) * .3)) solid var(--ev-line);
+  background:linear-gradient(118deg,#e4f0f4 0%,#eef5f6 55%,#e7f2f1 100%);
+  box-shadow:0 calc(var(--u) * 2.4) calc(var(--u) * 6) rgba(40,70,90,.12);
+  color:var(--ev-ink);
+  -webkit-backface-visibility:hidden;backface-visibility:hidden;
+}
+.ev-back{transform:rotateX(180deg)}
+.ev-tile{
+  flex:none;
+  width:calc(var(--u) * 12.1);height:calc(var(--u) * 13.1);
+  border-radius:calc(var(--u) * 2.3);
+  background:#fff;overflow:hidden;
+  box-shadow:0 calc(var(--u) * .5) calc(var(--u) * 1.6) rgba(0,0,0,.1);
+  display:flex;flex-direction:column;align-items:center;
+  font-family:var(--font);line-height:1;
+}
+.ev-tile b{
+  width:100%;padding:calc(var(--u) * .9) 0 calc(var(--u) * .7);
+  background:var(--ev-sky);color:#10323c;
+  font-size:max(8px, calc(var(--u) * 2));font-weight:700;letter-spacing:.02em;text-align:center;
+}
+.ev-tile i{margin-top:calc(var(--u) * 1.3);font-style:normal;font-weight:700;font-size:max(7.5px, calc(var(--u) * 1.75));color:var(--ev-sky)}
+.ev-tile strong{margin-top:calc(var(--u) * .5);font-weight:800;font-size:calc(var(--u) * 4.1);letter-spacing:-.02em}
+.ev-main{min-width:0;flex:1}
+.ev-main p{margin:0;white-space:nowrap}
+.ev-label,.ev-meta,.ev-in,.ev-unit{font-family:var(--ev-mono);text-transform:uppercase;line-height:1.2}
+.ev-label{font-size:max(9px, calc(var(--u) * 2.05));letter-spacing:.2em;color:#4fb4d0;font-weight:600}
+.ev-title{
+  margin:calc(var(--u) * .9) 0 calc(var(--u) * 1) !important;
+  font-family:var(--ev-wide);font-weight:900;font-stretch:108%;
+  font-size:max(13px, calc(var(--u) * 4.2));line-height:1;letter-spacing:-.005em;
+  overflow:hidden;text-overflow:ellipsis;
+}
+.ev-meta{font-size:max(9px, calc(var(--u) * 2));letter-spacing:.14em;color:var(--ev-grey)}
+.ev-count{
+  flex:none;margin-left:auto;
+  display:flex;flex-direction:column;align-items:center;
+  min-width:calc(var(--u) * 8);
+}
+.ev-in,.ev-unit{font-size:max(8.5px, calc(var(--u) * 1.85));letter-spacing:.16em;color:var(--ev-grey)}
+/* odometer windows: a column of values inside a one-line window, moved by JS */
+.ev-num,.ev-unit{display:block;overflow:hidden;text-align:center}
+.ev-num{
+  height:1em;line-height:1;margin:calc(var(--u) * .5) 0 calc(var(--u) * .7);
+  font-family:var(--ev-wide);font-weight:900;font-stretch:125%;
+  font-size:calc(var(--u) * 6.9);
+}
+.ev-unit{height:1.2em}
+.ev-roll{display:block;will-change:transform}
+.ev-roll > span{display:block;height:1em}
+.ev-unit .ev-roll > span{height:1.2em}
+
+/* ---- the timeline, in the app's own layout ---- */
+.live-after{position:relative;z-index:6;width:min(90vw,700px);display:flex;flex-direction:column;align-items:center;gap:clamp(16px,2.6vh,28px)}
+.ev-line{list-style:none;margin:0;padding:0;width:100%;display:grid;gap:clamp(10px,1.8vh,18px);text-align:left}
+.ev-row{display:grid;grid-template-columns:auto auto minmax(0,1fr);align-items:start;column-gap:clamp(12px,2vw,18px)}
+.ev-date{display:flex;flex-direction:column;align-items:flex-end;min-width:2.6em;font-family:var(--ev-mono);font-size:clamp(11px,1.3vw,13px);letter-spacing:.12em;text-transform:uppercase;color:var(--ev-grey)}
+.ev-date b{font-family:var(--ev-wide);font-weight:900;font-stretch:100%;font-size:clamp(22px,2.9vw,30px);line-height:1;letter-spacing:-.01em;color:var(--ev-ink)}
+.ev-dot{width:clamp(9px,1vw,11px);aspect-ratio:1;border-radius:50%;background:var(--ev-sky);margin-top:clamp(7px,1vw,10px)}
+.ev-row.is-past .ev-dot{background:#8d8d92}
+.ev-what{display:flex;flex-direction:column;gap:4px;min-width:0;font-family:var(--ev-mono);font-size:clamp(11px,1.3vw,13px);letter-spacing:.12em;text-transform:uppercase;color:var(--ev-grey)}
+.ev-what b{font-family:var(--ev-wide);font-weight:900;font-stretch:125%;font-size:clamp(15px,2.1vw,22px);line-height:1.1;letter-spacing:0;color:var(--ev-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.live-sub{margin:0 auto;max-width:44ch}
+
+/* ============ pinned: a runway, a stage, and the night ============ */
+.motion .live{height:500vh;padding-block:0}
+@media (max-width:739px){ .motion .live{height:430vh} }
+/* a phone on its side has well under 400px of height for headline, card and
+   timeline together, so everything comes down and the closing sentence goes */
+@media (max-height:520px) and (orientation:landscape){
+  .motion .live{height:380vh}
+  .live .kicker{display:none}
+  .live .h2{font-size:clamp(22px,7.4vh,32px)}
+  .live-stage{gap:10px}
+  .motion .live-stage{padding-top:calc(var(--nav-h) + var(--safe-t) + 6px);padding-bottom:8px}
+  .ev-card{--w:min(80vw,640px,96vh)}
+  .live-after{gap:8px}
+  .ev-line{gap:6px}
+  .ev-date b{font-size:20px}
+  .ev-what b{font-size:15px}
+  .motion .live-sub{display:none}
+}
+.motion .live-track{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden}
+.motion .live-stage{
+  position:absolute;inset:0;
+  justify-content:center;
+  padding:calc(var(--nav-h) + var(--safe-t) + 2vh) var(--pad) 3vh;
+}
+.motion .live-vig,.motion .live-dark,.motion .live-crowd,.motion .live-spot,.motion .live-big{display:block}
+/* The night comes down in steps, the way house lights do: the edges of the
+   room go first (the vignette, which keeps a pool of light on the card) and
+   the whole room follows. JS sets both opacities. */
+.live-vig,.live-dark{position:absolute;inset:0;z-index:1;opacity:0;pointer-events:none}
+.live-vig{
+  background:radial-gradient(75% 60% at 50% var(--card-y,50%), transparent 0%, rgba(26,12,38,.55) 55%, rgba(21,11,32,.95) 100%);
+}
+.live-dark{
+  background:
+    radial-gradient(70% 48% at 50% var(--card-y,50%), #2a1339 0%, transparent 72%),
+    radial-gradient(120% 90% at 50% 88%, #3a1548 0%, #1d0e2b 45%, var(--night) 75%);
+}
+/* A sea of lightsticks: three planes laid flat as a floor running to a
+   horizon at the top of this box. Each is a repeating radial-gradient painted
+   once and only ever moved, so swaying costs nothing. The far plane is fine
+   and dim, the near one big soft bokeh. */
+.live-crowd{
+  position:absolute;left:0;right:0;bottom:0;height:50%;z-index:2;
+  perspective:560px;perspective-origin:50% 0%;
+  opacity:0;pointer-events:none;
+  -webkit-mask-image:linear-gradient(to bottom,transparent 0%,#000 22%);
+  mask-image:linear-gradient(to bottom,transparent 0%,#000 22%);
+}
+.live-crowd::before{
+  content:"";position:absolute;left:-10%;right:-10%;top:-38%;height:70%;
+  background:radial-gradient(ellipse at 50% 60%, rgba(255,46,139,.34), rgba(122,76,255,.12) 45%, transparent 70%);
+}
+.crowd{
+  position:absolute;left:-60%;right:-60%;bottom:0;height:240%;
+  transform-origin:50% 100%;
+  will-change:transform,opacity;
+}
+.crowd::after{content:"";position:absolute;inset:0;background:inherit;opacity:0;transform:translate3d(9px,6px,0)}
+/* two or three dot grids of different pitch per plane, so the sea never
+   settles into one obvious grid */
+.crowd-far{
+  background:
+    radial-gradient(circle, rgba(255,160,215,.95) 0 1.4px, transparent 2.2px) 0 0 / 17px 15px,
+    radial-gradient(circle, rgba(255,255,255,.85) 0 1.2px, transparent 2px) 8px 7px / 23px 19px,
+    radial-gradient(circle, rgba(255,46,139,.9) 0 1.3px, transparent 2.1px) 3px 11px / 29px 26px;
+}
+.crowd-mid{
+  background:
+    radial-gradient(circle, rgba(255,46,139,.95) 0 2.4px, rgba(255,46,139,.25) 4px, transparent 6px) 0 0 / 38px 31px,
+    radial-gradient(circle, rgba(255,210,235,.9) 0 2px, transparent 4.5px) 19px 14px / 47px 37px,
+    radial-gradient(circle, rgba(180,120,255,.8) 0 1.8px, transparent 4px) 9px 25px / 61px 43px;
+}
+.crowd-near{
+  background:
+    radial-gradient(circle, rgba(255,90,170,.42) 0 7px, rgba(255,90,170,.1) 13px, transparent 20px) 0 0 / 104px 86px,
+    radial-gradient(circle, rgba(255,240,250,.3) 0 6px, transparent 16px) 52px 43px / 131px 97px;
+}
+/* a twinkle: the same dots again, on and off, out of step with the plane */
+.live.is-near .crowd::after{animation:twinkle 1.7s var(--ease-io) infinite alternate}
+.live.is-near .crowd-mid::after{animation-duration:2.3s;animation-delay:-.8s}
+.live.is-near .crowd-near::after{animation-duration:3.1s;animation-delay:-1.6s}
+@keyframes twinkle{to{opacity:.85}}
+/* the follow-spot, a pool of light that sweeps across once */
+.live-spot{
+  position:absolute;left:50%;top:18%;z-index:3;
+  width:min(90vw,900px);height:min(70vh,640px);margin-left:calc(min(90vw,900px) / -2);
+  background:radial-gradient(ellipse at center, rgba(255,240,250,.2), rgba(255,200,230,.07) 45%, transparent 68%);
+  opacity:0;pointer-events:none;
+}
+/* the big screen behind the card: the countdown, huge, then TONIGHT */
+.live-big{position:absolute;inset:0;z-index:4;pointer-events:none}
+.big-win{
+  position:absolute;left:50%;top:var(--card-y,50%);
+  height:1em;overflow:hidden;
+  font-family:var(--ev-wide);font-weight:900;font-stretch:125%;
+  font-size:min(46vh,44vw);line-height:1;text-align:center;
+  transform:translate(-50%,-50%);
+}
+.big-roll{will-change:transform}
+.big-roll > span{display:block;height:1em}
+.big-ink{color:rgba(18,18,20,.05)}
+.big-glow{
+  color:rgba(255,120,190,.1);
+  -webkit-text-stroke:max(1.5px,.004em) rgba(255,150,205,.75);
+  text-shadow:0 0 .05em rgba(255,46,139,.7), 0 0 .16em rgba(255,46,139,.35);
+  opacity:0;
+}
+.big-word{
+  position:absolute;left:50%;top:var(--word-y,50%);
+  font-family:var(--ev-wide);font-weight:900;font-stretch:100%;
+  font-size:var(--word-size,min(15.5vw,30vh));line-height:1;letter-spacing:-.01em;white-space:nowrap;
+  color:#fff5fb;
+  text-shadow:0 0 .06em #ff5aa8, 0 0 .22em rgba(255,46,139,.75), 0 0 .6em rgba(255,46,139,.35);
+  transform:translate(-50%,-56%);
+  opacity:0;
+}
+/* the headline: its lines rise out of masks as the run reaches them */
+.motion .live-copy .ln{overflow:hidden;padding-bottom:.12em;margin-bottom:-.12em}
+.motion .live-copy .ln-in{display:block;will-change:transform}
+.motion .ev-card{will-change:transform}
+.motion .live-after .ev-row,.motion .live-sub{will-change:transform,opacity}
+/* the bar goes dark with the room */
+.nav.is-light.is-dim{background:rgba(14,8,20,.6);border-bottom-color:rgba(255,255,255,.08);color:var(--text-on-dark)}
 
 /* ---- feature rail ---- */
 .rail-sec{padding:clamp(40px,7vh,90px) 0 clamp(56px,8vh,96px)}

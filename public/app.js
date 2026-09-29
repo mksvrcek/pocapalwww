@@ -1417,6 +1417,229 @@ function queueScrub() {
   requestAnimationFrame(() => { scrubQueued = false; scrubAll(); recede(); });
 }
 
+/* -------------------------------------------------------------
+   8d. EVENTS — the second pinned run
+   The NEXT UP card counts down, and each step takes the house
+   lights down a notch. Then it is the night: TONIGHT on the big
+   screen, the crowd's lightsticks swaying, a follow-spot. The
+   lights come up and the card turns over to the next show. As in
+   the hero, every frame is a pure function of the blade's progress,
+   eased toward the scroll position so it glides rather than steps.
+   ------------------------------------------------------------- */
+/** what the card's counter reads, in order. The app shows "IN 4 WEEKS";
+    what it shows in the last week is a guess to confirm against the app */
+const COUNTDOWN = [
+  [4, 'Weeks'], [3, 'Weeks'], [2, 'Weeks'], [1, 'Week'],
+  [6, 'Days'], [5, 'Days'], [4, 'Days'], [3, 'Days'], [2, 'Days'], [1, 'Day'],
+];
+/** the beats, as the blade's own progress 0 → 1 while it is pinned. The
+    headline's first line and the card rise before that, as the blade scrolls
+    into view, so it is never an empty stage that pins. */
+const LV = {
+  count: [0.02, 0.46],    // the countdown; each step shorter than the last
+  night: [0.46, 0.56],    // the last number rolls away, TONIGHT, the second line
+  crowd: [0.50, 0.62],    // lightsticks come up out of the dark, far ones first
+  spot:  [0.57, 0.80],    // the follow-spot sweeps across once
+  up:    [0.76, 0.88],    // house lights up, the crowd sinks away
+  flip:  [0.80, 0.90],    // the card turns over to the next show
+  after: [0.88, 1.00],    // the timeline, then the line under it
+};
+
+const live = document.getElementById('events');
+if (live && motion) {
+  const q        = sel => live.querySelector(sel);
+  const liveTrack= q('.live-track');
+  const dark     = q('.live-dark'), vig = q('.live-vig');
+  const crowdBox = q('.live-crowd'), spot = q('.live-spot');
+  const crowds   = [...live.querySelectorAll('.crowd')];
+  const bigInk   = q('.big-ink'), bigGlow = q('.big-glow'), bigWord = q('.big-word');
+  const bigRolls = [...live.querySelectorAll('.big-roll')];
+  const copy     = q('.live-copy'), l1 = q('.live-l1'), l2 = q('.live-l2');
+  const evCard   = q('.ev-card'), evGlow = q('.ev-glow');
+  const front    = q('.ev-front');
+  const numRoll  = front.querySelector('.ev-num .ev-roll');
+  const unitRoll = front.querySelector('.ev-unit .ev-roll');
+  const evIn     = front.querySelector('.ev-in');
+  const tileDay  = front.querySelector('.ev-tile strong');
+  const rows     = [...live.querySelectorAll('.ev-row')];
+  const sub      = q('.live-sub');
+
+  /* The odometers. Each is a column of values in a one-line window, with an
+     empty cell at the end to roll the last number away into. The unit only
+     moves when the word actually changes, so WEEKS does not roll into WEEKS. */
+  const cells = list => list.map(v => `<span>${v}</span>`).join('') + '<span>&nbsp;</span>';
+  numRoll.innerHTML = cells(COUNTDOWN.map(c => c[0]));
+  for (const r of bigRolls) r.innerHTML = cells(COUNTDOWN.map(c => c[0]));
+  const units = [];                 // distinct words, in order
+  const unitAt = COUNTDOWN.map(([, u]) => {
+    if (units[units.length - 1] !== u) units.push(u);
+    return units.length - 1;
+  });
+  unitAt.push(units.length);        // the empty cell
+  unitRoll.innerHTML = cells(units);
+
+  /* Where each step of the count begins. The steps shorten as it goes, so
+     the count gathers pace toward the night, and each one holds first and
+     then rolls, so every number gets its moment. */
+  const steps = COUNTDOWN.length - 1;
+  const weights = Array.from({length: steps}, (_, i) => 1.5 - i * 0.11);
+  const wsum = weights.reduce((a, b) => a + b, 0);
+  const cuts = [LV.count[0]];
+  for (const w of weights) cuts.push(cuts[cuts.length - 1] + (LV.count[1] - LV.count[0]) * w / wsum);
+  /** 0 … COUNTDOWN.length (the empty cell), fractional while rolling */
+  const countAt = p => {
+    if (p >= LV.night[0]) return steps + easeIO(range(p, LV.night[0], LV.night[0] + 0.035));
+    for (let i = 0; i < steps; i++) {
+      if (p < cuts[i + 1]) return i + easeIO(clamp01((range(p, cuts[i], cuts[i + 1]) - 0.42) / 0.58));
+    }
+    return steps;
+  };
+  const unitPos = k => {
+    const i = Math.min(Math.floor(k), unitAt.length - 2), f = k - i;
+    return unitAt[i] + (unitAt[i + 1] - unitAt[i]) * f;
+  };
+  const mix = (a, b, t) => `rgb(${a.map((v, i) => Math.round(lerp(v, b[i], t))).join(',')})`;
+  const INK = [29, 29, 31], PALE = [245, 245, 247], MID = [110, 110, 115], MIST = [196, 186, 206];
+
+  /* Where things sit, measured from the untransformed layout. At night the
+     card drops down over the crowd, far enough to leave TONIGHT a clear band
+     between it and the headline, and the word is sized to that band. The
+     countdown numerals stay centred behind the card where it rests. */
+  const stageEl = q('.live-stage'), zone = q('.ev-zone');
+  const LM = {shift: 0};
+  function measureLive() {
+    const H = liveTrack.offsetHeight, W = liveTrack.offsetWidth;
+    const cardH  = evCard.offsetHeight;
+    const cardCY = zone.offsetTop + evCard.offsetTop + cardH / 2;
+    const copyB  = copy.offsetTop + copy.offsetHeight;
+    const pad    = Math.max(14, H * 0.03);
+    let size = Math.min(W * 0.155, H * 0.2);        // TONIGHT, its em size
+    const room = () => copyB + pad * 2 + size * 0.74 - (cardCY - cardH / 2);
+    // how far the card can drop and still clear the bottom of the screen
+    const most = Math.max(0, H * 0.96 - (cardCY + cardH / 2));
+    let shift = clamp(room(), 0, most);
+    if (room() > most) size = Math.max(24, (cardCY - cardH / 2 + shift - copyB - pad * 2) / 0.74);
+    LM.shift = shift;
+    stageEl.style.setProperty('--card-y', cardCY.toFixed(1) + 'px');
+    stageEl.style.setProperty('--word-y', (copyB + pad + size * 0.37).toFixed(1) + 'px');
+    stageEl.style.setProperty('--word-size', size.toFixed(1) + 'px');
+  }
+
+  function drawLive(u) {
+    // u runs -1 → 0 as the blade scrolls up into view, then 0 → 1 pinned
+    const p = Math.max(0, u), pre = 1 + Math.min(0, u);
+    const k = countAt(p);
+
+    /* the room: down a notch per step, black by the night, up again after */
+    const nightK = easeIO(range(p, LV.night[0], LV.night[0] + 0.06));
+    const upK    = easeIO(range(p, LV.up[0], LV.up[1]));
+    const dim    = Math.max(0.9 * Math.min(k, steps) / steps, 0.97 * nightK) * (1 - upK);
+    vig.style.opacity  = Math.min(1, dim * 1.6).toFixed(4);
+    dark.style.opacity = Math.pow(dim, 1.7).toFixed(4);
+    // the type turns over quickly as the room crosses mid-grey, never grey on grey
+    const turn = smooth(range(dim, 0.34, 0.56));
+    copy.style.color = mix(INK, PALE, turn);
+    copy.firstElementChild.style.color = mix(MID, MIST, turn);
+    nav.classList.toggle('is-dim', dim > 0.45);
+
+    /* the headline, a line at a time out of its masks */
+    const e1 = easeOut(range(pre, 0.35, 0.95));
+    const e2 = easeOut(range(p, LV.night[0] + 0.01, LV.night[1]));
+    l1.style.transform = `translate3d(0,${((1 - e1) * 108).toFixed(2)}%,0)`;
+    l2.style.transform = `translate3d(0,${((1 - e2) * 108).toFixed(2)}%,0)`;
+
+    /* the card: rises in, floats tipped back over the crowd, then turns
+       over to the next show */
+    const enter = easeOut(range(pre, 0.45, 1));
+    const tip   = smooth(range(p, LV.crowd[0], LV.crowd[1])) * (1 - smooth(range(p, LV.up[0], LV.up[0] + 0.08)));
+    const drop  = smooth(range(p, LV.night[0], LV.night[0] + 0.07)) * (1 - smooth(range(p, LV.up[0], LV.up[0] + 0.1)));
+    const flip  = easeIO(range(p, LV.flip[0], LV.flip[1]));
+    const bob   = Math.sin(p * 70) * tip * 4;
+    evCard.style.opacity = enter.toFixed(4);
+    evCard.style.transform =
+      `translate3d(0,${((1 - enter) * 70 + drop * LM.shift + bob).toFixed(2)}px,0) ` +
+      `scale(${(0.9 + 0.1 * enter + 0.05 * tip).toFixed(4)}) rotateX(${(tip * 10 - 180 * flip).toFixed(2)}deg)`;
+    evGlow.style.opacity = (dim * (1 - flip)).toFixed(4);
+    numRoll.style.transform  = `translate3d(0,${(-k).toFixed(4)}em,0)`;
+    unitRoll.style.transform = `translate3d(0,${(-unitPos(k) * 1.2).toFixed(4)}em,0)`;
+    evIn.style.opacity = (1 - nightK).toFixed(4);
+    // the date on the tile gives one beat as the day arrives
+    tileDay.style.transform = `scale(${(1 + 0.16 * Math.sin(Math.PI * range(p, LV.night[0], LV.night[0] + 0.06))).toFixed(4)})`;
+
+    /* the big screen: the same count, huge, pale on the page and glowing in
+       the dark; then TONIGHT */
+    for (const r of bigRolls) r.style.transform = `translate3d(0,${(-k).toFixed(4)}em,0)`;
+    // pale ink on the lit page, a neon outline once it is properly dark
+    bigInk.style.opacity  = (enter * (1 - smooth(range(dim, 0.2, 0.55)))).toFixed(4);
+    bigGlow.style.opacity = (smooth(range(dim, 0.35, 0.75)) * (1 - nightK)).toFixed(4);
+    const word = smooth(range(p, LV.night[0] + 0.045, LV.night[1] + 0.01)) * (1 - smooth(range(p, LV.up[0], LV.up[0] + 0.06)));
+    bigWord.style.opacity   = word.toFixed(4);
+    bigWord.style.transform = `translate(-50%,-50%) scale(${(1.12 - 0.12 * word).toFixed(4)})`;
+
+    /* the crowd: far lights first, each plane swaying at its own rate, all
+       of it sinking away as the lights come up */
+    const out = smooth(range(p, LV.up[0], LV.up[1] - 0.02));
+    crowdBox.style.opacity = (smooth(range(p, LV.crowd[0], LV.crowd[1])) * (1 - out)).toFixed(4);
+    crowdBox.style.transform = `translate3d(0,${(out * 30).toFixed(2)}%,0)`;
+    crowds.forEach((c, i) => {
+      const inK = smooth(range(p, LV.crowd[0] + i * 0.025, LV.crowd[1] - 0.04 + i * 0.02));
+      const sway = [14, 30, 64][i] * Math.sin(2 * Math.PI * [3.1, 2.4, 1.9][i] * p + i * 1.7);
+      c.style.opacity = inK.toFixed(4);
+      c.style.transform = `rotateX(76deg) translate3d(${sway.toFixed(2)}px,0,0)`;
+    });
+
+    /* the follow-spot: across once, brightest in the middle of its sweep */
+    const st = range(p, LV.spot[0], LV.spot[1]);
+    spot.style.opacity = (Math.sin(Math.PI * st) * dim).toFixed(4);
+    spot.style.transform = `translate3d(${(lerp(-0.36, 0.36, easeIO(st)) * innerWidth).toFixed(1)}px,0,0)`;
+
+    /* after: the timeline, then the line under it */
+    rows.forEach((r, i) => {
+      const t = easeOut(range(p, LV.after[0] + i * 0.03, LV.after[0] + 0.07 + i * 0.03));
+      r.style.opacity = t.toFixed(4);
+      r.style.transform = `translate3d(0,${((1 - t) * 26).toFixed(2)}px,0)`;
+    });
+    const s = easeOut(range(p, LV.after[0] + 0.05, LV.after[1]));
+    sub.style.opacity = s.toFixed(4);
+    sub.style.transform = `translate3d(0,${((1 - s) * 20).toFixed(2)}px,0)`;
+  }
+
+  // the runner: read the blade's progress, ease toward it, draw
+  let liveTarget = 0, liveShown = -2, liveRunning = false, liveNear = false;
+  /** -1 → 0 while the blade's top scrolls from the bottom of the screen to
+      the top, then 0 → 1 across the pinned run */
+  const readLive = () => {
+    const H = liveTrack.offsetHeight, span = live.offsetHeight - H;
+    const top = live.getBoundingClientRect().top;
+    if (top > 0) return -clamp01(top / H);
+    return span > 0 ? clamp01(-top / span) : 0;
+  };
+  const liveFrame = () => {
+    liveShown += (liveTarget - liveShown) * 0.18;
+    if (Math.abs(liveTarget - liveShown) < 0.0001) liveShown = liveTarget;
+    drawLive(liveShown);
+    liveRunning = liveShown !== liveTarget;
+    if (liveRunning) requestAnimationFrame(liveFrame);
+  };
+  const kickLive = () => {
+    if (!liveNear) return;
+    liveTarget = readLive();
+    if (liveShown < -1) liveShown = liveTarget;       // first sight, or after a resize: jump
+    if (!liveRunning) { liveRunning = true; requestAnimationFrame(liveFrame); }
+  };
+  new IntersectionObserver(([e]) => {
+    liveNear = e.isIntersecting;
+    live.classList.toggle('is-near', liveNear);
+    if (liveNear) kickLive(); else nav.classList.remove('is-dim');
+  }, {rootMargin: '15% 0px 15% 0px'}).observe(live);
+  addEventListener('scroll', kickLive, {passive: true});
+  addEventListener('resize', () => { measureLive(); liveShown = -2; kickLive(); });
+  // the card's type is a web font; measure again once it has arrived
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { measureLive(); drawLive(readLive()); });
+  measureLive();
+  drawLive(readLive());      // in place before it is ever reached
+}
+
 /* nav flips to light once the dark story is behind us */
 const navIO = new IntersectionObserver(([e]) => {
   nav.classList.toggle('is-light', !e.isIntersecting);

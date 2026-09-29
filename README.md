@@ -101,6 +101,7 @@ What each part does:
 | carousel | the row slides in from the right; neighbours sit back at 93% and the current slide's phone rises into its window |
 | Themes | the back phone starts tucked flat behind the front one and swings out to its angle; picking a theme makes the pair take a small breath |
 | Players | the stage swings up into place; switching slides the new player in from the side you're heading towards |
+| Events | a second pinned run: the card counts down as the room goes dark, then TONIGHT over a sea of lightsticks, then lights up and the next show (see The Events blade) |
 | rail | cards arrive one after another, and each illustration plays a short scene (scan line sweeping, haul sliding into the grid, completion ring filling) once in view and again on hover |
 | CTA | a hand of photocards fans out behind the app icon, which springs in; the fan opens wider on hover |
 | FAQ | questions fade up in turn; an answer settles in just behind the opening |
@@ -267,6 +268,48 @@ Swatch colours are set per theme in `styles.css`
 (`.swatch[data-theme="chaewon"]` and friends). They're hand-picked rather than
 sampled: the real accents in the app are too close together to tell apart at
 20px.
+
+## The Events blade
+
+`#events`, between Players and the feature rail, is the page's second pinned
+run, built the same way as the hero: `.live` is the runway (500vh, 430vh on
+phones, 380vh on a phone on its side), `.live-track` sticks for its length,
+and `drawLive(u)` in `app.js` writes every frame from the blade's own
+progress, eased toward the scroll position. `u` runs from -1 to 0 while the
+blade scrolls up into view (the headline and card rise then, so it never pins
+on an empty stage) and 0 to 1 while it is pinned.
+
+The beats live in `LV`:
+
+| key | what happens |
+|---|---|
+| `count` | the NEXT UP card's odometer counts down; each step is shorter than the last, and each takes the room a notch darker (`.live-vig` first, then `.live-dark`) |
+| `night` | the last number rolls away, the tile's date gives a beat, "Then, tonight." rises, the card drops and TONIGHT lights up on the big screen above it |
+| `crowd` | three planes of lightsticks come up out of the dark and sway at different rates as you scroll |
+| `spot` | a follow-spot sweeps across once |
+| `up` / `flip` | the lights come up, the crowd sinks, and the card flips over to the next show |
+| `after` | the two timeline rows, then the line under them |
+
+What the counter reads is `COUNTDOWN`, one entry per step. The app's own
+screenshot only proves "IN 4 WEEKS"; the days that follow are a guess, so
+check them against the app and edit the list. The odometers are built from
+it, and the unit only rolls when the word changes.
+
+The card is the app's NEXT UP card rebuilt in HTML, measured off
+`assets/slides/events.jpg`. Everything in it is sized in `--u`, a hundredth of
+its width, with a floor under the smallest labels so they stay readable on a
+phone. Its titles and numbers are set in Archivo from Google Fonts, cut down
+to capitals, digits and the middle dot with `text=`; keep that text in capitals
+or widen the subset. `measureLive()` works out, from the untransformed layout,
+how far the card drops at night and how big TONIGHT can be in the room left
+above it, and runs again on resize and once the font has loaded.
+
+`.light` clips sideways with `overflow-x: clip`, not `overflow: hidden`: a
+hidden overflow makes it a scroll container, and the blade inside could no
+longer stick.
+
+Without motion (reduced motion, or no script) the blade is a still: the card
+at four weeks and the timeline under it.
 
 ## The feature rail
 

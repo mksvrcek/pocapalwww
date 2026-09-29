@@ -14,6 +14,11 @@
 <!-- motion is opt-in: without script, or with reduced motion asked for, the
      page renders complete and still -->
 <script>if(!matchMedia('(prefers-reduced-motion: reduce)').matches)document.documentElement.classList.add('motion')</script>
+<!-- the heavy, wide face the app sets its titles and numbers in, only for the
+     Events card and its countdown, cut down to capitals and digits -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,800..900&amp;display=swap&amp;text=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789%C2%B7">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -241,6 +246,84 @@
             <button class="swatch" type="button" data-player="digital"  data-label="Digital"  aria-pressed="false" aria-label="Digital player"></button>
           </div>
           <p class="swatch-label rv" aria-live="polite"><span id="playerName">Cassette</span></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────── Events: the countdown, played out as a night out ───────────
+         Pinned like the hero: .live is the runway and .live-track sticks for
+         its length, and every frame is a function of the blade's own scroll
+         progress, so it plays backwards as well. The card is the app's NEXT UP
+         card rebuilt in HTML (compare assets/slides/events.jpg). Without
+         motion it is a still: the card at four weeks, and the timeline. -->
+    <section class="live" id="events" aria-labelledby="liveHead">
+      <div class="live-track">
+        <div class="live-stage" id="liveStage">
+          <div class="live-vig" aria-hidden="true"></div>
+          <div class="live-dark" aria-hidden="true"></div>
+          <div class="live-crowd" aria-hidden="true">
+            <div class="crowd crowd-far"></div>
+            <div class="crowd crowd-mid"></div>
+            <div class="crowd crowd-near"></div>
+          </div>
+          <div class="live-spot" aria-hidden="true"></div>
+          <div class="live-big" aria-hidden="true">
+            <div class="big-win big-ink"><div class="big-roll"><span>4</span></div></div>
+            <div class="big-win big-glow"><div class="big-roll"><span>4</span></div></div>
+            <div class="big-word">TONIGHT</div>
+          </div>
+
+          <div class="live-copy">
+            <p class="kicker">Events</p>
+            <h2 class="h2" id="liveHead"><span class="ln"><span class="ln-in live-l1">Four weeks to go.</span></span> <span class="ln"><span class="ln-in live-l2 hl">Then, tonight.</span></span></h2>
+          </div>
+
+          <div class="ev-zone">
+            <div class="ev-card" id="evCard" role="img"
+                 aria-label="The Events tab's Next up card: LE SSERAFIM PUREFLOW, a concert in Amsterdam on Sunday 18 October, in 4 weeks.">
+              <div class="ev-glow"></div>
+              <div class="ev-face ev-front">
+                <div class="ev-tile"><b>OCT</b><i>SUN</i><strong>18</strong></div>
+                <div class="ev-main">
+                  <p class="ev-label">Next up</p>
+                  <p class="ev-title">LE SSERAFIM PUREFLOW</p>
+                  <p class="ev-meta">Concert · Amsterdam</p>
+                </div>
+                <div class="ev-count">
+                  <span class="ev-in">In</span>
+                  <span class="ev-num"><span class="ev-roll"><span>4</span></span></span>
+                  <span class="ev-unit"><span class="ev-roll"><span>Weeks</span></span></span>
+                </div>
+              </div>
+              <div class="ev-face ev-back">
+                <div class="ev-tile"><b>JAN</b><i>SUN</i><strong>24</strong></div>
+                <div class="ev-main">
+                  <p class="ev-label">Next up</p>
+                  <p class="ev-title">AESPA SYNK TOUR</p>
+                  <p class="ev-meta">Concert · Copenhagen</p>
+                </div>
+                <div class="ev-count">
+                  <span class="ev-in">In</span>
+                  <span class="ev-num"><span class="ev-roll"><span>14</span></span></span>
+                  <span class="ev-unit"><span class="ev-roll"><span>Weeks</span></span></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="live-after">
+            <ol class="ev-line" aria-label="Your events">
+              <li class="ev-row">
+                <span class="ev-date"><b>24</b> Jan</span><span class="ev-dot"></span>
+                <span class="ev-what"><b>AESPA SYNK TOUR</b> Concert · Copenhagen</span>
+              </li>
+              <li class="ev-row is-past">
+                <span class="ev-date"><b>18</b> Oct</span><span class="ev-dot"></span>
+                <span class="ev-what"><b>LE SSERAFIM PUREFLOW</b> Concert · Amsterdam</span>
+              </li>
+            </ol>
+            <p class="body live-sub">Concerts, fansigns and comebacks on one timeline, with the next one counting down. When the night is over it stays on the list, and the next one starts counting.</p>
+          </div>
         </div>
       </div>
     </section>
