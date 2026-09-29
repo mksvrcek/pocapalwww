@@ -4,13 +4,18 @@ Static single page. No build step, no backend. `public/` is the whole site.
 
 ```
 public/
-  index.html            structure + all copy
+  index.html            structure + all copy, and the feature rail's artwork (inline SVG)
   styles.css            all styling (dark story → light body, magenta accent)
   app.js                scroll choreography; tuning constants at the top
-  assets/cards/         placeholder card artwork (SVG)
-  assets/features/      placeholder artwork for the feature rail (SVG)
+  assets/cards/         card artwork
   assets/phone-frame.webp the phone frame (hero + both blades)
+tools/
+  build-preview.py      one-page build for sharing as a claude.ai artifact (not deployed)
 ```
+
+Everything is front end: plain HTML, CSS and JS, no framework, no build step
+and no backend, so `public/` deploys to Firebase Hosting (or any static host)
+exactly as it is.
 
 ## The phone frame
 
@@ -52,6 +57,67 @@ firebase use --add            # pick/create your project
 firebase deploy --only hosting
 ```
 
+## Sharing a preview
+
+`tools/build-preview.py` writes a copy of the page to `dist/preview/` with
+`styles.css` and `app.js` inlined and the document skeleton stripped, which is
+the shape the claude.ai artifact viewer wants. Publish that page with
+`public/assets/` alongside it at the same relative paths. It reads `public/`
+and never changes it; Firebase does not need it.
+
+## Motion
+
+All of the movement outside the hero story sits behind a `.motion` class on
+`<html>`, which a one-line script in the `<head>` adds before first paint
+unless the visitor has asked for reduced motion. Without it (no script,
+reduced motion) every section renders complete and still, so nothing is ever
+left invisible waiting for an observer.
+
+There are two kinds:
+
+- **Reveals** are timed and play once. A `[data-reveal]` group gets `.in` when
+  it comes into view. Headlines marked `data-lines` are split at their `<br>`s
+  into `.ln > .ln-in` and each line rises out of its own mask; everything else
+  in the group marked `.rv` fades up after them. JS gives each piece its place
+  in the sequence as `--d`, a beat per headline line and a short step for
+  anything else, so the copy under a headline follows its last line up.
+  Keep `<br>`s at the top level of a split headline, never inside a span.
+- **Scrubs** are tied to the scroll position and play backwards when you scroll
+  back. A `[data-scrub]` element gets `--e`: 0 as its top crosses the bottom of
+  the screen, 1 once its middle is just past the middle, already eased. CSS
+  reads it. Only elements near the screen are measured, and a scrub element's
+  own box must never be moved by its own CSS (move its children instead) or the
+  value would chase itself. That is why the Players scrub sits on the art
+  column rather than on the stage it turns.
+
+What each part does:
+
+| where | what moves |
+|---|---|
+| hero | the nav drops in, the headline rises a line at a time, and once the page has loaded the card grid deals itself in, rippling out from its middle (`INTRO_*` in `app.js`) |
+| story | the phone arrives tipped back and stands up; the closing line's two lines rise at different rates (`--o`) |
+| story → light | as the light sheet slides over, the dark stage sinks back at under half speed and dims (`recede()`) |
+| Collection | the phone stands up out of the table while the four cards are dealt onto it, each dropping out of the air above the plane on its own slice of `--e` |
+| carousel | the row slides in from the right; neighbours sit back at 93% and the current slide's phone rises into its window |
+| Themes | the back phone starts tucked flat behind the front one and swings out to its angle; picking a theme makes the pair take a small breath |
+| Players | the stage swings up into place; switching slides the new player in from the side you're heading towards |
+| rail | cards arrive one after another, and each illustration plays a short scene (scan line sweeping, haul sliding into the grid, completion ring filling) once in view and again on hover |
+| CTA | a hand of photocards fans out behind the app icon, which springs in; the fan opens wider on hover |
+| FAQ | questions fade up in turn; an answer settles in just behind the opening |
+
+The rail's artwork is inline SVG so its parts can move. Where a piece of the
+art already carries a `transform` attribute it is wrapped in a `<g>` that the
+animation moves, because a CSS transform would replace the attribute rather
+than add to it.
+
+## Layout
+
+Two breakpoints matter. Below 740px, and on any upright screen up to 900px
+(an iPad held portrait), the feature blades stack into one centred column so
+the art can be big. A phone on its side (over 740px wide but under 520px tall)
+keeps two columns, and the story's type comes down with its closing line
+dropping its second sentence, so the settled phone still has room.
+
 ## The phone, twice over
 
 The hero phone and the two light-section blades share one set of measurements,
@@ -78,7 +144,7 @@ Two blades arrange props around the phone, both under `.scene`:
   rotate *flat within it*. Tilting each card on its own is what makes them look
   like they are leaning at different angles rather than sharing a table. Their
   `bottom` is a distance into that plane, so higher up reads as further away.
-- **`.scene-pair`** (Wishlist), a second phone turned off-axis behind the
+- **`.scene-pair`** (Themes), a second phone turned off-axis behind the
   first. `rotateY` about its own left edge, and deliberately no `rotateZ`,
   which reads as toppling. The pair is centred as a group rather than
   individually: the front phone carries a `margin-left` that offsets the space
@@ -211,7 +277,8 @@ matches the track's padding so the first card lines up with the heading rather
 than the viewport edge; without it the browser snaps the card to the very edge.
 
 Cards, copy and artwork all live in `index.html`, add or remove `<li
-class="rail-card">` entries freely, the arrows adapt.
+class="rail-card">` entries freely, the arrows adapt. The artwork is inline
+SVG, and the `sv-*` classes on its parts pick the animation (see Motion).
 
 ## Swapping in real artwork
 Drop images into `public/assets/cards/` and edit the `ASSETS` array at the

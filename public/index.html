@@ -3,14 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>PocaPal · Everything, finally in one place</title>
-<meta name="description" content="PocaPal is the photocard collection app for K-pop collectors. Track everything you own, see what you are still missing, and theme the whole app around your bias.">
+<title>PocaPal · Everything. Finally in one place.</title>
+<meta name="description" content="PocaPal is the collection app for K-pop collectors. File every photocard, album and polaroid, see what you're still missing, and theme the whole app around your bias.">
 <meta name="theme-color" content="#07070a">
-<meta property="og:title" content="PocaPal · Everything, finally in one place">
-<meta property="og:description" content="The photocard collection app for K-pop collectors.">
+<meta property="og:title" content="PocaPal · Everything. Finally in one place.">
+<meta property="og:description" content="The collection app for K-pop collectors. Photocards, albums, polaroids and everything in between.">
 <meta property="og:type" content="website">
 <link rel="icon" href="assets/app-icon.png" type="image/png" sizes="204x204">
 <link rel="apple-touch-icon" href="assets/app-icon.png">
+<!-- motion is opt-in: without script, or with reduced motion asked for, the
+     page renders complete and still -->
+<script>if(!matchMedia('(prefers-reduced-motion: reduce)').matches)document.documentElement.classList.add('motion')</script>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -24,8 +27,10 @@
     </a>
     <nav class="nav-links" aria-label="Primary">
       <a href="#collection">Collection</a>
-      <a href="#views">Features</a>
-      <a href="#more">More</a>
+      <a href="#themes">Themes</a>
+      <a href="#players">Players</a>
+      <a href="#more">Features</a>
+      <a href="#faq">FAQ</a>
     </nav>
     <a class="btn btn-sm" href="#get">Get the app</a>
   </div>
@@ -40,9 +45,9 @@
 
         <!-- headline sits inside the stage so it can fade as cards take over -->
         <div class="hero-copy" id="heroCopy">
-          <p class="eyebrow">PocaPal</p>
-          <h1 class="h1">Everything.<br>Finally in one place.</h1>
-          <p class="sub">Photocards, albums, polaroids, the lot. Always with you, whenever and wherever you are.</p>
+          <p class="eyebrow">PocaPal for iPhone</p>
+          <h1 class="h1" data-lines>Everything.<br>Finally in one place.</h1>
+          <p class="sub">Photocards, albums, polaroids and everything in between. Filed, searchable and always with you.</p>
           <div class="hero-scrollhint" aria-hidden="true">
             <span>Scroll</span>
             <span class="hint-line"></span>
@@ -80,8 +85,8 @@
 
         <!-- closing line of the story -->
         <div class="story-outro" id="storyOutro">
-          <h2 class="h2">A home for your collection<br><span class="hl">on the go.</span></h2>
-          <p class="sub sub-tight">Photocards, albums, polaroids and everything else in one place. Your binder, always with you.</p>
+          <h2 class="h2" data-lines>Your whole binder.<br><span class="hl">Now in your pocket.</span></h2>
+          <p class="sub sub-tight">Every pull, every album, every polaroid. One collection that goes wherever you do.</p>
         </div>
 
       </div>
@@ -92,20 +97,20 @@
   <div class="light">
 
     <section class="feature" id="collection">
-      <div class="feature-copy reveal">
-        <p class="kicker">Collection</p>
-        <h2 class="h2">Collect in more<br>detail <span class="hl">than ever.</span></h2>
-        <p class="body">Add a card and PocaPal fills in the group, the idol and the rest. Sort by any of it and find anything in seconds.</p>
+      <div class="feature-copy" data-reveal>
+        <p class="kicker rv">Collection</p>
+        <h2 class="h2" data-lines>Every card.<br><span class="hl">Every detail.</span></h2>
+        <p class="body rv">Add a card and PocaPal fills in the group, the idol and the rest for you. Sort by any of it, and find the one you're after in seconds.</p>
       </div>
-      <div class="feature-art reveal">
-        <div class="scene scene-lay">
-        <div class="device">
-          <div class="device-screen">
-            <img class="device-still" src="assets/screens/home.jpg"
-                 alt="The PocaPal home screen" width="591" height="1280">
+      <div class="feature-art">
+        <div class="scene scene-lay" data-scrub>
+          <div class="device">
+            <div class="device-screen">
+              <img class="device-still" src="assets/screens/home.jpg"
+                   alt="The PocaPal home screen" width="591" height="1280">
+            </div>
+            <img class="device-frame" src="assets/phone-frame.webp" alt="" width="1470" height="3000">
           </div>
-          <img class="device-frame" src="assets/phone-frame.webp" alt="" width="1470" height="3000">
-        </div>
 
           <div class="ground" aria-hidden="true">
             <div class="lay lay-a"><img src="assets/cards/poca-04.jpg" alt="" loading="lazy"></div>
@@ -118,9 +123,11 @@
     </section>
 
     <section class="deck" id="views" aria-roledescription="carousel" aria-label="Ways to view your collection">
-      <h2 class="h2 deck-head reveal">Cards, events, albums, <span class="hl">and more.</span></h2>
+      <div class="deck-head" data-reveal>
+        <h2 class="h2" data-lines>A tab for everything<br><span class="hl">you collect.</span></h2>
+      </div>
 
-      <div class="deck-rail" id="deck">
+      <div class="deck-rail" id="deck" data-scrub>
         <ul class="deck-track">
           <li class="deck-slide">
             <figure>
@@ -130,7 +137,7 @@
                   <img class="deck-frame" src="assets/phone-frame.webp" alt="" width="1470" height="3000">
                 </div>
               </div>
-              <figcaption><b>Photocards</b> in one grid, with your favourites and dupes marked.</figcaption>
+              <figcaption><b>Photocards.</b> Your whole binder in one grid, with favourites and dupes marked at a glance.</figcaption>
             </figure>
           </li>
           <li class="deck-slide">
@@ -141,7 +148,7 @@
                   <img class="deck-frame" src="assets/phone-frame.webp" alt="" width="1470" height="3000">
                 </div>
               </div>
-              <figcaption><b>Events</b> like concerts, fansigns and comebacks, with the next one counting down.</figcaption>
+              <figcaption><b>Events.</b> Concerts, fansigns and comebacks on one timeline, with the next one counting down.</figcaption>
             </figure>
           </li>
           <li class="deck-slide">
@@ -152,7 +159,7 @@
                   <img class="deck-frame" src="assets/phone-frame.webp" alt="" width="1470" height="3000">
                 </div>
               </div>
-              <figcaption><b>Albums</b> logged with the artwork and the version you actually own.</figcaption>
+              <figcaption><b>Albums.</b> Every version you own, filed with its artwork and ready to play.</figcaption>
             </figure>
           </li>
           <li class="deck-slide">
@@ -163,7 +170,7 @@
                   <img class="deck-frame" src="assets/phone-frame.webp" alt="" width="1470" height="3000">
                 </div>
               </div>
-              <figcaption><b>Others</b> as well: toys, clothes, banners and whatever else you have ended up with.</figcaption>
+              <figcaption><b>Others.</b> Toys, clothes, concert banners. Whatever else you've ended up with gets a shelf of its own.</figcaption>
             </figure>
           </li>
         </ul>
@@ -176,13 +183,13 @@
     </section>
 
     <section class="feature feature-centre" id="themes">
-      <div class="feature-copy reveal">
-        <p class="kicker">Themes</p>
-        <h2 class="h2">Create your theme.<br><span class="hl">Show off your bias.</span></h2>
-        <p class="body">Pick your bias and the whole app takes their colours. Change it whenever you like.</p>
+      <div class="feature-copy" data-reveal>
+        <p class="kicker rv">Themes</p>
+        <h2 class="h2" data-lines>Your bias.<br><span class="hl">Your whole app.</span></h2>
+        <p class="body rv">Pick your bias and PocaPal takes on their colours, with their name in Hangul right across your home screen. Change it whenever you like.</p>
       </div>
-      <div class="feature-art reveal">
-        <div class="scene scene-pair" id="themeScene" data-theme="chaewon">
+      <div class="feature-art">
+        <div class="scene scene-pair" id="themeScene" data-theme="chaewon" data-scrub>
           <div class="scene-glow" aria-hidden="true"></div>
           <div class="device device-back" aria-hidden="true">
             <div class="device-screen">
@@ -202,73 +209,274 @@
           </div>
         </div>
 
-        <div class="swatches" role="group" aria-label="App theme">
-          <button class="swatch" type="button" data-theme="chaewon" data-label="Kim Chaewon" data-ko="김채원" aria-pressed="true"  aria-label="Kim Chaewon theme"></button>
-          <button class="swatch" type="button" data-theme="ryujin"  data-label="Ryujin"      data-ko="신류진" aria-pressed="false" aria-label="Ryujin theme"></button>
-          <button class="swatch" type="button" data-theme="karina"  data-label="Karina"      data-ko="유지민" aria-pressed="false" aria-label="Karina theme"></button>
-          <button class="swatch" type="button" data-theme="suzy"    data-label="Suzy"        data-ko="배수지" aria-pressed="false" aria-label="Suzy theme"></button>
+        <div class="picker" data-reveal>
+          <div class="swatches rv" role="group" aria-label="App theme">
+            <button class="swatch" type="button" data-theme="chaewon" data-label="Kim Chaewon" data-ko="김채원" aria-pressed="true"  aria-label="Kim Chaewon theme"></button>
+            <button class="swatch" type="button" data-theme="ryujin"  data-label="Ryujin"      data-ko="신류진" aria-pressed="false" aria-label="Ryujin theme"></button>
+            <button class="swatch" type="button" data-theme="karina"  data-label="Karina"      data-ko="유지민" aria-pressed="false" aria-label="Karina theme"></button>
+            <button class="swatch" type="button" data-theme="suzy"    data-label="Suzy"        data-ko="배수지" aria-pressed="false" aria-label="Suzy theme"></button>
+          </div>
+          <p class="swatch-label rv" aria-live="polite"><span id="themeName">Kim Chaewon</span><em id="themeKo">김채원</em></p>
         </div>
-        <p class="swatch-label"><span id="themeName">Kim Chaewon</span><em id="themeKo">김채원</em></p>
       </div>
     </section>
 
     <section class="feature feature-flip" id="players">
-      <div class="feature-copy reveal">
-        <p class="kicker">Players</p>
-        <h2 class="h2 h2-tight">Enjoy your albums<br><span class="hl">the way they were<br>meant to be.</span></h2>
-        <p class="body">Cassette, vinyl, CD or something more modern. Pick the one that suits the album, and take it with you on the go.</p>
+      <div class="feature-copy" data-reveal>
+        <p class="kicker rv">Players</p>
+        <h2 class="h2 h2-tight" data-lines>Play your albums<br><span class="hl">the way they were</span><br><span class="hl">meant to be heard.</span></h2>
+        <p class="body rv">Cassette, vinyl, CD or something more modern. Choose the player that suits the album and press play, wherever you are.</p>
       </div>
-      <div class="feature-art art-stack reveal">
+      <div class="feature-art art-stack" data-scrub>
         <div class="player-stage">
           <img class="player-shot is-on" src="assets/players/cassette.webp" alt="The PocaPal cassette player">
           <img class="player-shot" src="" alt="">
         </div>
 
-        <div class="swatches" role="group" aria-label="Player">
-          <button class="swatch" type="button" data-player="cassette" data-label="Cassette" aria-pressed="true"  aria-label="Cassette player"></button>
-          <button class="swatch" type="button" data-player="vinyl"    data-label="Vinyl"    aria-pressed="false" aria-label="Vinyl player"></button>
-          <button class="swatch" type="button" data-player="cd"       data-label="CD"       aria-pressed="false" aria-label="CD player"></button>
-          <button class="swatch" type="button" data-player="digital"  data-label="Digital"  aria-pressed="false" aria-label="Digital player"></button>
+        <div class="picker" data-reveal>
+          <div class="swatches rv" role="group" aria-label="Player">
+            <button class="swatch" type="button" data-player="cassette" data-label="Cassette" aria-pressed="true"  aria-label="Cassette player"></button>
+            <button class="swatch" type="button" data-player="vinyl"    data-label="Vinyl"    aria-pressed="false" aria-label="Vinyl player"></button>
+            <button class="swatch" type="button" data-player="cd"       data-label="CD"       aria-pressed="false" aria-label="CD player"></button>
+            <button class="swatch" type="button" data-player="digital"  data-label="Digital"  aria-pressed="false" aria-label="Digital player"></button>
+          </div>
+          <p class="swatch-label rv" aria-live="polite"><span id="playerName">Cassette</span></p>
         </div>
-        <p class="swatch-label"><span id="playerName">Cassette</span></p>
       </div>
     </section>
 
     <section class="rail-sec" id="more">
-      <div class="rail-head reveal">
-        <p class="kicker">More in PocaPal</p>
-        <h2 class="h2">Every little thing,<br>thought through.</h2>
-        <p class="body rail-sub">The small stuff that takes the admin out of collecting, so you can get back to the fun part.</p>
+      <div class="rail-head" data-reveal>
+        <p class="kicker rv">More in PocaPal</p>
+        <h2 class="h2" data-lines>Every little thing.<br><span class="hl">Thought through.</span></h2>
+        <p class="body rail-sub rv">The small stuff that takes the admin out of collecting, so you can get back to the fun part.</p>
       </div>
 
+      <!-- The artwork is inline so its parts can move: each card plays its
+           little scene once when it comes into view, and again on hover. -->
       <div class="rail" id="rail">
         <ul class="rail-track">
           <li class="rail-card">
-            <div class="rail-art"><img src="assets/features/scan.svg" alt="" loading="lazy"></div>
-            <p><b>Scan to add.</b> Hold a card up to the camera and PocaPal works out the group, the album and which version you're holding, then files it. No typing, no picking from a list.</p>
+            <div class="rail-art" aria-hidden="true">
+              <svg viewBox="0 0 800 600" fill="none">
+                <defs>
+                  <linearGradient id="bga" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#efe7ff"/><stop offset="1" stop-color="#ffe9f4"/></linearGradient>
+                  <linearGradient id="pocaa" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff5fae"/><stop offset="1" stop-color="#7a4cff"/></linearGradient>
+                  <filter id="sha" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#2a2038" flood-opacity="0.18"/></filter>
+                </defs>
+                <rect width="800" height="600" fill="url(#bga)"/>
+                <g class="sv-rise">
+                  <g transform="rotate(-4 400 262)" filter="url(#sha)">
+                    <rect x="320" y="150" width="160" height="224" rx="14.4" fill="url(#pocaa)"/>
+                    <circle cx="400" cy="230.64" r="24" fill="#fff" opacity=".92"/>
+                    <path d="M 361.6 306.8 a 38.4 41.6 0 0 1 76.8 0 Z" fill="#fff" opacity=".92"/>
+                  </g>
+                </g>
+                <g class="sv-frame" stroke="#2a2038" stroke-opacity=".55" stroke-width="7" stroke-linecap="round" fill="none">
+                  <path d="M250 190v-34a16 16 0 0 1 16-16h34"/>
+                  <path d="M550 190v-34a16 16 0 0 0-16-16h-34"/>
+                  <path d="M250 410v34a16 16 0 0 0 16 16h34"/>
+                  <path d="M550 410v34a16 16 0 0 0-16 16h-34"/>
+                </g>
+                <g class="sv-laser">
+                  <rect x="255" y="292" width="290" height="5" rx="2.5" fill="#ff2e8b" opacity=".9"/>
+                  <rect x="255" y="292" width="290" height="46" rx="6" fill="#ff2e8b" opacity=".13"/>
+                </g>
+              </svg>
+            </div>
+            <p><b>Scan to add.</b> Hold a card up to the camera and PocaPal works out the group, the album and the version, then files it. No typing, no scrolling through lists.</p>
           </li>
           <li class="rail-card">
-            <div class="rail-art"><img src="assets/features/import.svg" alt="" loading="lazy"></div>
-            <p><b>Add a whole haul at once.</b> Point it at your camera roll and it pulls the individual cards out of your unboxing photos, so a new pull-set takes seconds rather than an evening.</p>
+            <div class="rail-art" aria-hidden="true">
+              <svg viewBox="0 0 800 600" fill="none">
+                <defs>
+                  <linearGradient id="bgf" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e8f4ff"/><stop offset="1" stop-color="#eaeaff"/></linearGradient>
+                  <linearGradient id="pocaf" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff5fae"/><stop offset="1" stop-color="#7a4cff"/></linearGradient>
+                  <filter id="shf" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#2a2038" flood-opacity="0.18"/></filter>
+                </defs>
+                <rect width="800" height="600" fill="url(#bgf)"/>
+                <g filter="url(#shf)"><rect x="168" y="140" width="330" height="296" rx="24" fill="#fff" opacity=".6"/></g>
+                <g fill="#ffffff" opacity=".85">
+                  <rect class="sv-pop" style="--i:0" x="196" y="168" width="88" height="112" rx="10"/>
+                  <rect class="sv-pop" style="--i:1" x="300" y="168" width="88" height="112" rx="10"/>
+                  <rect class="sv-pop" style="--i:2" x="404" y="168" width="88" height="112" rx="10"/>
+                  <rect class="sv-pop" style="--i:3" x="196" y="296" width="88" height="112" rx="10"/>
+                  <rect class="sv-pop" style="--i:4" x="300" y="296" width="88" height="112" rx="10"/>
+                  <rect class="sv-pop" style="--i:5" x="404" y="296" width="88" height="112" rx="10"/>
+                </g>
+                <g class="sv-fly">
+                  <g transform="rotate(9 545 341)" filter="url(#shf)">
+                    <rect x="470" y="236" width="150" height="210" rx="13.5" fill="url(#pocaf)"/>
+                    <circle cx="545" cy="311.6" r="22.5" fill="#fff" opacity=".92"/>
+                    <path d="M 509 383 a 36 39 0 0 1 72 0 Z" fill="#fff" opacity=".92"/>
+                  </g>
+                </g>
+                <path class="sv-draw" pathLength="1" d="M430 300h70M482 284l20 16-20 16" stroke="#ff2e8b" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              </svg>
+            </div>
+            <p><b>Add a whole haul at once.</b> Point it at your camera roll and it lifts each card out of your unboxing photos. A new pull takes seconds, not an evening.</p>
           </li>
           <li class="rail-card">
-            <div class="rail-art"><img src="assets/features/sets.svg" alt="" loading="lazy"></div>
-            <p><b>See how close you are.</b> Every album shows its completion at a glance, with the missing versions called out, so you know what you're actually hunting before you buy.</p>
+            <div class="rail-art" aria-hidden="true">
+              <svg viewBox="0 0 800 600" fill="none">
+                <defs>
+                  <linearGradient id="bgc" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#eaf7f0"/><stop offset="1" stop-color="#e9efff"/></linearGradient>
+                  <linearGradient id="pocac" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff5fae"/><stop offset="1" stop-color="#7a4cff"/></linearGradient>
+                  <filter id="shc" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#2a2038" flood-opacity="0.18"/></filter>
+                </defs>
+                <rect width="800" height="600" fill="url(#bgc)"/>
+                <g filter="url(#shc)"><rect x="210" y="122" width="290" height="390" rx="26" fill="#fff"/></g>
+                <g fill="url(#pocac)" opacity=".55">
+                  <rect class="sv-pop" style="--i:0" x="238" y="150" width="74" height="104" rx="9"/>
+                  <rect class="sv-pop" style="--i:1" x="328" y="150" width="74" height="104" rx="9"/>
+                  <rect class="sv-pop" style="--i:2" x="418" y="150" width="74" height="104" rx="9"/>
+                  <rect class="sv-pop" style="--i:3" x="238" y="272" width="74" height="104" rx="9"/>
+                  <rect class="sv-pop" style="--i:4" x="328" y="272" width="74" height="104" rx="9"/>
+                  <rect class="sv-pop" style="--i:6" x="238" y="394" width="74" height="104" rx="9"/>
+                  <rect class="sv-pop" style="--i:7" x="328" y="394" width="74" height="104" rx="9"/>
+                </g>
+                <g stroke="#ff2e8b" stroke-opacity=".45" stroke-width="3" stroke-dasharray="8 7">
+                  <rect class="sv-fade" style="--i:5" x="420" y="274" width="70" height="100" rx="8"/>
+                  <rect class="sv-fade" style="--i:8" x="420" y="396" width="70" height="100" rx="8"/>
+                </g>
+                <g class="sv-badge" filter="url(#shc)">
+                  <circle cx="570" cy="318" r="72" fill="#fff"/>
+                  <circle cx="570" cy="318" r="53" fill="none" stroke="#e7e7ec" stroke-width="13"/>
+                  <circle class="sv-ring" cx="570" cy="318" r="53" fill="none" stroke="#ff2e8b" stroke-width="13" stroke-linecap="round"
+                          stroke-dasharray="333" stroke-dashoffset="73" transform="rotate(-90 570 318)"/>
+                  <text class="sv-count" data-to="78" x="570" y="328" text-anchor="middle" font-family="Helvetica Neue, Arial, sans-serif" font-size="27" font-weight="700" fill="#2a2038">78%</text>
+                </g>
+              </svg>
+            </div>
+            <p><b>See how close you are.</b> Every album shows how complete it is, with the missing versions called out, so you know exactly what you're hunting before you buy.</p>
           </li>
           <li class="rail-card">
-            <div class="rail-art"><img src="assets/features/dupes.svg" alt="" loading="lazy"></div>
-            <p><b>Dupes, kept separate.</b> Flag a spare and it drops out of your main count but stays in your trade list, ready to send when someone's after it.</p>
+            <div class="rail-art" aria-hidden="true">
+              <svg viewBox="0 0 800 600" fill="none">
+                <defs>
+                  <linearGradient id="bgb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e9f6ff"/><stop offset="1" stop-color="#f2ecff"/></linearGradient>
+                  <linearGradient id="pocab" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff5fae"/><stop offset="1" stop-color="#7a4cff"/></linearGradient>
+                  <filter id="shb" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#2a2038" flood-opacity="0.18"/></filter>
+                </defs>
+                <rect width="800" height="600" fill="url(#bgb)"/>
+                <g class="sv-split-l">
+                  <g transform="rotate(-9 325 275)" filter="url(#shb)">
+                    <rect x="250" y="170" width="150" height="210" rx="13.5" fill="#8ec9ff"/>
+                    <circle cx="325" cy="245.6" r="22.5" fill="#fff" opacity=".92"/>
+                    <path d="M 289 317 a 36 39 0 0 1 72 0 Z" fill="#fff" opacity=".92"/>
+                  </g>
+                </g>
+                <g class="sv-split-r">
+                  <g transform="rotate(7 475 265)" filter="url(#shb)">
+                    <rect x="400" y="160" width="150" height="210" rx="13.5" fill="url(#pocab)"/>
+                    <circle cx="475" cy="235.6" r="22.5" fill="#fff" opacity=".92"/>
+                    <path d="M 439 307 a 36 39 0 0 1 72 0 Z" fill="#fff" opacity=".92"/>
+                  </g>
+                </g>
+                <g class="sv-badge" style="--i:4" filter="url(#shb)">
+                  <circle cx="552" cy="170" r="32" fill="#ff2e8b"/>
+                  <text x="552" y="182" text-anchor="middle" font-family="Helvetica Neue, Arial, sans-serif" font-size="30" font-weight="700" fill="#fff">2</text>
+                </g>
+                <g class="sv-rise" style="--i:6" filter="url(#shb)">
+                  <rect x="286" y="452" width="228" height="56" rx="28" fill="#fff"/>
+                  <text x="400" y="488" text-anchor="middle" font-family="Helvetica Neue, Arial, sans-serif" font-size="21" font-weight="600" fill="#2a2038" letter-spacing="1">TRADE READY</text>
+                </g>
+              </svg>
+            </div>
+            <p><b>Dupes, kept apart.</b> Mark a spare and it leaves your main count but stays on your trade list, ready for whoever asks.</p>
           </li>
           <li class="rail-card">
-            <div class="rail-art"><img src="assets/features/search.svg" alt="" loading="lazy"></div>
-            <p><b>Search that knows what you mean.</b> Filter by member, era, album or version, or ask for everything you're still missing from one release.</p>
+            <div class="rail-art" aria-hidden="true">
+              <svg viewBox="0 0 800 600" fill="none">
+                <defs>
+                  <linearGradient id="bgd" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff1e8"/><stop offset="1" stop-color="#ffe9f6"/></linearGradient>
+                  <linearGradient id="pocad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff5fae"/><stop offset="1" stop-color="#7a4cff"/></linearGradient>
+                  <filter id="shd" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#2a2038" flood-opacity="0.18"/></filter>
+                </defs>
+                <rect width="800" height="600" fill="url(#bgd)"/>
+                <g class="sv-rise" filter="url(#shd)">
+                  <rect x="150" y="170" width="500" height="76" rx="38" fill="#fff"/>
+                  <circle cx="204" cy="208" r="16" fill="none" stroke="#9a94a8" stroke-width="6"/>
+                  <path d="M216 220l18 18" stroke="#9a94a8" stroke-width="6" stroke-linecap="round"/>
+                  <rect class="sv-type" x="248" y="196" width="172" height="24" rx="12" fill="#d9d6e2"/>
+                </g>
+                <g filter="url(#shd)">
+                  <rect class="sv-pop" style="--i:4" x="150" y="290" width="126" height="52" rx="26" fill="#ff2e8b"/>
+                  <rect class="sv-pop" style="--i:5" x="292" y="290" width="150" height="52" rx="26" fill="#ffffff"/>
+                  <rect class="sv-pop" style="--i:6" x="458" y="290" width="116" height="52" rx="26" fill="#ffffff"/>
+                  <rect class="sv-pop" style="--i:7" x="590" y="290" width="60" height="52" rx="26" fill="#ffffff"/>
+                </g>
+                <g class="sv-rise" style="--i:9" filter="url(#shd)">
+                  <rect x="150" y="382" width="500" height="76" rx="20" fill="#fff"/>
+                  <rect x="176" y="404" width="38" height="32" rx="6" fill="url(#pocad)"/>
+                  <rect x="234" y="408" width="210" height="14" rx="7" fill="#d9d6e2"/>
+                  <rect x="234" y="430" width="132" height="12" rx="6" fill="#e7e5ee"/>
+                </g>
+              </svg>
+            </div>
+            <p><b>Search that knows what you mean.</b> Filter by member, era, album or version, or pull up everything you're still missing from one release.</p>
           </li>
           <li class="rail-card">
-            <div class="rail-art"><img src="assets/features/share.svg" alt="" loading="lazy"></div>
-            <p><b>Share your binder.</b> Send a link to your collection or your wishlist. Whoever opens it doesn't need the app, or an account, to look.</p>
+            <div class="rail-art" aria-hidden="true">
+              <svg viewBox="0 0 800 600" fill="none">
+                <defs>
+                  <linearGradient id="bge" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e9f0ff"/><stop offset="1" stop-color="#f7e9ff"/></linearGradient>
+                  <linearGradient id="pocae" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff5fae"/><stop offset="1" stop-color="#7a4cff"/></linearGradient>
+                  <filter id="she" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#2a2038" flood-opacity="0.18"/></filter>
+                </defs>
+                <rect width="800" height="600" fill="url(#bge)"/>
+                <g class="sv-split-l">
+                  <g transform="rotate(-7 323 241)" filter="url(#she)">
+                    <rect x="258" y="150" width="130" height="182" rx="11.7" fill="url(#pocae)"/>
+                    <circle cx="323" cy="215.5" r="19.5" fill="#fff" opacity=".92"/>
+                    <path d="M 291.8 277.4 a 31.2 33.8 0 0 1 62.4 0 Z" fill="#fff" opacity=".92"/>
+                  </g>
+                </g>
+                <g class="sv-split-r">
+                  <g transform="rotate(6 477 241)" filter="url(#she)">
+                    <rect x="412" y="150" width="130" height="182" rx="11.7" fill="#b9a6ff"/>
+                    <circle cx="477" cy="215.5" r="19.5" fill="#fff" opacity=".92"/>
+                    <path d="M 445.8 277.4 a 31.2 33.8 0 0 1 62.4 0 Z" fill="#fff" opacity=".92"/>
+                  </g>
+                </g>
+                <g class="sv-rise" style="--i:4" filter="url(#she)">
+                  <rect x="196" y="420" width="408" height="72" rx="36" fill="#fff"/>
+                  <path class="sv-draw" style="--i:7" pathLength="1" d="M258 456h84M334 440l18 16-18 16" stroke="#ff2e8b" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                  <rect class="sv-type" style="--i:8" x="376" y="447" width="168" height="18" rx="9" fill="#ddd9e6"/>
+                </g>
+              </svg>
+            </div>
+            <p><b>Share your binder.</b> Send a link to your collection or your wishlist. Whoever opens it doesn't need the app, or an account, to have a look.</p>
           </li>
           <li class="rail-card">
-            <div class="rail-art"><img src="assets/features/offline.svg" alt="" loading="lazy"></div>
+            <div class="rail-art" aria-hidden="true">
+              <svg viewBox="0 0 800 600" fill="none">
+                <defs>
+                  <linearGradient id="bgg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#eef0f4"/><stop offset="1" stop-color="#e7f3ee"/></linearGradient>
+                  <linearGradient id="pocag" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff5fae"/><stop offset="1" stop-color="#7a4cff"/></linearGradient>
+                  <filter id="shg" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#2a2038" flood-opacity="0.18"/></filter>
+                </defs>
+                <rect width="800" height="600" fill="url(#bgg)"/>
+                <g class="sv-rise" filter="url(#shg)">
+                  <rect x="290" y="108" width="220" height="392" rx="34" fill="#fff"/>
+                  <rect x="306" y="124" width="188" height="360" rx="24" fill="#f3f3f7"/>
+                </g>
+                <g fill="url(#pocag)">
+                  <rect class="sv-pop" style="--i:3" x="324" y="186" width="46" height="66" rx="7"/>
+                  <rect class="sv-pop" style="--i:4" x="382" y="186" width="46" height="66" rx="7" opacity=".65"/>
+                  <rect class="sv-pop" style="--i:5" x="440" y="186" width="46" height="66" rx="7"/>
+                  <rect class="sv-pop" style="--i:6" x="324" y="268" width="46" height="66" rx="7" opacity=".65"/>
+                  <rect class="sv-pop" style="--i:7" x="382" y="268" width="46" height="66" rx="7"/>
+                  <rect class="sv-pop" style="--i:8" x="440" y="268" width="46" height="66" rx="7" opacity=".65"/>
+                </g>
+                <g class="sv-badge" style="--i:9" filter="url(#shg)">
+                  <circle cx="500" cy="452" r="42" fill="#fff"/>
+                  <path d="M480 452a28 28 0 0 1 40 0" stroke="#2a2038" stroke-opacity=".5" stroke-width="7" stroke-linecap="round" fill="none"/>
+                  <circle cx="500" cy="466" r="6.5" fill="#2a2038" fill-opacity=".5"/>
+                  <path class="sv-draw" style="--i:12" pathLength="1" d="M478 430l44 44" stroke="#ff2e8b" stroke-width="7" stroke-linecap="round"/>
+                </g>
+              </svg>
+            </div>
             <p><b>Works with no signal.</b> Your collection lives on your phone, so it's there in the queue, at the venue, or halfway through a trade in a car park.</p>
           </li>
         </ul>
@@ -281,75 +489,86 @@
     </section>
 
     <section class="cta" id="get">
-      <div class="cta-brand reveal">
-        <img class="cta-icon" src="assets/app-icon.png" alt="" width="204" height="204">
-        <p class="cta-name">PocaPal</p>
+      <!-- a hand of cards fans out behind the icon as it comes into view -->
+      <div class="cta-brand" data-reveal>
+        <div class="cta-fan" aria-hidden="true">
+          <img class="fan-card" style="--k:-2" src="assets/cards/poca-02.jpg" alt="" loading="lazy">
+          <img class="fan-card" style="--k:-1" src="assets/cards/poca-12.jpg" alt="" loading="lazy">
+          <img class="fan-card" style="--k:1"  src="assets/cards/poca-05.jpg" alt="" loading="lazy">
+          <img class="fan-card" style="--k:2"  src="assets/cards/poca-14.jpg" alt="" loading="lazy">
+          <img class="cta-icon" src="assets/app-icon.png" alt="" width="204" height="204">
+        </div>
+        <p class="cta-name rv">PocaPal</p>
       </div>
-      <h2 class="h2">Start your collection.</h2>
-      <p class="body cta-body">Free to download. Your cards, your phone.</p>
-      <div class="store-row">
-        <a class="store" href="#" aria-label="Download on the App Store">
-          <span class="store-icon" data-store="apple"></span>
-          <span class="store-txt"><small>Download on the</small><strong>App Store</strong></span>
-        </a>
+      <div data-reveal>
+        <h2 class="h2" data-lines>Start your collection.</h2>
+        <p class="body cta-body rv">Free on the App Store. No ads, and nothing behind a paywall.</p>
+        <div class="store-row rv">
+          <a class="store" href="#" aria-label="Download on the App Store">
+            <span class="store-icon" data-store="apple"></span>
+            <span class="store-txt"><small>Download on the</small><strong>App Store</strong></span>
+          </a>
+        </div>
       </div>
     </section>
 
     <section class="faq" id="faq" aria-labelledby="faqHead">
-      <h2 class="h2 faq-head reveal" id="faqHead">Questions. <span class="hl">We got answers.</span></h2>
-      <div class="faq-list reveal">
+      <div class="faq-head" data-reveal>
+        <h2 class="h2" id="faqHead" data-lines>Questions?<br><span class="hl">Answered.</span></h2>
+      </div>
+      <div class="faq-list" data-reveal>
 
-        <div class="faq-item">
+        <div class="faq-item rv">
           <button class="faq-q" type="button" aria-expanded="false" aria-controls="faq-a1" id="faq-q1">
             Is PocaPal free?<span class="faq-mark" aria-hidden="true"></span>
           </button>
           <div class="faq-a" id="faq-a1" role="region" aria-labelledby="faq-q1">
-            <div><p>Yes. Download it and start filing. No ads, and nothing behind a paywall.</p></div>
+            <div><p>Yes. Download it and start filing. There are no ads, and nothing sits behind a paywall.</p></div>
           </div>
         </div>
 
-        <div class="faq-item">
+        <div class="faq-item rv">
           <button class="faq-q" type="button" aria-expanded="false" aria-controls="faq-a2" id="faq-q2">
             How do I add a card?<span class="faq-mark" aria-hidden="true"></span>
           </button>
           <div class="faq-a" id="faq-a2" role="region" aria-labelledby="faq-q2">
-            <div><p>Photograph it, or pick it out of your camera roll. PocaPal fills in the group, the idol and the version, and you can correct anything it gets wrong.</p></div>
+            <div><p>Take a photo of it, or pick it out of your camera roll. PocaPal fills in the group, the idol and the version, and you can correct anything it gets wrong.</p></div>
           </div>
         </div>
 
-        <div class="faq-item">
+        <div class="faq-item rv">
           <button class="faq-q" type="button" aria-expanded="false" aria-controls="faq-a3" id="faq-q3">
-            Is it just photocards?<span class="faq-mark" aria-hidden="true"></span>
+            Is it just for photocards?<span class="faq-mark" aria-hidden="true"></span>
           </button>
           <div class="faq-a" id="faq-a3" role="region" aria-labelledby="faq-q3">
-            <div><p>No. Albums, polaroids, toys, banners, lightsticks, whatever you have ended up with. Each kind gets its own shelf.</p></div>
+            <div><p>No. Albums, polaroids, toys, clothes, banners, lightsticks, whatever you've ended up with. Each kind gets its own tab or shelf.</p></div>
           </div>
         </div>
 
-        <div class="faq-item">
+        <div class="faq-item rv">
           <button class="faq-q" type="button" aria-expanded="false" aria-controls="faq-a4" id="faq-q4">
-            Can I keep track of what I am still missing?<span class="faq-mark" aria-hidden="true"></span>
+            Can I keep track of what I'm still missing?<span class="faq-mark" aria-hidden="true"></span>
           </button>
           <div class="faq-a" id="faq-a4" role="region" aria-labelledby="faq-q4">
-            <div><p>Yes. Anything you are after goes on your wishlist, next to what you already own, so you know what you are looking for before you get to the pop-up.</p></div>
+            <div><p>Yes. Anything you're after goes on your wishlist, next to what you already own, so you know what you're looking for before you get to the pop-up.</p></div>
           </div>
         </div>
 
-        <div class="faq-item">
+        <div class="faq-item rv">
           <button class="faq-q" type="button" aria-expanded="false" aria-controls="faq-a5" id="faq-q5">
             Does it work without signal?<span class="faq-mark" aria-hidden="true"></span>
           </button>
           <div class="faq-a" id="faq-a5" role="region" aria-labelledby="faq-q5">
-            <div><p>Your collection lives on your phone, so it is there in a basement venue or on a plane. Back it up whenever you are online.</p></div>
+            <div><p>Yes. Your collection lives on your phone, so it's there in a basement venue or on a plane. Back it up whenever you're online.</p></div>
           </div>
         </div>
 
-        <div class="faq-item">
+        <div class="faq-item rv">
           <button class="faq-q" type="button" aria-expanded="false" aria-controls="faq-a6" id="faq-q6">
             Is there an iPad version?<span class="faq-mark" aria-hidden="true"></span>
           </button>
           <div class="faq-a" id="faq-a6" role="region" aria-labelledby="faq-q6">
-            <div><p>Not yet, but one is being built. For now PocaPal is made for iPhone, where everything already works, and it will run on an iPad at iPhone size in the meantime. Once the iPad version is ready you will be able to browse the same collection on the bigger screen as well, with nothing to move across.</p></div>
+            <div><p>Not yet, but one is on the way. PocaPal is made for iPhone and runs on iPad at iPhone size in the meantime. When the iPad version arrives, your collection will be waiting on the bigger screen, with nothing to move across.</p></div>
           </div>
         </div>
 
@@ -361,7 +580,7 @@
 
 <footer class="footer">
   <div class="footer-inner">
-    <p>PocaPal</p>
+    <p class="footer-brand">PocaPal</p>
     <nav aria-label="Footer">
       <a href="#">Privacy</a><a href="#">Terms</a><a href="#">Support</a><a href="#">Contact</a>
     </nav>

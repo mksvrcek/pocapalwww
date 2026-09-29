@@ -196,9 +196,23 @@ const catmull = (a,b,c,d,t) => {
    5. BOOT
    ------------------------------------------------------------- */
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const motion  = !reduced;
+// the head sets this before first paint; repeated here in case it was stripped
+document.documentElement.classList.toggle('motion', motion);
+
+/* Headlines that reveal a line at a time are split at their <br>s into
+   `.ln > .ln-in`, each carrying its index for the stagger. A block line
+   breaks exactly where the <br> did, so nothing reflows. The space between
+   them keeps the heading's accessible name reading as separate words. */
+for (const h of document.querySelectorAll('[data-lines]')) {
+  h.innerHTML = h.innerHTML.split(/<br\s*\/?>/i).map((html, i) =>
+    `<span class="ln"><span class="ln-in" style="--i:${i}">${html.trim()}</span></span>`
+  ).join(' ');
+}
 
 const story    = document.getElementById('story');
 const track    = document.querySelector('.story-track');
+const stage    = document.getElementById('stage');
 const layer    = document.getElementById('cardLayer');
 const heroCopy = document.getElementById('heroCopy');
 const phoneWrap= document.getElementById('phoneWrap');
@@ -546,7 +560,8 @@ function measure() {
   const outroBottom = outro.offsetTop + outro.offsetHeight;
   const topLimit = outroBottom + G.H * 0.03;
   const botLimit = G.H - G.H * 0.025;
-  G.settleScale = clamp((botLimit - topLimit) / G.phoneH, 0.55, 0.94);
+  // a phone on its side leaves very little height, so this may go well down
+  G.settleScale = clamp((botLimit - topLimit) / G.phoneH, 0.3, 0.94);
   G.settleY = (topLimit + botLimit) / 2 - G.H / 2;
   // run the queue through the middle of where the phone ends up
   if (marquee) marquee.style.top = Math.round(G.H / 2 + G.settleY) + 'px';
@@ -735,8 +750,30 @@ function frame() {
   shown += (target - shown) * 0.16;
   if (Math.abs(target - shown) < 0.00012) shown = target;
   render(shown);
-  running = Math.abs(target - shown) > 0.00012 || G.live;
+  running = Math.abs(target - shown) > 0.00012 || G.live || G.introLive;
   if (running) requestAnimationFrame(frame);
+}
+
+/* The opening. Once the page has loaded, and with it the first cards'
+   artwork, the resting grid deals itself in: each card rises into its square
+   and turns upright, rippling out from the middle of the grid. It only
+   touches cards still sitting in the grid, and it only ever plays once. */
+const INTRO_DUR = 1150, INTRO_STEP = 80, INTRO_LAG = 150;
+let introT0 = 0, introDone = !motion;
+/** 0 → 1, how far card `i` is through its entrance */
+function introAt(i, now) {
+  if (introDone) return 1;
+  if (!introT0) return 0;
+  const row = (i / G.cols) | 0, col = (G.cols - 1) - (i % G.cols);
+  const d = Math.hypot(col - (G.cols - 1) / 2, (row - (G.rows - 1) / 2) * 1.3);
+  return clamp01((now - introT0 - INTRO_LAG - d * INTRO_STEP) / INTRO_DUR);
+}
+function startIntro() {
+  if (introT0 || introDone) return;
+  introT0 = performance.now();
+  // arriving part way down the page (a reload, a link to a section) skips it
+  if (readProgress() > T.hoverUntil) introDone = true;
+  if (!running) { running = true; requestAnimationFrame(frame); }
 }
 /* Which way the reader is going. The run finishes itself when they stop with
    everything filed, but only if they were going forwards: someone scrolling
@@ -816,6 +853,9 @@ function headAt(p) {
 }
 
 function render(p) {
+  const now = performance.now();
+  let introLive = false;
+
   /* --- headline --- */
   const heroOut = smooth(range(p, T.heroFadeIn, T.heroFadeOut));
   heroCopy.style.opacity   = String(1 - heroOut);
@@ -828,8 +868,11 @@ function render(p) {
   const arrive = G.phoneFit * lerp(0.80, 1, pin);
   const psc    = lerp(arrive, G.settleScale, settle);
   const phoneY = lerp(48, 0, pin) + G.settleY * settle;
+  // it arrives tipped back and stands up as it lands; squared, so it is
+  // upright well before the first card is filed into it
+  const tip    = 18 * (1 - pin) * (1 - pin);
   phoneWrap.style.opacity   = String(pin);
-  phoneWrap.style.transform = `translateY(${phoneY}px) scale(${psc})`;
+  phoneWrap.style.transform = `translateY(${phoneY}px) rotateX(${tip}deg) scale(${psc})`;
 
   const phoneCX = G.W / 2;
   const phoneCY = G.H / 2 + phoneY;
@@ -891,6 +934,17 @@ function render(p) {
       rz = lerp(c.tilt * 0.4, rz, m);
       op = lerp(1, op, m);
       zi = Math.round(lerp(500, zi, m));
+
+      // the opening, weighted by how much of the card is still in the grid
+      if (!introDone) {
+        const ci = introAt(i, now);
+        if (ci < 1) introLive = true;
+        const e = 1 - easeOut(ci), k = 1 - m;
+        y  += e * G.cellH * 0.62 * k;
+        sc *= 1 - e * 0.2 * k;
+        rz += e * (c.tilt * 2.4 + 6) * k;
+        op *= 1 - (1 - clamp01(ci * 1.8)) * k;
+      }
     }
 
     if (a > 0) {
@@ -974,7 +1028,11 @@ function render(p) {
   if (absorbed >= cards.length && !backwards) glideToEnd();
   outro.style.opacity   = String(oi);
   outro.style.transform = `translateX(-50%) translateY(${lerp(28,0,oi)}px)`;
+  outro.style.setProperty('--o', oi.toFixed(4));   // the lines rise out of their masks
 
+  // the opening is over once every card still in the grid has arrived
+  if (introT0 && !introDone && !introLive) introDone = true;
+  G.introLive = introT0 > 0 && !introDone;
   G.live = live;
 }
 
@@ -1137,6 +1195,8 @@ if (swatches.length && screens.length === 2) {
       if (scene) scene.dataset.theme = b.dataset.theme;   // retints the halo
       nameEl.textContent = b.dataset.label;
       koEl.textContent   = b.dataset.ko;
+      replay(nameEl.parentElement, 'is-swap');
+      if (scene) replay(scene, 'is-swapping', 900);
       show(b.dataset.theme, b.dataset.label);
     });
   }
@@ -1154,11 +1214,16 @@ if (pStage) {
     for (const b of picks) new Image().src = `assets/players/${b.dataset.player}.webp`;
   });
 
-  for (const b of picks) {
+  let current = 0;          // which pick is showing, for the direction of travel
+  for (const [idx, b] of picks.entries()) {
     b.addEventListener('click', async () => {
       if (b.getAttribute('aria-pressed') === 'true') return;
       for (const o of picks) o.setAttribute('aria-pressed', String(o === b));
       label.textContent = b.dataset.label;
+      replay(label.parentElement, 'is-swap');
+      // moving right along the row, the new one comes in from the right
+      const dir = idx > current ? 1 : -1;
+      current = idx;
 
       const mine = ++turn;
       const next = shots[1 - at], prev = shots[at];
@@ -1167,6 +1232,12 @@ if (pStage) {
       if (mine !== turn) return;
       next.alt = `The PocaPal ${b.dataset.label.toLowerCase()} player`;
       prev.alt = '';
+      // park the incoming one on its side without animating it there first
+      next.style.transition = 'none';
+      next.style.setProperty('--from', `${dir * 64}px`);
+      void next.offsetWidth;
+      next.style.transition = '';
+      prev.style.setProperty('--from', `${-dir * 64}px`);
       next.classList.add('is-on');
       prev.classList.remove('is-on');
       at = 1 - at;
@@ -1201,13 +1272,150 @@ if (rail) {
   sync();
 }
 
-/* reveal on scroll */
-const io = new IntersectionObserver((entries) => {
+/* -------------------------------------------------------------
+   8b. REVEALS
+   A [data-reveal] group plays once as it comes into view. Within it
+   each piece gets its place in the sequence as --d: a split headline
+   takes a beat per line, anything else (.rv) one short step, so the
+   copy under a headline follows its last line up.
+   ------------------------------------------------------------- */
+const hasIO = 'IntersectionObserver' in window;
+const revealIO = motion && hasIO && new IntersectionObserver(entries => {
   for (const e of entries) {
-    if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+    if (!e.isIntersecting) continue;
+    e.target.classList.add('in');
+    revealIO.unobserve(e.target);
   }
-}, {threshold: 0.18, rootMargin: '0px 0px -8% 0px'});
-document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+}, {threshold: 0.2, rootMargin: '0px 0px -6% 0px'});
+
+for (const g of document.querySelectorAll('[data-reveal]')) {
+  let t = 0;
+  for (const n of g.querySelectorAll('.rv, [data-lines]')) {
+    n.style.setProperty('--d', t.toFixed(2) + 's');
+    t += n.hasAttribute('data-lines') ? n.querySelectorAll('.ln').length * 0.11 + 0.05 : 0.09;
+  }
+  if (revealIO) revealIO.observe(g); else g.classList.add('in');
+}
+
+/** restart a class-driven animation: off, a reflow, back on, and off again
+    after `ms` if given */
+const replayTimers = new WeakMap();
+function replay(el, cls, ms) {
+  el.classList.remove(cls);
+  void el.offsetWidth;
+  el.classList.add(cls);
+  if (ms) {
+    clearTimeout(replayTimers.get(el));
+    replayTimers.set(el, setTimeout(() => el.classList.remove(cls), ms));
+  }
+}
+
+/* The feature rail's cards arrive from the right, one after another, and
+   each plays its illustration's scene as it lands (.play). Cards further
+   along the rail wait until it is scrolled to them: the observer counts the
+   rail's own clipping. Hovering one with a mouse plays its scene again. */
+const railCards = [...document.querySelectorAll('.rail-card')];
+/** the completion figure in the sets artwork counts up alongside its ring */
+function countUp(card) {
+  const el = card.querySelector('.sv-count');
+  if (!el || !motion) return;
+  const to = Number(el.dataset.to), t0 = performance.now() + 700, dur = 1600;
+  const step = now => {
+    const k = clamp01((now - t0) / dur);
+    el.textContent = Math.round(to * easeOut(k)) + '%';
+    if (k < 1) requestAnimationFrame(step);
+  };
+  el.textContent = '0%';
+  requestAnimationFrame(step);
+}
+if (motion && hasIO) {
+  const railIO = new IntersectionObserver(entries => {
+    let n = 0;
+    for (const e of entries) {
+      if (!e.isIntersecting) continue;
+      const c = e.target;
+      c.style.setProperty('--d', (n++ * 0.1).toFixed(2) + 's');
+      c.classList.add('in', 'play');
+      c.dataset.played = String(performance.now());
+      countUp(c);
+      railIO.unobserve(c);
+    }
+  }, {threshold: 0.35});
+  for (const c of railCards) {
+    railIO.observe(c);
+    c.addEventListener('pointerenter', e => {
+      if (e.pointerType !== 'mouse' || !c.classList.contains('in')) return;
+      // let a scene finish before it can be started again
+      if (performance.now() - Number(c.dataset.played || 0) < 1800) return;
+      c.style.setProperty('--d', '0s');
+      replay(c, 'play');
+      c.dataset.played = String(performance.now());
+      countUp(c);
+    });
+  }
+} else {
+  for (const c of railCards) c.classList.add('in');
+}
+
+/* -------------------------------------------------------------
+   8c. SCRUBS
+   A [data-scrub] element gets --e, how far it has come into view:
+   0 as its top crosses the bottom of the screen, 1 once its middle
+   reaches just past the middle, eased out, so a blade's pieces
+   settle as it arrives. CSS does the rest. Only elements near the
+   screen are measured, and each is measured on its own box, which
+   the CSS never moves, so the value cannot chase itself.
+   ------------------------------------------------------------- */
+const scrubEls = [...document.querySelectorAll('[data-scrub]')];
+const scrubNear = new Set(scrubEls);
+const scrubVal  = new WeakMap();
+function scrubAll() {
+  const vh = innerHeight;
+  for (const el of scrubNear) {
+    const r = el.getBoundingClientRect();
+    const e = 1 - Math.pow(1 - clamp01((vh - r.top) / (vh * 0.45 + r.height * 0.5)), 2);
+    if (Math.abs(e - (scrubVal.get(el) ?? -1)) < 0.0005) continue;
+    scrubVal.set(el, e);
+    el.style.setProperty('--e', e.toFixed(4));
+  }
+}
+if (motion && hasIO) {
+  const nearIO = new IntersectionObserver(entries => {
+    for (const e of entries) {
+      if (e.isIntersecting) scrubNear.add(e.target); else scrubNear.delete(e.target);
+    }
+    queueScrub();
+  }, {rootMargin: '25% 0px 25% 0px'});
+  scrubEls.forEach(el => nearIO.observe(el));
+}
+
+/* Once the story has played out and the page carries on, the dark stage
+   sinks back and dims while the light sheet slides up over it, so the
+   hand-over reads as one surface passing over another rather than a cut. */
+let receded = false;
+function recede() {
+  const H = G.H || innerHeight;
+  const past = scrollY - (story.offsetTop + story.offsetHeight - H);
+  if (past <= 0 || past > H * 1.3) {
+    if (receded && past <= 0) {
+      stage.style.transform = '';
+      track.style.setProperty('--dim', '0');
+      receded = false;
+    }
+    return;
+  }
+  const k = past / H;
+  stage.style.transform = `translate3d(0,${(past * 0.42).toFixed(1)}px,0) scale(${(1 - 0.07 * Math.min(k, 1)).toFixed(4)})`;
+  track.style.setProperty('--dim', (0.6 * Math.min(k, 1)).toFixed(3));
+  receded = true;
+}
+
+let scrubQueued = false;
+function queueScrub() {
+  if (scrubQueued || !motion) return;
+  scrubQueued = true;
+  requestAnimationFrame(() => { scrubQueued = false; scrubAll(); recede(); });
+}
 
 /* nav flips to light once the dark story is behind us */
 const navIO = new IntersectionObserver(([e]) => {
@@ -1229,12 +1437,18 @@ for (const q of document.querySelectorAll('.faq-q')) {
    9. WIRE UP
    ------------------------------------------------------------- */
 if (!reduced) {
-  const resync = () => { measure(); target = readProgress(); shown = target; render(shown); };
+  const resync = () => {
+    measure(); target = readProgress(); shown = target; render(shown); queueScrub();
+  };
   resync();
   addEventListener('scroll', kick, {passive: true});
   addEventListener('scroll', armNudge, {passive: true});
+  addEventListener('scroll', queueScrub, {passive: true});
   addEventListener('resize', resync);
-  addEventListener('load',   resync);
+  // the opening waits for the artwork, but not for ever
+  addEventListener('load', () => { resync(); startIntro(); });
+  if (document.readyState === 'complete') startIntro();
+  setTimeout(startIntro, 2600);
 } else {
   // static fallback: a calm grid, no choreography
   layer.querySelectorAll('.pcard').forEach((el, i) => { if (i > 11) el.remove(); });
