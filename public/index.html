@@ -261,21 +261,33 @@
         <div class="live-stage" id="liveStage">
           <div class="live-vig" aria-hidden="true"></div>
           <div class="live-dark" aria-hidden="true"></div>
-          <div class="live-crowd" aria-hidden="true">
-            <div class="crowd crowd-far"></div>
-            <div class="crowd crowd-mid"></div>
-            <div class="crowd crowd-near"></div>
+          <!-- the venue, which only exists once the lights are down: a stage
+               with its big screen and side screens, light beams off the truss,
+               and a canvas for the crowd and the confetti -->
+          <div class="live-rig" aria-hidden="true">
+            <canvas class="rig-beams"></canvas>
+            <div class="rig-side rig-side-l"></div>
+            <div class="rig-side rig-side-r"></div>
+            <div class="rig-screen"><span class="rig-word">TONIGHT</span></div>
+            <div class="rig-floor"></div>
           </div>
-          <div class="live-spot" aria-hidden="true"></div>
+          <canvas class="live-fx" aria-hidden="true"></canvas>
           <div class="live-big" aria-hidden="true">
             <div class="big-win big-ink"><div class="big-roll"><span>4</span></div></div>
             <div class="big-win big-glow"><div class="big-roll"><span>4</span></div></div>
-            <div class="big-word">TONIGHT</div>
           </div>
 
+          <!-- Two headlines in one slot. The first says what this is; at the
+               concert it rolls away and the payoff rolls in. -->
           <div class="live-copy">
             <p class="kicker">Events</p>
-            <h2 class="h2" id="liveHead"><span class="ln"><span class="ln-in live-l1">Four weeks to go.</span></span> <span class="ln"><span class="ln-in live-l2 hl">Then, tonight.</span></span></h2>
+            <div class="live-heads">
+              <div class="live-intro">
+                <h2 class="h2" id="liveHead"><span class="ln"><span class="ln-in li-1">Every show,</span></span> <span class="ln"><span class="ln-in li-2 hl">counted down.</span></span></h2>
+                <p class="body live-lede">Add a concert, a fansign or a comeback, and PocaPal counts down to it.</p>
+              </div>
+              <p class="h2 live-night" aria-hidden="true"><span class="ln"><span class="ln-in live-l1">Four weeks to go.</span></span> <span class="ln"><span class="ln-in live-l2 hl">Then, tonight.</span></span></p>
+            </div>
           </div>
 
           <div class="ev-zone">
@@ -322,7 +334,7 @@
                 <span class="ev-what"><b>LE SSERAFIM PUREFLOW</b> Concert · Amsterdam</span>
               </li>
             </ol>
-            <p class="body live-sub">Concerts, fansigns and comebacks on one timeline, with the next one counting down. When the night is over it stays on the list, and the next one starts counting.</p>
+            <p class="body live-sub">When the night is over it stays on your timeline, and the next one starts counting.</p>
           </div>
         </div>
       </div>

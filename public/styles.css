@@ -959,11 +959,12 @@ a{color:inherit;text-decoration:none}
 }
 
 /* ============================================================
-   EVENTS — "Four weeks to go. Then, tonight."
+   EVENTS — "Every show, counted down."
    The app's NEXT UP card counts down while the page dims in
-   steps like house lights, then it is the night: a sea of
-   lightsticks, a follow-spot, and TONIGHT on the big screen.
-   The lights come up and the card flips to the next show.
+   steps like house lights. Then it is the night: a stage with
+   TONIGHT on its big screen, beams, confetti and a crowd holding
+   up their lightsticks. The lights come up and the card flips
+   to the next show.
 
    Without .motion this is a still blade: the card at four weeks
    and the timeline under it. With it, .live becomes a runway
@@ -987,11 +988,14 @@ a{color:inherit;text-decoration:none}
   padding-inline:var(--pad);
   text-align:center;
 }
-.live-vig,.live-dark,.live-crowd,.live-spot,.live-big{display:none}
+.live-vig,.live-dark,.live-rig,.live-fx,.live-big,.live-night{display:none}
 .live-copy{position:relative;z-index:6}
 .live .h2{color:inherit}
 .live-copy .ln{display:block}
-.live-copy .kicker{transition:none}
+/* the two headlines share one slot, so swapping them moves nothing */
+.live-heads{display:grid}
+.live-heads > *{grid-area:1 / 1;align-self:start}
+.live-lede{margin:14px auto 0;max-width:40ch}
 
 /* ---- the card, measured off the app: everything is in --u, a hundredth of
         its width, so it keeps its proportions from a phone to a desktop ---- */
@@ -1098,6 +1102,7 @@ a{color:inherit;text-decoration:none}
   .ev-date b{font-size:20px}
   .ev-what b{font-size:15px}
   .motion .live-sub{display:none}
+  .live-lede{margin-top:6px;font-size:14px;max-width:60ch}
 }
 .motion .live-track{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden}
 .motion .live-stage{
@@ -1105,7 +1110,7 @@ a{color:inherit;text-decoration:none}
   justify-content:center;
   padding:calc(var(--nav-h) + var(--safe-t) + 2vh) var(--pad) 3vh;
 }
-.motion .live-vig,.motion .live-dark,.motion .live-crowd,.motion .live-spot,.motion .live-big{display:block}
+.motion .live-vig,.motion .live-dark,.motion .live-rig,.motion .live-fx,.motion .live-big,.motion .live-night{display:block}
 /* The night comes down in steps, the way house lights do: the edges of the
    room go first (the vignette, which keeps a pool of light on the card) and
    the whole room follows. JS sets both opacities. */
@@ -1118,59 +1123,66 @@ a{color:inherit;text-decoration:none}
     radial-gradient(70% 48% at 50% var(--card-y,50%), #2a1339 0%, transparent 72%),
     radial-gradient(120% 90% at 50% 88%, #3a1548 0%, #1d0e2b 45%, var(--night) 75%);
 }
-/* A sea of lightsticks: three planes laid flat as a floor running to a
-   horizon at the top of this box. Each is a repeating radial-gradient painted
-   once and only ever moved, so swaying costs nothing. The far plane is fine
-   and dim, the near one big soft bokeh. */
-.live-crowd{
-  position:absolute;left:0;right:0;bottom:0;height:50%;z-index:2;
-  perspective:560px;perspective-origin:50% 0%;
-  opacity:0;pointer-events:none;
-  -webkit-mask-image:linear-gradient(to bottom,transparent 0%,#000 22%);
-  mask-image:linear-gradient(to bottom,transparent 0%,#000 22%);
-}
-.live-crowd::before{
-  content:"";position:absolute;left:-10%;right:-10%;top:-38%;height:70%;
-  background:radial-gradient(ellipse at 50% 60%, rgba(255,46,139,.34), rgba(122,76,255,.12) 45%, transparent 70%);
-}
-.crowd{
-  position:absolute;left:-60%;right:-60%;bottom:0;height:240%;
-  transform-origin:50% 100%;
-  will-change:transform,opacity;
-}
-.crowd::after{content:"";position:absolute;inset:0;background:inherit;opacity:0;transform:translate3d(9px,6px,0)}
-/* two or three dot grids of different pitch per plane, so the sea never
-   settles into one obvious grid */
-.crowd-far{
+/* ---- the venue: a stage, its screens and its lights. JS places it from a
+        measure of the room (--scr-*, --floor-*) and sets its opacity. ---- */
+.live-rig{position:absolute;inset:0;z-index:2;pointer-events:none;opacity:0}
+.rig-screen{
+  position:absolute;left:50%;top:var(--scr-y,30%);
+  width:var(--scr-w,60vw);height:var(--scr-h,20vh);
+  transform:translate(-50%,-50%);
+  border-radius:max(4px,.6vh);overflow:hidden;
+  display:grid;place-items:center;
+  /* an LED wall: a fine pixel grid over a warm glow */
   background:
-    radial-gradient(circle, rgba(255,160,215,.95) 0 1.4px, transparent 2.2px) 0 0 / 17px 15px,
-    radial-gradient(circle, rgba(255,255,255,.85) 0 1.2px, transparent 2px) 8px 7px / 23px 19px,
-    radial-gradient(circle, rgba(255,46,139,.9) 0 1.3px, transparent 2.1px) 3px 11px / 29px 26px;
+    repeating-linear-gradient(0deg, rgba(255,255,255,.045) 0 1px, transparent 1px 4px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.045) 0 1px, transparent 1px 4px),
+    radial-gradient(80% 120% at 50% 55%, #3a1236 0%, #150818 62%, #0b050e 100%);
+  box-shadow:0 0 0 1px rgba(255,255,255,.07), 0 0 7vh rgba(255,46,139,.32), inset 0 0 5vh rgba(255,46,139,.22);
 }
-.crowd-mid{
+.rig-word{
+  font-family:var(--ev-wide);font-weight:900;font-stretch:100%;
+  font-size:var(--word-size,12vw);line-height:1;letter-spacing:-.01em;white-space:nowrap;
+  color:#fff5fb;
+  text-shadow:0 0 .06em #ff5aa8, 0 0 .2em rgba(255,46,139,.8), 0 0 .5em rgba(255,46,139,.35);
+  transform:translateY(.04em);
+}
+/* the side screens run a close-up, the way arena screens do */
+.rig-side{
+  position:absolute;top:var(--scr-y,30%);
+  width:calc(var(--scr-h,20vh) * .62);height:calc(var(--scr-h,20vh) * 1.08);
+  transform:translateY(-50%);
+  border-radius:max(3px,.5vh);overflow:hidden;
   background:
-    radial-gradient(circle, rgba(255,46,139,.95) 0 2.4px, rgba(255,46,139,.25) 4px, transparent 6px) 0 0 / 38px 31px,
-    radial-gradient(circle, rgba(255,210,235,.9) 0 2px, transparent 4.5px) 19px 14px / 47px 37px,
-    radial-gradient(circle, rgba(180,120,255,.8) 0 1.8px, transparent 4px) 9px 25px / 61px 43px;
+    repeating-linear-gradient(0deg, rgba(0,0,0,.28) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, rgba(255,46,139,.28), rgba(122,76,255,.3)),
+    url("assets/cards/poca-04.jpg") center 22% / cover no-repeat;
+  box-shadow:0 0 0 1px rgba(255,255,255,.07), 0 0 4vh rgba(255,46,139,.25);
+  filter:saturate(1.15);
 }
-.crowd-near{
-  background:
-    radial-gradient(circle, rgba(255,90,170,.42) 0 7px, rgba(255,90,170,.1) 13px, transparent 20px) 0 0 / 104px 86px,
-    radial-gradient(circle, rgba(255,240,250,.3) 0 6px, transparent 16px) 52px 43px / 131px 97px;
+.rig-side-l{right:calc(50% + var(--scr-w,60vw) / 2 + var(--scr-h,20vh) * .14)}
+.rig-side-r{left:calc(50% + var(--scr-w,60vw) / 2 + var(--scr-h,20vh) * .14)}
+/* the stage itself: a dark platform with an LED strip along its front edge */
+.rig-floor{
+  position:absolute;left:50%;top:var(--floor-y,50%);
+  width:var(--floor-w,90vw);height:var(--floor-h,3vh);
+  transform:translateX(-50%);
+  background:linear-gradient(180deg,#24102c,#0c0610);
+  clip-path:polygon(7% 0,93% 0,100% 100%,0 100%);
 }
-/* a twinkle: the same dots again, on and off, out of step with the plane */
-.live.is-near .crowd::after{animation:twinkle 1.7s var(--ease-io) infinite alternate}
-.live.is-near .crowd-mid::after{animation-duration:2.3s;animation-delay:-.8s}
-.live.is-near .crowd-near::after{animation-duration:3.1s;animation-delay:-1.6s}
-@keyframes twinkle{to{opacity:.85}}
-/* the follow-spot, a pool of light that sweeps across once */
-.live-spot{
-  position:absolute;left:50%;top:18%;z-index:3;
-  width:min(90vw,900px);height:min(70vh,640px);margin-left:calc(min(90vw,900px) / -2);
-  background:radial-gradient(ellipse at center, rgba(255,240,250,.2), rgba(255,200,230,.07) 45%, transparent 68%);
-  opacity:0;pointer-events:none;
+.rig-floor::after{
+  content:"";position:absolute;left:0;right:0;bottom:0;height:max(2px,.3vh);
+  background:linear-gradient(90deg,transparent,#ff5aa8 12%,#ffd1e8 50%,#ff5aa8 88%,transparent);
+  box-shadow:0 0 12px #ff2e8b;
 }
-/* the big screen behind the card: the countdown, huge, then TONIGHT */
+/* Beams off the front of the stage, fanning up into the dark, drawn on a
+   canvas behind the screens (see drawBeams in app.js): six rotating clipped
+   elements cost a desktop half its frame rate. */
+.rig-beams{position:absolute;left:0;top:0;width:100%;height:100%}
+.live-rig.is-narrow .rig-side{display:none}
+/* the crowd and the confetti are drawn, not styled: see drawFx in app.js */
+.live-fx{position:absolute;left:0;top:0;width:100%;height:100%;z-index:3;pointer-events:none}
+
+/* the countdown behind the card, huge: pale ink on the lit page, neon later */
 .live-big{position:absolute;inset:0;z-index:4;pointer-events:none}
 .big-win{
   position:absolute;left:50%;top:var(--card-y,50%);
@@ -1186,15 +1198,6 @@ a{color:inherit;text-decoration:none}
   color:rgba(255,120,190,.1);
   -webkit-text-stroke:max(1.5px,.004em) rgba(255,150,205,.75);
   text-shadow:0 0 .05em rgba(255,46,139,.7), 0 0 .16em rgba(255,46,139,.35);
-  opacity:0;
-}
-.big-word{
-  position:absolute;left:50%;top:var(--word-y,50%);
-  font-family:var(--ev-wide);font-weight:900;font-stretch:100%;
-  font-size:var(--word-size,min(15.5vw,30vh));line-height:1;letter-spacing:-.01em;white-space:nowrap;
-  color:#fff5fb;
-  text-shadow:0 0 .06em #ff5aa8, 0 0 .22em rgba(255,46,139,.75), 0 0 .6em rgba(255,46,139,.35);
-  transform:translate(-50%,-56%);
   opacity:0;
 }
 /* the headline: its lines rise out of masks as the run reaches them */

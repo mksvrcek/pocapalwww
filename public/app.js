@@ -1419,12 +1419,16 @@ function queueScrub() {
 
 /* -------------------------------------------------------------
    8d. EVENTS — the second pinned run
-   The NEXT UP card counts down, and each step takes the house
-   lights down a notch. Then it is the night: TONIGHT on the big
-   screen, the crowd's lightsticks swaying, a follow-spot. The
-   lights come up and the card turns over to the next show. As in
-   the hero, every frame is a pure function of the blade's progress,
-   eased toward the scroll position so it glides rather than steps.
+   "Every show, counted down." The NEXT UP card counts down, and
+   each step takes the house lights down a notch. Then it is the
+   night: the headline turns over to "Four weeks to go. Then,
+   tonight.", a stage powers up with TONIGHT on its screen, beams
+   swing, confetti comes down and the crowd holds up its
+   lightsticks. The lights come up and the card turns over to the
+   next show. As in the hero, the choreography is a pure function
+   of the blade's progress, eased toward the scroll position; only
+   the crowd's sway and the beams also drift a little on their own
+   while the show is on, so the room never freezes.
    ------------------------------------------------------------- */
 /** what the card's counter reads, in order. The app shows "IN 4 WEEKS";
     what it shows in the last week is a guess to confirm against the app */
@@ -1433,14 +1437,14 @@ const COUNTDOWN = [
   [6, 'Days'], [5, 'Days'], [4, 'Days'], [3, 'Days'], [2, 'Days'], [1, 'Day'],
 ];
 /** the beats, as the blade's own progress 0 → 1 while it is pinned. The
-    headline's first line and the card rise before that, as the blade scrolls
-    into view, so it is never an empty stage that pins. */
+    headline and the card rise before that, as the blade scrolls into view,
+    so it is never an empty stage that pins. */
 const LV = {
-  count: [0.02, 0.46],    // the countdown; each step shorter than the last
-  night: [0.46, 0.56],    // the last number rolls away, TONIGHT, the second line
-  crowd: [0.50, 0.62],    // lightsticks come up out of the dark, far ones first
-  spot:  [0.57, 0.80],    // the follow-spot sweeps across once
-  up:    [0.76, 0.88],    // house lights up, the crowd sinks away
+  count: [0.02, 0.44],    // the countdown; each step shorter than the last
+  night: [0.44, 0.54],    // the last number rolls away, the headline turns over, black
+  show:  [0.48, 0.60],    // the stage powers up, the crowd rises out of the dark
+  rain:  [0.53, 0.80],    // the confetti comes down
+  up:    [0.76, 0.88],    // house lights up, the show fades, the crowd sinks away
   flip:  [0.80, 0.90],    // the card turns over to the next show
   after: [0.88, 1.00],    // the timeline, then the line under it
 };
@@ -1448,21 +1452,25 @@ const LV = {
 const live = document.getElementById('events');
 if (live && motion) {
   const q        = sel => live.querySelector(sel);
-  const liveTrack= q('.live-track');
+  const liveTrack= q('.live-track'), stageEl = q('.live-stage');
   const dark     = q('.live-dark'), vig = q('.live-vig');
-  const crowdBox = q('.live-crowd'), spot = q('.live-spot');
-  const crowds   = [...live.querySelectorAll('.crowd')];
-  const bigInk   = q('.big-ink'), bigGlow = q('.big-glow'), bigWord = q('.big-word');
+  const rig      = q('.live-rig'), rigWord = q('.rig-word');
+  const beamCv   = q('.rig-beams'), bc = beamCv.getContext('2d');
+  const fx       = q('.live-fx'), fxc = fx.getContext('2d');
+  const bigInk   = q('.big-ink'), bigGlow = q('.big-glow');
   const bigRolls = [...live.querySelectorAll('.big-roll')];
-  const copy     = q('.live-copy'), l1 = q('.live-l1'), l2 = q('.live-l2');
-  const evCard   = q('.ev-card'), evGlow = q('.ev-glow');
+  const copy     = q('.live-copy'), kicker = copy.querySelector('.kicker');
+  const heads    = q('.live-heads'), nightHead = q('.live-night');
+  const intro    = [q('.li-1'), q('.li-2')], lede = q('.live-lede');
+  const outro    = [q('.live-l1'), q('.live-l2')];
+  const zone     = q('.ev-zone'), evCard = q('.ev-card'), evGlow = q('.ev-glow');
   const front    = q('.ev-front');
   const numRoll  = front.querySelector('.ev-num .ev-roll');
   const unitRoll = front.querySelector('.ev-unit .ev-roll');
   const evIn     = front.querySelector('.ev-in');
   const tileDay  = front.querySelector('.ev-tile strong');
   const rows     = [...live.querySelectorAll('.ev-row')];
-  const sub      = q('.live-sub');
+  const sub      = q('.live-sub'), after = q('.live-after');
 
   /* The odometers. Each is a column of values in a one-line window, with an
      empty cell at the end to roll the last number away into. The unit only
@@ -1501,31 +1509,220 @@ if (live && motion) {
   const mix = (a, b, t) => `rgb(${a.map((v, i) => Math.round(lerp(v, b[i], t))).join(',')})`;
   const INK = [29, 29, 31], PALE = [245, 245, 247], MID = [110, 110, 115], MIST = [196, 186, 206];
 
+  /* -------- the crowd, drawn --------
+     People stand in rows from the stage front (far, small, packed) to the
+     bottom of the screen (near, big, few). Everyone is a silhouette; most
+     hold a lightstick up, a few a lit phone. The far rows are drawn once into
+     an offscreen canvas; only the near ones are drawn each frame, swaying. */
+  const GLOW = {};
+  const glowSprite = hex => {
+    if (GLOW[hex]) return GLOW[hex];
+    const c = document.createElement('canvas'); c.width = c.height = 64;
+    const g = c.getContext('2d'), grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    grd.addColorStop(0, '#ffffff'); grd.addColorStop(0.16, hex);
+    grd.addColorStop(0.42, hex + '55'); grd.addColorStop(1, hex + '00');
+    g.fillStyle = grd; g.fillRect(0, 0, 64, 64);
+    return (GLOW[hex] = c);
+  };
+  const STICKS = ['#ff4fa3', '#ff4fa3', '#ff4fa3', '#ff8fc6', '#ffe9f4', '#b98cff'];
+  const CONF   = ['#ff4fa3', '#ffd1e8', '#ffffff', '#c9b6ff', '#e8e8f0'];
+  const SIL = '#07030b';
+  const LM = {shift: 0, gap: 0, beam: 0.5, W: 0, H: 0, top: 0, dpr: 1, far: null, near: [], bits: [], ru: 8};
+
+  function buildCrowd() {
+    const {W, H, top} = LM, depth = H - top, ru = LM.ru;
+    const near = [], rowsN = 7, rowsF = 18;
+    // the far rows, into their own canvas once
+    const far = document.createElement('canvas');
+    far.width = Math.ceil(W * LM.dpr); far.height = Math.ceil(depth * LM.dpr);
+    const g = far.getContext('2d');
+    g.setTransform(LM.dpr, 0, 0, LM.dpr, 0, 0);
+    let seed = 1;
+    const R = () => rnd(seed++);
+    for (let r = 0; r < rowsF + rowsN; r++) {
+      const t = (r + 1) / (rowsF + rowsN);                 // 0 at the stage, 1 at the bottom
+      const s = lerp(0.2, 1.7, Math.pow(t, 1.7));           // how big a person is on this row
+      const y = depth * Math.pow(t, 1.25) + ru * s * 1.2;   // their head, from the top of the crowd
+      const gap = ru * 4.4 * s;
+      for (let x = -gap * R(); x < W + gap; x += gap * (0.75 + R() * 0.5)) {
+        const person = {
+          x, y, s,
+          stick: R() < 0.72, phone: R() < 0.05,
+          glow: lerp(2.6, 1.7, t),                          // far lights read bigger than they are
+          side: R() < 0.5 ? -1 : 1,
+          col: STICKS[(R() * STICKS.length) | 0],
+          lean: (R() - 0.5) * 0.5, ph: R() * 6.283, rate: 0.7 + R() * 0.6,
+        };
+        if (r < rowsF) drawPerson(g, person, 0, 1, 0);
+        else near.push(person);
+      }
+    }
+    LM.far = far; LM.near = near;
+    // the confetti: pieces falling from above the stage at their own pace
+    const bits = [], n = Math.round(clamp(W / 11, 40, 140));
+    for (let i = 0; i < n; i++) {
+      bits.push({
+        x: rnd(i + 900) * W, y0: -rnd(i + 950) * H * 0.9 - 20,
+        v: 0.9 + rnd(i + 990) * 0.9, w: (4 + rnd(i + 1030) * 6) * Math.max(0.8, ru / 9),
+        col: CONF[(rnd(i + 1070) * CONF.length) | 0], spin: 4 + rnd(i + 1110) * 9,
+        drift: (rnd(i + 1150) - 0.5) * 0.08, ph: rnd(i + 1190) * 6.283,
+      });
+    }
+    LM.bits = bits;
+  }
+
+  /** one person: shoulders, head, a raised arm, and what they hold up.
+      `sway` swings the arm about the shoulder; `alpha` fades a whole row */
+  function drawPerson(g, o, sway, alpha, lift) {
+    const u = LM.ru * o.s, x = o.x, y = o.y + lift;
+    const ang = o.lean + sway;                              // 0 is straight up
+    const shx = x + o.side * u * 1.05, shy = y + u * 1.55;  // the raised shoulder
+    const hx = shx + Math.sin(ang) * u * 3.1, hy = shy - Math.cos(ang) * u * 3.1;
+    g.globalAlpha = alpha;
+    g.fillStyle = SIL; g.strokeStyle = SIL;
+    g.beginPath(); g.ellipse(x, y + u * 2.5, u * 2.1, u * 1.5, 0, Math.PI, 0); g.fill();   // shoulders
+    g.fillRect(x - u * 2.1, y + u * 2.48, u * 4.2, u * 3);
+    g.beginPath(); g.arc(x, y, u, 0, Math.PI * 2); g.fill();                             // head
+    g.lineCap = 'round'; g.lineWidth = u * 0.8;
+    g.beginPath(); g.moveTo(shx, shy); g.lineTo(hx, hy); g.stroke();                     // arm
+    if (o.phone) {
+      g.globalCompositeOperation = 'lighter';
+      // a phone held up: a small, soft, cool light rather than a white block
+      g.globalAlpha = alpha * 0.45;
+      g.drawImage(glowSprite('#cfdcff'), hx - u * 1.2, hy - u * 1.9, u * 2.4, u * 2.4);
+      g.globalCompositeOperation = 'source-over';
+      g.globalAlpha = alpha * 0.55;
+      g.fillStyle = '#dbe4ff'; g.fillRect(hx - u * 0.26, hy - u * 1.05, u * 0.52, u * 0.9);
+      g.globalAlpha = alpha;
+    } else if (o.stick) {
+      const tx = hx + Math.sin(ang) * u * 1.7, ty = hy - Math.cos(ang) * u * 1.7;
+      g.strokeStyle = 'rgba(235,225,240,.7)'; g.lineWidth = u * 0.34;
+      g.beginPath(); g.moveTo(hx, hy); g.lineTo(tx, ty); g.stroke();                     // handle
+      g.globalCompositeOperation = 'lighter';
+      g.globalAlpha = alpha * 0.8;
+      const r = u * o.glow;
+      g.drawImage(glowSprite(o.col), tx - r, ty - r, r * 2, r * 2);                       // the light
+      g.globalCompositeOperation = 'source-over';
+    }
+    g.globalAlpha = 1;
+  }
+
+  /** the crowd and the confetti for this frame. `show` brings the room up,
+      `out` sinks it away; `t` is time in seconds, for the drift */
+  function drawFx(p, show, out, t) {
+    const {W, H, top} = LM, g = fxc;
+    g.setTransform(LM.dpr, 0, 0, LM.dpr, 0, 0);
+    g.clearRect(0, 0, W, H);
+    if (show <= 0.001 || out >= 0.999) return;
+    const a = show * (1 - out), sink = out * H * 0.28;
+    // haze off the stage, so the silhouettes have something to stand against
+    const haze = g.createRadialGradient(W / 2, top, 0, W / 2, top, Math.max(W, H) * 0.75);
+    haze.addColorStop(0, `rgba(255,46,139,${0.42 * a})`);
+    haze.addColorStop(0.35, `rgba(122,60,200,${0.2 * a})`);
+    haze.addColorStop(1, 'rgba(20,10,30,0)');
+    g.fillStyle = haze; g.fillRect(0, 0, W, H);          // the whole canvas: the glow fades out on its own
+    // the far rows come up first, then the near ones row by row
+    g.globalAlpha = a * smooth(range(show, 0, 0.55));
+    g.drawImage(LM.far, 0, top + sink, W, H - top);
+    g.globalAlpha = 1;
+    const wave = 2 * Math.PI * p * 3.2;
+    for (const o of LM.near) {
+      const rowIn = smooth(range(show, 0.2 + (o.s - 0.9) * 0.18, 0.6 + (o.s - 0.9) * 0.18));
+      if (rowIn <= 0) continue;
+      const sway = 0.42 * Math.sin(wave + o.x * 0.006 + o.ph * 0.25)
+                 + 0.12 * Math.sin(t * o.rate * 1.6 + o.ph);
+      drawPerson(g, o, sway, a * rowIn, top + sink + (1 - rowIn) * LM.ru * o.s * 3);
+    }
+    // confetti: comes down through the show, fluttering as it turns
+    const c = range(p, LV.rain[0], LV.rain[1]);
+    if (c > 0 && c < 1) {
+      const fade = smooth(range(c, 0, 0.08)) * (1 - smooth(range(c, 0.8, 1))) * (1 - out);
+      for (const b of LM.bits) {
+        const y = b.y0 + c * H * 1.7 * b.v;
+        if (y < -20 || y > H + 20) continue;
+        const x = b.x + Math.sin(c * 9 * b.v + b.ph) * W * 0.03 + b.drift * c * W;
+        const turn = c * b.spin * 6 + t * 1.5 + b.ph;
+        g.save();
+        g.globalAlpha = fade * 0.95;
+        g.translate(x, y); g.rotate(turn);
+        g.scale(1, Math.cos(turn * 1.7));
+        g.fillStyle = b.col;
+        g.fillRect(-b.w / 2, -b.w * 0.22, b.w, b.w * 0.44);
+        g.restore();
+      }
+    }
+  }
+
+  /** six beams off the front of the stage, fanning up and sweeping */
+  let beamsDrawn = false;
+  function drawBeams(p, t, alpha) {
+    const {W, H} = LM, g = bc;
+    g.setTransform(0.5, 0, 0, 0.5, 0, 0);
+    if (alpha <= 0.001) { if (beamsDrawn) { g.clearRect(0, 0, W, H); beamsDrawn = false; } return; }
+    g.clearRect(0, 0, W, H);
+    g.globalCompositeOperation = 'lighter';
+    const L = H * (LM.wide ? 0.85 : 0.7), half = H * (LM.wide ? 0.13 : 0.09);
+    for (let i = 0; i < 6; i++) {
+      const f = i / 5 - 0.5;                                        // -0.5 … 0.5 across the stage
+      const ang = f * 1.1 + 0.3 * Math.sin(2 * Math.PI * p * 2.4 + i * 1.3) + 0.12 * Math.sin(t * 0.7 + i * 2.1);
+      const x0 = W / 2 + f * W * 0.62, y0 = LM.floorY;
+      const sx = Math.sin(ang), cy = Math.cos(ang);
+      const tx = x0 + sx * L, ty = y0 - cy * L;                     // up and out
+      const grd = g.createLinearGradient(x0, y0, tx, ty);
+      grd.addColorStop(0, `rgba(255,236,248,${0.5 * alpha})`);
+      grd.addColorStop(0.45, `rgba(255,160,215,${0.14 * alpha})`);
+      grd.addColorStop(0.85, 'rgba(255,160,215,0)');
+      g.fillStyle = grd;
+      g.beginPath();
+      g.moveTo(x0 - cy * 3, y0 - sx * 3); g.lineTo(x0 + cy * 3, y0 + sx * 3);
+      g.lineTo(tx + cy * half, ty + sx * half); g.lineTo(tx - cy * half, ty - sx * half);
+      g.closePath(); g.fill();
+    }
+    g.globalCompositeOperation = 'source-over';
+    beamsDrawn = true;
+  }
+
   /* Where things sit, measured from the untransformed layout. At night the
-     card drops down over the crowd, far enough to leave TONIGHT a clear band
-     between it and the headline, and the word is sized to that band. The
-     countdown numerals stay centred behind the card where it rests. */
-  const stageEl = q('.live-stage'), zone = q('.ev-zone');
-  const LM = {shift: 0};
+     stage stands under the headline with TONIGHT on its screen, and the card
+     drops to float over the crowd with plenty of air between them. Everything
+     is sized to what the room actually has. */
   function measureLive() {
     const H = liveTrack.offsetHeight, W = liveTrack.offsetWidth;
     const cardH  = evCard.offsetHeight;
     const cardCY = zone.offsetTop + evCard.offsetTop + cardH / 2;
-    const copyB  = copy.offsetTop + copy.offsetHeight;
-    const pad    = Math.max(14, H * 0.03);
-    let size = Math.min(W * 0.155, H * 0.2);        // TONIGHT, its em size
-    const room = () => copyB + pad * 2 + size * 0.74 - (cardCY - cardH / 2);
-    // how far the card can drop and still clear the bottom of the screen
-    const most = Math.max(0, H * 0.96 - (cardCY + cardH / 2));
-    let shift = clamp(room(), 0, most);
-    if (room() > most) size = Math.max(24, (cardCY - cardH / 2 + shift - copyB - pad * 2) / 0.74);
-    LM.shift = shift;
-    stageEl.style.setProperty('--card-y', cardCY.toFixed(1) + 'px');
-    stageEl.style.setProperty('--word-y', (copyB + pad + size * 0.37).toFixed(1) + 'px');
-    stageEl.style.setProperty('--word-size', size.toFixed(1) + 'px');
+    // the night headline's own bottom: the slot is sized by the taller intro
+    const nightB = copy.offsetTop + heads.offsetTop + nightHead.offsetTop + nightHead.offsetHeight;
+    const wide   = W >= 600;                                  // room for side screens
+    const g1 = Math.max(14, H * 0.03), g2 = Math.max(40, H * 0.08);
+    const floorH = Math.max(8, H * 0.018);
+    const bottom = H - Math.max(14, H * 0.035);
+    let size = Math.min(W * (wide ? 0.112 : 0.145), H * 0.15);
+    const avail = bottom - nightB - g1 - floorH - g2 - cardH;
+    if (size * 1.34 > avail) size = Math.max(20, avail / 1.34);
+    const scrH = size * 1.34, scrW = size * 6.1;
+    const scrY = nightB + g1 + scrH / 2, floorY = nightB + g1 + scrH;
+    LM.shift = floorY + floorH + g2 + cardH / 2 - cardCY;
+    Object.assign(LM, {W, H, top: floorY + floorH, dpr: Math.min(2, devicePixelRatio || 1),
+                       ru: clamp(Math.min(H * 0.0105, W * 0.022), 4.5, 11)});
+    // once the lights are up the intro's lede is gone, so the card and the
+    // timeline close up under the shorter headline
+    LM.gap = Math.max(0, q('.live-intro').offsetHeight - nightHead.offsetHeight);
+    const set = (k, v) => stageEl.style.setProperty(k, v.toFixed(1) + 'px');
+    set('--card-y', cardCY); set('--word-size', size);
+    set('--scr-y', scrY); set('--scr-w', scrW); set('--scr-h', scrH);
+    set('--floor-y', floorY); set('--floor-h', floorH);
+    set('--floor-w', Math.min(W * 1.02, scrW * (wide ? 1.75 : 1.2)));
+    LM.beam = wide ? 0.55 : 0.34;
+    LM.floorY = floorY; LM.wide = wide;
+    // the beams are soft, so their canvas can be coarse
+    beamCv.width = Math.ceil(W / 2); beamCv.height = Math.ceil(H / 2);
+    rig.classList.toggle('is-narrow', !wide);
+    fx.width = Math.ceil(W * LM.dpr); fx.height = Math.ceil(H * LM.dpr);
+    buildCrowd();
   }
 
-  function drawLive(u) {
+  let lastShow = 0, lastOut = 0;
+  function drawLive(u, t) {
     // u runs -1 → 0 as the blade scrolls up into view, then 0 → 1 pinned
     const p = Math.max(0, u), pre = 1 + Math.min(0, u);
     const k = countAt(p);
@@ -1539,26 +1736,33 @@ if (live && motion) {
     // the type turns over quickly as the room crosses mid-grey, never grey on grey
     const turn = smooth(range(dim, 0.34, 0.56));
     copy.style.color = mix(INK, PALE, turn);
-    copy.firstElementChild.style.color = mix(MID, MIST, turn);
+    kicker.style.color = lede.style.color = mix(MID, MIST, turn);
     nav.classList.toggle('is-dim', dim > 0.45);
 
-    /* the headline, a line at a time out of its masks */
-    const e1 = easeOut(range(pre, 0.35, 0.95));
-    const e2 = easeOut(range(p, LV.night[0] + 0.01, LV.night[1]));
-    l1.style.transform = `translate3d(0,${((1 - e1) * 108).toFixed(2)}%,0)`;
-    l2.style.transform = `translate3d(0,${((1 - e2) * 108).toFixed(2)}%,0)`;
+    /* the headlines: the intro rises as the blade arrives and rolls away at
+       the night, when the payoff rolls in under it */
+    const inA  = easeOut(range(pre, 0.35, 0.92)), inB = easeOut(range(pre, 0.45, 1));
+    const away = easeIO(range(p, LV.night[0], LV.night[0] + 0.05));
+    intro[0].style.transform = `translate3d(0,${((1 - inA) * 108 - away * 108).toFixed(2)}%,0)`;
+    intro[1].style.transform = `translate3d(0,${((1 - inB) * 108 - away * 108).toFixed(2)}%,0)`;
+    lede.style.opacity = (smooth(range(pre, 0.6, 1)) * (1 - away)).toFixed(4);
+    const n1 = easeOut(range(p, LV.night[0] + 0.03, LV.night[0] + 0.09));
+    const n2 = easeOut(range(p, LV.night[0] + 0.05, LV.night[0] + 0.11));
+    outro[0].style.transform = `translate3d(0,${((1 - n1) * 108).toFixed(2)}%,0)`;
+    outro[1].style.transform = `translate3d(0,${((1 - n2) * 108).toFixed(2)}%,0)`;
 
-    /* the card: rises in, floats tipped back over the crowd, then turns
-       over to the next show */
+    /* the card: rises in, drops to float over the crowd for the show, then
+       turns over to the next show */
     const enter = easeOut(range(pre, 0.45, 1));
-    const tip   = smooth(range(p, LV.crowd[0], LV.crowd[1])) * (1 - smooth(range(p, LV.up[0], LV.up[0] + 0.08)));
     const drop  = smooth(range(p, LV.night[0], LV.night[0] + 0.07)) * (1 - smooth(range(p, LV.up[0], LV.up[0] + 0.1)));
+    const tip   = smooth(range(p, LV.show[0], LV.show[1])) * (1 - smooth(range(p, LV.up[0], LV.up[0] + 0.08)));
     const flip  = easeIO(range(p, LV.flip[0], LV.flip[1]));
     const bob   = Math.sin(p * 70) * tip * 4;
+    const close = -LM.gap * easeIO(range(p, LV.up[0], LV.up[1]));
     evCard.style.opacity = enter.toFixed(4);
     evCard.style.transform =
-      `translate3d(0,${((1 - enter) * 70 + drop * LM.shift + bob).toFixed(2)}px,0) ` +
-      `scale(${(0.9 + 0.1 * enter + 0.05 * tip).toFixed(4)}) rotateX(${(tip * 10 - 180 * flip).toFixed(2)}deg)`;
+      `translate3d(0,${((1 - enter) * 70 + drop * LM.shift + bob + close).toFixed(2)}px,0) ` +
+      `scale(${(0.9 + 0.1 * enter).toFixed(4)}) rotateX(${(tip * 8 - 180 * flip).toFixed(2)}deg)`;
     evGlow.style.opacity = (dim * (1 - flip)).toFixed(4);
     numRoll.style.transform  = `translate3d(0,${(-k).toFixed(4)}em,0)`;
     unitRoll.style.transform = `translate3d(0,${(-unitPos(k) * 1.2).toFixed(4)}em,0)`;
@@ -1566,45 +1770,37 @@ if (live && motion) {
     // the date on the tile gives one beat as the day arrives
     tileDay.style.transform = `scale(${(1 + 0.16 * Math.sin(Math.PI * range(p, LV.night[0], LV.night[0] + 0.06))).toFixed(4)})`;
 
-    /* the big screen: the same count, huge, pale on the page and glowing in
-       the dark; then TONIGHT */
+    /* the count behind the card, huge: pale ink on the lit page, a neon
+       outline once it is properly dark, gone when the stage comes up */
     for (const r of bigRolls) r.style.transform = `translate3d(0,${(-k).toFixed(4)}em,0)`;
-    // pale ink on the lit page, a neon outline once it is properly dark
     bigInk.style.opacity  = (enter * (1 - smooth(range(dim, 0.2, 0.55)))).toFixed(4);
     bigGlow.style.opacity = (smooth(range(dim, 0.35, 0.75)) * (1 - nightK)).toFixed(4);
-    const word = smooth(range(p, LV.night[0] + 0.045, LV.night[1] + 0.01)) * (1 - smooth(range(p, LV.up[0], LV.up[0] + 0.06)));
-    bigWord.style.opacity   = word.toFixed(4);
-    bigWord.style.transform = `translate(-50%,-50%) scale(${(1.12 - 0.12 * word).toFixed(4)})`;
 
-    /* the crowd: far lights first, each plane swaying at its own rate, all
-       of it sinking away as the lights come up */
-    const out = smooth(range(p, LV.up[0], LV.up[1] - 0.02));
-    crowdBox.style.opacity = (smooth(range(p, LV.crowd[0], LV.crowd[1])) * (1 - out)).toFixed(4);
-    crowdBox.style.transform = `translate3d(0,${(out * 30).toFixed(2)}%,0)`;
-    crowds.forEach((c, i) => {
-      const inK = smooth(range(p, LV.crowd[0] + i * 0.025, LV.crowd[1] - 0.04 + i * 0.02));
-      const sway = [14, 30, 64][i] * Math.sin(2 * Math.PI * [3.1, 2.4, 1.9][i] * p + i * 1.7);
-      c.style.opacity = inK.toFixed(4);
-      c.style.transform = `rotateX(76deg) translate3d(${sway.toFixed(2)}px,0,0)`;
-    });
-
-    /* the follow-spot: across once, brightest in the middle of its sweep */
-    const st = range(p, LV.spot[0], LV.spot[1]);
-    spot.style.opacity = (Math.sin(Math.PI * st) * dim).toFixed(4);
-    spot.style.transform = `translate3d(${(lerp(-0.36, 0.36, easeIO(st)) * innerWidth).toFixed(1)}px,0,0)`;
+    /* the stage powers up, and goes when the lights come up */
+    const show = smooth(range(p, LV.show[0], LV.show[1]));
+    const out  = smooth(range(p, LV.up[0], LV.up[1] - 0.02));
+    const on   = smooth(range(p, LV.show[0], LV.show[0] + 0.05)) * (1 - out);
+    rig.style.opacity = on.toFixed(4);
+    rigWord.style.transform = `translateY(.04em) scale(${(1.14 - 0.14 * easeOut(range(p, LV.show[0], LV.show[0] + 0.07))).toFixed(4)})`;
+    drawBeams(p, t, smooth(range(p, LV.show[0] + 0.03, LV.show[1])) * (1 - out) * LM.beam);
+    drawFx(p, show, out, t);
+    lastShow = show; lastOut = out;
 
     /* after: the timeline, then the line under it */
+    after.style.transform = `translate3d(0,${close.toFixed(2)}px,0)`;
     rows.forEach((r, i) => {
-      const t = easeOut(range(p, LV.after[0] + i * 0.03, LV.after[0] + 0.07 + i * 0.03));
-      r.style.opacity = t.toFixed(4);
-      r.style.transform = `translate3d(0,${((1 - t) * 26).toFixed(2)}px,0)`;
+      const e = easeOut(range(p, LV.after[0] + i * 0.03, LV.after[0] + 0.07 + i * 0.03));
+      r.style.opacity = e.toFixed(4);
+      r.style.transform = `translate3d(0,${((1 - e) * 26).toFixed(2)}px,0)`;
     });
     const s = easeOut(range(p, LV.after[0] + 0.05, LV.after[1]));
     sub.style.opacity = s.toFixed(4);
     sub.style.transform = `translate3d(0,${((1 - s) * 20).toFixed(2)}px,0)`;
   }
 
-  // the runner: read the blade's progress, ease toward it, draw
+  /* The runner: read the blade's progress, ease toward it, draw. While the
+     show is on it keeps drawing even when the scroll holds still, so the
+     crowd and the beams keep moving. */
   let liveTarget = 0, liveShown = -2, liveRunning = false, liveNear = false;
   /** -1 → 0 while the blade's top scrolls from the bottom of the screen to
       the top, then 0 → 1 across the pinned run */
@@ -1614,11 +1810,12 @@ if (live && motion) {
     if (top > 0) return -clamp01(top / H);
     return span > 0 ? clamp01(-top / span) : 0;
   };
-  const liveFrame = () => {
+  const liveFrame = now => {
     liveShown += (liveTarget - liveShown) * 0.18;
     if (Math.abs(liveTarget - liveShown) < 0.0001) liveShown = liveTarget;
-    drawLive(liveShown);
-    liveRunning = liveShown !== liveTarget;
+    drawLive(liveShown, now / 1000);
+    const showing = liveNear && lastShow > 0.001 && lastOut < 0.999;
+    liveRunning = liveShown !== liveTarget || showing;
     if (liveRunning) requestAnimationFrame(liveFrame);
   };
   const kickLive = () => {
@@ -1633,11 +1830,11 @@ if (live && motion) {
     if (liveNear) kickLive(); else nav.classList.remove('is-dim');
   }, {rootMargin: '15% 0px 15% 0px'}).observe(live);
   addEventListener('scroll', kickLive, {passive: true});
+  const relayout = () => { measureLive(); drawLive(readLive(), performance.now() / 1000); };
   addEventListener('resize', () => { measureLive(); liveShown = -2; kickLive(); });
   // the card's type is a web font; measure again once it has arrived
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { measureLive(); drawLive(readLive()); });
-  measureLive();
-  drawLive(readLive());      // in place before it is ever reached
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(relayout);
+  relayout();                // in place before it is ever reached
 }
 
 /* nav flips to light once the dark story is behind us */
