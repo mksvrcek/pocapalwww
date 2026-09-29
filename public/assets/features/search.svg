@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600" fill="none">
+<defs>
+  <linearGradient id="bgd" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#fff1e8"/><stop offset="1" stop-color="#ffe9f6"/>
+  </linearGradient>
+  <linearGradient id="cardd" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#eef0f4"/>
+  </linearGradient>
+  <linearGradient id="pocad" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#ff5fae"/><stop offset="1" stop-color="#7a4cff"/>
+  </linearGradient>
+  <filter id="shd" x="-40%" y="-40%" width="180%" height="180%">
+    <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#2a2038" flood-opacity="0.18"/>
+  </filter>
+</defs>
+<rect width="800" height="600" fill="url(#bgd)"/>
+<g filter="url(#shd)">
+  <rect x="150" y="170" width="500" height="76" rx="38" fill="#fff"/>
+  <circle cx="204" cy="208" r="16" fill="none" stroke="#9a94a8" stroke-width="6"/>
+  <path d="M216 220l18 18" stroke="#9a94a8" stroke-width="6" stroke-linecap="round"/>
+  <rect x="248" y="196" width="172" height="24" rx="12" fill="#d9d6e2"/>
+</g>
+<g filter="url(#shd)">
+  <rect x="150" y="290" width="126" height="52" rx="26" fill="#ff2e8b"/><rect x="292" y="290" width="150" height="52" rx="26" fill="#ffffff"/><rect x="458" y="290" width="116" height="52" rx="26" fill="#ffffff"/><rect x="590" y="290" width="60" height="52" rx="26" fill="#ffffff"/>
+</g>
+<g filter="url(#shd)">
+  <rect x="150" y="382" width="500" height="76" rx="20" fill="#fff"/>
+  <rect x="176" y="404" width="38" height="32" rx="6" fill="url(#pocad)"/>
+  <rect x="234" y="408" width="210" height="14" rx="7" fill="#d9d6e2"/>
+  <rect x="234" y="430" width="132" height="12" rx="6" fill="#e7e5ee"/>
+</g>
+</svg>

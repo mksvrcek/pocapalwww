@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600" fill="none">
+<defs>
+  <linearGradient id="bga" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#efe7ff"/><stop offset="1" stop-color="#ffe9f4"/>
+  </linearGradient>
+  <linearGradient id="carda" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#eef0f4"/>
+  </linearGradient>
+  <linearGradient id="pocaa" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#ff5fae"/><stop offset="1" stop-color="#7a4cff"/>
+  </linearGradient>
+  <filter id="sha" x="-40%" y="-40%" width="180%" height="180%">
+    <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#2a2038" flood-opacity="0.18"/>
+  </filter>
+</defs>
+<rect width="800" height="600" fill="url(#bga)"/>
+<g transform="rotate(-4 400 262)" filter="url(#sha)">
+    <rect x="320" y="150" width="160" height="224" rx="14.399999999999999" fill="url(#pocaa)"/>
+    <circle cx="400" cy="230.64" r="24" fill="#fff" opacity=".92"/>
+    <path d="M 361.6 306.79999999999995 a 38.4 41.6 0 0 1 76.8 0 Z" fill="#fff" opacity=".92"/>
+  </g>
+<g stroke="#2a2038" stroke-opacity=".55" stroke-width="7" stroke-linecap="round" fill="none">
+  <path d="M250 190v-34a16 16 0 0 1 16-16h34"/>
+  <path d="M550 190v-34a16 16 0 0 0-16-16h-34"/>
+  <path d="M250 410v34a16 16 0 0 0 16 16h34"/>
+  <path d="M550 410v34a16 16 0 0 0-16 16h-34"/>
+</g>
+<rect x="255" y="292" width="290" height="5" rx="2.5" fill="#ff2e8b" opacity=".9"/>
+<rect x="255" y="292" width="290" height="46" rx="6" fill="#ff2e8b" opacity=".13"/>
+</svg>
