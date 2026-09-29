@@ -7,7 +7,8 @@ and wants the page's CSS and JS inline, so it:
 
   · drops the document skeleton (doctype, html, head, body, charset, viewport)
   · names the page "PocaPal"
-  · inlines styles.css and app.js in place of their <link> and <script> tags
+  · inlines styles.css and app.js in place of their <link> and <script> tags,
+    and the self-hosted font subset into the CSS as a data URI
 
 The images are published next to the page at the same relative paths
 (assets/…), so nothing else changes. Nothing in public/ is modified.
@@ -29,6 +30,14 @@ def swap(pattern, repl, text):
     if n != 1:
         sys.exit(f'build-preview: expected exactly one match for {pattern!r}')
     return new
+
+# the viewer only takes fonts from Google or inline, so the self-hosted subset
+# goes in as a data URI
+import base64
+font = PUB / 'assets' / 'fonts' / 'archivo-caps.woff2'
+if font.exists():
+    uri = 'data:font/woff2;base64,' + base64.b64encode(font.read_bytes()).decode()
+    css = swap(r'url\("assets/fonts/archivo-caps\.woff2"\)', f'url("{uri}")', css)
 
 html = swap(r'<title>.*?</title>', '<title>PocaPal</title>', html)
 html = swap(r'<link rel="stylesheet" href="styles\.css">', f'<style>\n{css}\n</style>', html)

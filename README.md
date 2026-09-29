@@ -9,6 +9,7 @@ public/
   app.js                scroll choreography; tuning constants at the top
   assets/cards/         card artwork
   assets/phone-frame.webp the phone frame (hero + both blades)
+  assets/fonts/         the Events card's font subset (Archivo, OFL)
 tools/
   build-preview.py      one-page build for sharing as a claude.ai artifact (not deployed)
 ```
@@ -101,7 +102,7 @@ What each part does:
 | carousel | the row slides in from the right; neighbours sit back at 93% and the current slide's phone rises into its window |
 | Themes | the back phone starts tucked flat behind the front one and swings out to its angle; picking a theme makes the pair take a small breath |
 | Players | the stage swings up into place; switching slides the new player in from the side you're heading towards |
-| Events | a second pinned run: the card counts down as the room goes dark, then TONIGHT over a sea of lightsticks, then lights up and the next show (see The Events blade) |
+| Events | a second pinned run: the card counts down as the room goes dark, then a stage with TONIGHT on its screen, beams, confetti and a crowd waving lightsticks, then lights up and the next show (see The Events blade) |
 | rail | cards arrive one after another, and each illustration plays a short scene (scan line sweeping, haul sliding into the grid, completion ring filling) once in view and again on hover |
 | CTA | a hand of photocards fans out behind the app icon, which springs in; the fan opens wider on hover |
 | FAQ | questions fade up in turn; an answer settles in just behind the opening |
@@ -274,42 +275,65 @@ sampled: the real accents in the app are too close together to tell apart at
 `#events`, between Players and the feature rail, is the page's second pinned
 run, built the same way as the hero: `.live` is the runway (500vh, 430vh on
 phones, 380vh on a phone on its side), `.live-track` sticks for its length,
-and `drawLive(u)` in `app.js` writes every frame from the blade's own
+and `drawLive(u, t)` in `app.js` writes every frame from the blade's own
 progress, eased toward the scroll position. `u` runs from -1 to 0 while the
 blade scrolls up into view (the headline and card rise then, so it never pins
-on an empty stage) and 0 to 1 while it is pinned.
+on an empty stage) and 0 to 1 while it is pinned. Only the crowd's sway and
+the beams also drift with time `t`, so the room keeps moving while the show
+is on and the reader holds still.
+
+It opens on "Every show, counted down." and a line saying what the feature
+does. At the night that rolls away and "Four weeks to go. Then, tonight."
+rolls in as the payoff. The two headlines share one grid cell, so swapping
+them moves nothing.
 
 The beats live in `LV`:
 
 | key | what happens |
 |---|---|
 | `count` | the NEXT UP card's odometer counts down; each step is shorter than the last, and each takes the room a notch darker (`.live-vig` first, then `.live-dark`) |
-| `night` | the last number rolls away, the tile's date gives a beat, "Then, tonight." rises, the card drops and TONIGHT lights up on the big screen above it |
-| `crowd` | three planes of lightsticks come up out of the dark and sway at different rates as you scroll |
-| `spot` | a follow-spot sweeps across once |
-| `up` / `flip` | the lights come up, the crowd sinks, and the card flips over to the next show |
-| `after` | the two timeline rows, then the line under them |
+| `night` | the last number rolls away, the headline turns over, the card drops to float over the crowd |
+| `show` | the stage powers up with TONIGHT on its screen, the beams come on, the crowd rises out of the dark |
+| `rain` | confetti comes down |
+| `up` / `flip` | the lights come up, the show fades, the crowd sinks, and the card flips over to the next show |
+| `after` | the two timeline rows, then the line under them; the card and timeline close up under the shorter headline |
 
 What the counter reads is `COUNTDOWN`, one entry per step. The app's own
 screenshot only proves "IN 4 WEEKS"; the days that follow are a guess, so
 check them against the app and edit the list. The odometers are built from
 it, and the unit only rolls when the word changes.
 
-The card is the app's NEXT UP card rebuilt in HTML, measured off
+**The card** is the app's NEXT UP card rebuilt in HTML, measured off
 `assets/slides/events.jpg`. Everything in it is sized in `--u`, a hundredth of
 its width, with a floor under the smallest labels so they stay readable on a
-phone. Its titles and numbers are set in Archivo from Google Fonts, cut down
-to capitals, digits and the middle dot with `text=`; keep that text in capitals
-or widen the subset. `measureLive()` works out, from the untransformed layout,
-how far the card drops at night and how big TONIGHT can be in the room left
-above it, and runs again on resize and once the font has loaded.
+phone. Its titles and numbers are set in Archivo, self-hosted from
+`assets/fonts/` (OFL, licence alongside) and cut down to capitals, digits, the
+space and the middle dot, so keep that text in capitals.
+
+**The venue** is `.live-rig`: the LED screen and the stage, placed by
+`measureLive()` from the untransformed layout so TONIGHT gets the room between
+the headline and the card, with clear air under it. The beams are drawn on a
+small canvas behind the screen (`drawBeams`), because six rotating clipped
+elements halved a desktop's frame rate.
+
+**The crowd** is drawn on `.live-fx` (`drawFx`), in three bands. The rows at the
+horizon are drawn once, whole, into an offscreen canvas and never move. The
+middle rows' bodies are drawn once too, but their arms, sticks and lights are
+drawn every frame, batched a row at a time, swaying more the nearer they are
+(`ROWS`, and `amp` per row). The front rows are drawn whole every frame. Each
+light is a sprite cached at the exact size it is drawn at, and the canvas is
+capped at about 1.6 million pixels. The confetti is drawn on the same canvas.
+
+**Phones.** The track spans the large viewport and the stage the small one, so
+when the toolbars retract the room carries on underneath instead of showing a
+strip of paper. Rotating a phone mid-blade changes the runway's height; the
+resize handler puts the reader back at the same point of the story.
 
 `.light` clips sideways with `overflow-x: clip`, not `overflow: hidden`: a
 hidden overflow makes it a scroll container, and the blade inside could no
-longer stick.
-
-Without motion (reduced motion, or no script) the blade is a still: the card
-at four weeks and the timeline under it.
+longer stick. Browsers without `overflow: clip` (Safari 15 and older) get the
+still instead, as do reduced motion and no script: the opening headline, the
+card at four weeks, and the timeline under it.
 
 ## The feature rail
 

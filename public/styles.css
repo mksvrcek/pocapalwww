@@ -970,11 +970,21 @@ a{color:inherit;text-decoration:none}
    and the timeline under it. With it, .live becomes a runway
    (like .story) and JS writes every frame from its progress.
    ============================================================ */
+/* The heavy, wide face the app sets its titles and numbers in, used only in
+   this blade. Self-hosted (OFL, licence alongside) and cut down to capitals,
+   digits, the space and the middle dot: 30KB, and no third-party request in
+   the way of the page's first paint. */
+@font-face{
+  font-family:"Archivo";
+  src:url("assets/fonts/archivo-caps.woff2") format("woff2");
+  font-weight:800 900;font-stretch:100% 125%;font-display:swap;
+  unicode-range:U+20,U+30-39,U+41-5A,U+B7;
+}
 .live{
   --ev-ink:#121214;
   --ev-sky:#58bcd6;          /* the calendar tile's header and the dots */
   --ev-line:#86cde4;         /* the card's outline */
-  --ev-grey:#7b8387;
+  --ev-grey:#656d71;         /* the app's blue-grey, darkened to read at 11px */
   --ev-mono:ui-monospace,"SF Mono",SFMono-Regular,"JetBrains Mono",Menlo,Consolas,monospace;
   --ev-wide:"Archivo","Arial Black","Helvetica Neue",system-ui,sans-serif;
   --night:#150b20;
@@ -1080,7 +1090,7 @@ a{color:inherit;text-decoration:none}
 .ev-date{display:flex;flex-direction:column;align-items:flex-end;min-width:2.6em;font-family:var(--ev-mono);font-size:clamp(11px,1.3vw,13px);letter-spacing:.12em;text-transform:uppercase;color:var(--ev-grey)}
 .ev-date b{font-family:var(--ev-wide);font-weight:900;font-stretch:100%;font-size:clamp(22px,2.9vw,30px);line-height:1;letter-spacing:-.01em;color:var(--ev-ink)}
 .ev-dot{width:clamp(9px,1vw,11px);aspect-ratio:1;border-radius:50%;background:var(--ev-sky);margin-top:clamp(7px,1vw,10px)}
-.ev-row.is-past .ev-dot{background:#8d8d92}
+.motion .ev-row.is-past .ev-dot{background:#8d8d92}   /* only once the night has happened */
 .ev-what{display:flex;flex-direction:column;gap:4px;min-width:0;font-family:var(--ev-mono);font-size:clamp(11px,1.3vw,13px);letter-spacing:.12em;text-transform:uppercase;color:var(--ev-grey)}
 .ev-what b{font-family:var(--ev-wide);font-weight:900;font-stretch:125%;font-size:clamp(15px,2.1vw,22px);line-height:1.1;letter-spacing:0;color:var(--ev-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .live-sub{margin:0 auto;max-width:44ch}
@@ -1088,28 +1098,18 @@ a{color:inherit;text-decoration:none}
 /* ============ pinned: a runway, a stage, and the night ============ */
 .motion .live{height:500vh;padding-block:0}
 @media (max-width:739px){ .motion .live{height:430vh} }
-/* a phone on its side has well under 400px of height for headline, card and
-   timeline together, so everything comes down and the closing sentence goes */
-@media (max-height:520px) and (orientation:landscape){
-  .motion .live{height:380vh}
-  .live .kicker{display:none}
-  .live .h2{font-size:clamp(22px,7.4vh,32px)}
-  .live-stage{gap:10px}
-  .motion .live-stage{padding-top:calc(var(--nav-h) + var(--safe-t) + 6px);padding-bottom:8px}
-  .ev-card{--w:min(80vw,640px,96vh)}
-  .live-after{gap:8px}
-  .ev-line{gap:6px}
-  .ev-date b{font-size:20px}
-  .ev-what b{font-size:15px}
-  .motion .live-sub{display:none}
-  .live-lede{margin-top:6px;font-size:14px;max-width:60ch}
-}
-.motion .live-track{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden}
+/* The track spans the large viewport (vh last, as .story-track does), so when a
+   phone's toolbars retract there is still room behind the night rather than a
+   strip of paper. The stage, and everything laid out in it, keeps to the small
+   viewport, which is always visible; the room's layers reach down past it. */
+.motion .live-track{position:sticky;top:0;height:100svh;height:100vh;overflow:hidden}
 .motion .live-stage{
-  position:absolute;inset:0;
+  position:absolute;inset:0 0 auto;height:100vh;height:100svh;
   justify-content:center;
   padding:calc(var(--nav-h) + var(--safe-t) + 2vh) var(--pad) 3vh;
 }
+.motion .live-vig,.motion .live-dark{bottom:calc(100svh - 100lvh)}
+.motion .live-fx{height:calc(100% + 100lvh - 100svh)}
 .motion .live-vig,.motion .live-dark,.motion .live-rig,.motion .live-fx,.motion .live-big,.motion .live-night{display:block}
 /* The night comes down in steps, the way house lights do: the edges of the
    room go first (the vignette, which keeps a pool of light on the card) and
@@ -1146,21 +1146,6 @@ a{color:inherit;text-decoration:none}
   text-shadow:0 0 .06em #ff5aa8, 0 0 .2em rgba(255,46,139,.8), 0 0 .5em rgba(255,46,139,.35);
   transform:translateY(.04em);
 }
-/* the side screens run a close-up, the way arena screens do */
-.rig-side{
-  position:absolute;top:var(--scr-y,30%);
-  width:calc(var(--scr-h,20vh) * .62);height:calc(var(--scr-h,20vh) * 1.08);
-  transform:translateY(-50%);
-  border-radius:max(3px,.5vh);overflow:hidden;
-  background:
-    repeating-linear-gradient(0deg, rgba(0,0,0,.28) 0 1px, transparent 1px 3px),
-    linear-gradient(180deg, rgba(255,46,139,.28), rgba(122,76,255,.3)),
-    url("assets/cards/poca-04.jpg") center 22% / cover no-repeat;
-  box-shadow:0 0 0 1px rgba(255,255,255,.07), 0 0 4vh rgba(255,46,139,.25);
-  filter:saturate(1.15);
-}
-.rig-side-l{right:calc(50% + var(--scr-w,60vw) / 2 + var(--scr-h,20vh) * .14)}
-.rig-side-r{left:calc(50% + var(--scr-w,60vw) / 2 + var(--scr-h,20vh) * .14)}
 /* the stage itself: a dark platform with an LED strip along its front edge */
 .rig-floor{
   position:absolute;left:50%;top:var(--floor-y,50%);
@@ -1178,9 +1163,52 @@ a{color:inherit;text-decoration:none}
    canvas behind the screens (see drawBeams in app.js): six rotating clipped
    elements cost a desktop half its frame rate. */
 .rig-beams{position:absolute;left:0;top:0;width:100%;height:100%}
-.live-rig.is-narrow .rig-side{display:none}
 /* the crowd and the confetti are drawn, not styled: see drawFx in app.js */
 .live-fx{position:absolute;left:0;top:0;width:100%;height:100%;z-index:3;pointer-events:none}
+
+/* a phone on its side has well under 400px of height for headline, card and
+   timeline together, so everything comes down and the closing sentence goes */
+@media (max-height:520px) and (orientation:landscape){
+  .motion .live{height:380vh}
+  .motion .live .kicker{display:none}
+  .live .h2{font-size:clamp(22px,7.4vh,32px)}
+  .live-stage{gap:10px}
+  .motion .live-stage{padding-top:calc(var(--nav-h) + var(--safe-t) + 6px);padding-bottom:8px}
+  .ev-card{--w:min(80vw,640px,96vh)}
+  .live-after{gap:8px}
+  .ev-line{gap:6px}
+  .ev-date b{font-size:20px}
+  .ev-what b{font-size:15px}
+  /* no room for it on screen; it stays for screen readers */
+  .motion .live-sub{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  .live-lede{margin-top:6px;font-size:14px;max-width:60ch}
+}
+/* short desktop windows (a laptop at 150% with a toolbar or two): the same
+   story, set a size smaller so the kicker clears the bar and nothing is cut */
+@media (min-height:521px) and (max-height:660px) and (orientation:landscape){
+  .live-stage{gap:14px}
+  .live .h2{font-size:clamp(28px,6.8vh,42px)}
+  .live-lede{margin-top:8px;font-size:16px}
+  .ev-card{--w:min(90vw,660px,100vh)}
+  .live-after{gap:12px}
+  .ev-line{gap:8px}
+}
+/* Until JS has drawn the first frame, the pinned blade holds its content back,
+   so a reload into the middle of it never flashes the lit still first. If the
+   script never runs, it shows anyway after three seconds. */
+.motion .live:not(.is-drawn) :is(.live-copy,.ev-zone,.live-after){visibility:hidden;animation:liveReveal 0s 3s forwards}
+@keyframes liveReveal{to{visibility:visible}}
+/* Without overflow:clip (Safari 15 and older) .light has to be overflow:hidden,
+   which is a scroll container, so nothing inside it can stick. There the blade
+   is the still, and app.js leaves it alone. */
+@supports not (overflow:clip){
+  .motion .live{height:auto;padding-block:clamp(80px,12vh,150px)}
+  .motion .live-track{position:static;height:auto;overflow:visible}
+  .motion .live-stage{position:relative;inset:auto;height:auto;padding:0 var(--pad)}
+  .motion .live-vig,.motion .live-dark,.motion .live-rig,.motion .live-fx,.motion .live-big,.motion .live-night{display:none}
+  .motion .ev-row.is-past .ev-dot{background:var(--ev-sky)}
+  .motion .live:not(.is-drawn) :is(.live-copy,.ev-zone,.live-after){visibility:visible;animation:none}
+}
 
 /* the countdown behind the card, huge: pale ink on the lit page, neon later */
 .live-big{position:absolute;inset:0;z-index:4;pointer-events:none}

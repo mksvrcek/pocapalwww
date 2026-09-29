@@ -1450,7 +1450,9 @@ const LV = {
 };
 
 const live = document.getElementById('events');
-if (live && motion) {
+// without overflow:clip nothing inside .light can stick (see styles.css), so
+// those browsers keep the still
+if (live && motion && window.CSS && CSS.supports('overflow', 'clip')) {
   const q        = sel => live.querySelector(sel);
   const liveTrack= q('.live-track'), stageEl = q('.live-stage');
   const dark     = q('.live-dark'), vig = q('.live-vig');
@@ -1524,23 +1526,45 @@ if (live && motion) {
     g.fillStyle = grd; g.fillRect(0, 0, 64, 64);
     return (GLOW[hex] = c);
   };
+  /** the same light pre-drawn at the exact size it is used at, so hundreds
+      of them a frame are copied rather than rescaled */
+  const SIZED = new Map();
+  const glowAt = (hex, r) => {
+    const d = Math.max(2, Math.round(r * 2 * LM.dpr)), key = hex + d;
+    let c = SIZED.get(key);
+    if (!c) {
+      c = document.createElement('canvas'); c.width = c.height = d;
+      c.getContext('2d').drawImage(glowSprite(hex), 0, 0, d, d);
+      SIZED.set(key, c);
+    }
+    return c;
+  };
   const STICKS = ['#ff4fa3', '#ff4fa3', '#ff4fa3', '#ff8fc6', '#ffe9f4', '#b98cff'];
   const CONF   = ['#ff4fa3', '#ffd1e8', '#ffffff', '#c9b6ff', '#e8e8f0'];
   const SIL = '#07030b';
-  const LM = {shift: 0, gap: 0, beam: 0.5, W: 0, H: 0, top: 0, dpr: 1, far: null, near: [], bits: [], ru: 8};
+  const LM = {shift: 0, gap: 0, beam: 0.5, W: 0, H: 0, CH: 0, top: 0, dpr: 1, far: null, mid: [], near: [], bits: [], ru: 8};
 
+  /* Three bands, back to front. The last few rows at the horizon are drawn
+     once, whole, and never move: at that size a sway would not show. The
+     middle rows have their bodies drawn once too, but their arms, sticks and
+     lights are drawn every frame, swaying more the nearer they are. The front
+     rows are drawn whole every frame. */
+  const ROWS = {still: 5, mid: 13, near: 7};
   function buildCrowd() {
-    const {W, H, top} = LM, depth = H - top, ru = LM.ru;
-    const near = [], rowsN = 7, rowsF = 18;
-    // the far rows, into their own canvas once
+    SIZED.clear();
+    const {W, H, CH, top} = LM, depth = CH - top, ru = LM.ru;
+    const near = [], mid = [];
+    const total = ROWS.still + ROWS.mid + ROWS.near;
+    // the bodies that never move, into their own canvas once
     const far = document.createElement('canvas');
     far.width = Math.ceil(W * LM.dpr); far.height = Math.ceil(depth * LM.dpr);
     const g = far.getContext('2d');
     g.setTransform(LM.dpr, 0, 0, LM.dpr, 0, 0);
     let seed = 1;
     const R = () => rnd(seed++);
-    for (let r = 0; r < rowsF + rowsN; r++) {
-      const t = (r + 1) / (rowsF + rowsN);                 // 0 at the stage, 1 at the bottom
+    for (let r = 0; r < total; r++) {
+      const t = (r + 1) / total;                            // 0 at the stage, 1 at the bottom
+      const row = [];
       const s = lerp(0.2, 1.7, Math.pow(t, 1.7));           // how big a person is on this row
       const y = depth * Math.pow(t, 1.25) + ru * s * 1.2;   // their head, from the top of the crowd
       const gap = ru * 4.4 * s;
@@ -1553,11 +1577,15 @@ if (live && motion) {
           col: STICKS[(R() * STICKS.length) | 0],
           lean: (R() - 0.5) * 0.5, ph: R() * 6.283, rate: 0.7 + R() * 0.6,
         };
-        if (r < rowsF) drawPerson(g, person, 0, 1, 0);
+        if (r < ROWS.still) drawPerson(g, person, 0, 1, 0);
+        else if (r < ROWS.still + ROWS.mid) { drawBody(g, person, 1, 0); row.push(person); }
         else near.push(person);
       }
+      // how far this middle row swings: a little at the back, most of the
+      // way to the front rows' swing by the time it reaches them
+      if (row.length) mid.push({s, amp: lerp(0.07, 0.36, smooth((r - ROWS.still) / (ROWS.mid - 1))), people: row});
     }
-    LM.far = far; LM.near = near;
+    LM.far = far; LM.near = near; LM.mid = mid;
     // the confetti: pieces falling from above the stage at their own pace
     const bits = [], n = Math.round(clamp(W / 11, 40, 140));
     for (let i = 0; i < n; i++) {
@@ -1574,15 +1602,25 @@ if (live && motion) {
   /** one person: shoulders, head, a raised arm, and what they hold up.
       `sway` swings the arm about the shoulder; `alpha` fades a whole row */
   function drawPerson(g, o, sway, alpha, lift) {
+    drawBody(g, o, alpha, lift);
+    drawHeld(g, o, sway, alpha, lift);
+  }
+  function drawBody(g, o, alpha, lift) {
+    const u = LM.ru * o.s, x = o.x, y = o.y + lift;
+    g.globalAlpha = alpha;
+    g.fillStyle = SIL;
+    g.beginPath(); g.ellipse(x, y + u * 2.5, u * 2.1, u * 1.5, 0, Math.PI, 0); g.fill();   // shoulders
+    g.fillRect(x - u * 2.1, y + u * 2.48, u * 4.2, u * 3);
+    g.beginPath(); g.arc(x, y, u, 0, Math.PI * 2); g.fill();                             // head
+    g.globalAlpha = 1;
+  }
+  function drawHeld(g, o, sway, alpha, lift) {
     const u = LM.ru * o.s, x = o.x, y = o.y + lift;
     const ang = o.lean + sway;                              // 0 is straight up
     const shx = x + o.side * u * 1.05, shy = y + u * 1.55;  // the raised shoulder
     const hx = shx + Math.sin(ang) * u * 3.1, hy = shy - Math.cos(ang) * u * 3.1;
     g.globalAlpha = alpha;
-    g.fillStyle = SIL; g.strokeStyle = SIL;
-    g.beginPath(); g.ellipse(x, y + u * 2.5, u * 2.1, u * 1.5, 0, Math.PI, 0); g.fill();   // shoulders
-    g.fillRect(x - u * 2.1, y + u * 2.48, u * 4.2, u * 3);
-    g.beginPath(); g.arc(x, y, u, 0, Math.PI * 2); g.fill();                             // head
+    g.strokeStyle = SIL;
     g.lineCap = 'round'; g.lineWidth = u * 0.8;
     g.beginPath(); g.moveTo(shx, shy); g.lineTo(hx, hy); g.stroke();                     // arm
     if (o.phone) {
@@ -1601,7 +1639,43 @@ if (live && motion) {
       g.globalCompositeOperation = 'lighter';
       g.globalAlpha = alpha * 0.8;
       const r = u * o.glow;
-      g.drawImage(glowSprite(o.col), tx - r, ty - r, r * 2, r * 2);                       // the light
+      g.drawImage(glowAt(o.col, r), tx - r, ty - r, r * 2, r * 2);                       // the light
+      g.globalCompositeOperation = 'source-over';
+    }
+    g.globalAlpha = 1;
+  }
+
+  /** The middle rows' arms, sticks and lights, a row at a time and batched:
+      all the arms of a row in one path, all its sticks in another, then the
+      lights. Hundreds of people cost a few draw calls per row. */
+  function drawMid(g, alpha, lift, wave, t) {
+    if (alpha <= 0.001) return;
+    g.lineCap = 'round';
+    for (const row of LM.mid) {
+      const u = LM.ru * row.s, glows = [];
+      const arms = new Path2D(), sticks = new Path2D();
+      for (const o of row.people) {
+        if (!o.stick && !o.phone) continue;
+        const ang = o.lean + row.amp * Math.sin(wave + o.x * 0.006 + o.ph * 0.25)
+                           + row.amp * 0.3 * Math.sin(t * o.rate * 1.6 + o.ph);
+        const sa = Math.sin(ang), ca = Math.cos(ang);
+        const shx = o.x + o.side * u * 1.05, shy = o.y + lift + u * 1.55;
+        const hx = shx + sa * u * 3.1, hy = shy - ca * u * 3.1;
+        arms.moveTo(shx, shy); arms.lineTo(hx, hy);
+        if (o.phone) { glows.push(hx, hy - u * 0.7, u * 1.2, '#cfdcff', 0.45); continue; }
+        const tx = hx + sa * u * 1.7, ty = hy - ca * u * 1.7;
+        sticks.moveTo(hx, hy); sticks.lineTo(tx, ty);
+        glows.push(tx, ty, u * o.glow, o.col, 0.8);
+      }
+      g.globalAlpha = alpha;
+      g.strokeStyle = SIL; g.lineWidth = u * 0.8; g.stroke(arms);
+      g.strokeStyle = 'rgba(235,225,240,.7)'; g.lineWidth = u * 0.34; g.stroke(sticks);
+      g.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < glows.length; i += 5) {
+        const r = glows[i + 2], img = glowAt(glows[i + 3], r);
+        g.globalAlpha = alpha * glows[i + 4];
+        g.drawImage(img, Math.round(glows[i] - r), Math.round(glows[i + 1] - r), r * 2, r * 2);
+      }
       g.globalCompositeOperation = 'source-over';
     }
     g.globalAlpha = 1;
@@ -1610,9 +1684,9 @@ if (live && motion) {
   /** the crowd and the confetti for this frame. `show` brings the room up,
       `out` sinks it away; `t` is time in seconds, for the drift */
   function drawFx(p, show, out, t) {
-    const {W, H, top} = LM, g = fxc;
+    const {W, H, CH, top} = LM, g = fxc;
     g.setTransform(LM.dpr, 0, 0, LM.dpr, 0, 0);
-    g.clearRect(0, 0, W, H);
+    g.clearRect(0, 0, W, CH);
     if (show <= 0.001 || out >= 0.999) return;
     const a = show * (1 - out), sink = out * H * 0.28;
     // haze off the stage, so the silhouettes have something to stand against
@@ -1620,12 +1694,13 @@ if (live && motion) {
     haze.addColorStop(0, `rgba(255,46,139,${0.42 * a})`);
     haze.addColorStop(0.35, `rgba(122,60,200,${0.2 * a})`);
     haze.addColorStop(1, 'rgba(20,10,30,0)');
-    g.fillStyle = haze; g.fillRect(0, 0, W, H);          // the whole canvas: the glow fades out on its own
+    g.fillStyle = haze; g.fillRect(0, 0, W, CH);         // the whole canvas: the glow fades out on its own
     // the far rows come up first, then the near ones row by row
     g.globalAlpha = a * smooth(range(show, 0, 0.55));
-    g.drawImage(LM.far, 0, top + sink, W, H - top);
+    g.drawImage(LM.far, 0, top + sink, W, CH - top);
     g.globalAlpha = 1;
     const wave = 2 * Math.PI * p * 3.2;
+    drawMid(g, a * smooth(range(show, 0, 0.55)), top + sink, wave, t);
     for (const o of LM.near) {
       const rowIn = smooth(range(show, 0.2 + (o.s - 0.9) * 0.18, 0.6 + (o.s - 0.9) * 0.18));
       if (rowIn <= 0) continue;
@@ -1687,22 +1762,28 @@ if (live && motion) {
      drops to float over the crowd with plenty of air between them. Everything
      is sized to what the room actually has. */
   function measureLive() {
-    const H = liveTrack.offsetHeight, W = liveTrack.offsetWidth;
+    // lay out in the stage, which is the small viewport a phone always shows;
+    // the crowd's canvas reaches on down under a retracted toolbar
+    const H = stageEl.offsetHeight, W = stageEl.offsetWidth, CH = fx.offsetHeight || H;
     const cardH  = evCard.offsetHeight;
     const cardCY = zone.offsetTop + evCard.offsetTop + cardH / 2;
     // the night headline's own bottom: the slot is sized by the taller intro
     const nightB = copy.offsetTop + heads.offsetTop + nightHead.offsetTop + nightHead.offsetHeight;
-    const wide   = W >= 600;                                  // room for side screens
+    const wide   = W >= 600;
     const g1 = Math.max(14, H * 0.03), g2 = Math.max(40, H * 0.08);
     const floorH = Math.max(8, H * 0.018);
     const bottom = H - Math.max(14, H * 0.035);
-    let size = Math.min(W * (wide ? 0.112 : 0.145), H * 0.15);
+    let size = Math.min(W * 0.145, H * 0.15);
     const avail = bottom - nightB - g1 - floorH - g2 - cardH;
     if (size * 1.34 > avail) size = Math.max(20, avail / 1.34);
     const scrH = size * 1.34, scrW = size * 6.1;
     const scrY = nightB + g1 + scrH / 2, floorY = nightB + g1 + scrH;
     LM.shift = floorY + floorH + g2 + cardH / 2 - cardCY;
-    Object.assign(LM, {W, H, top: floorY + floorH, dpr: Math.min(2, devicePixelRatio || 1),
+    // The crowd is soft light, so its canvas is capped at about 1.6 million
+    // pixels: a big retina display draws it a little coarser rather than
+    // drawing four times the pixels every frame.
+    const dpr = Math.min(2, devicePixelRatio || 1, Math.sqrt(1.6e6 / (W * CH)));
+    Object.assign(LM, {W, H, CH, top: floorY + floorH, dpr,
                        ru: clamp(Math.min(H * 0.0105, W * 0.022), 4.5, 11)});
     // once the lights are up the intro's lede is gone, so the card and the
     // timeline close up under the shorter headline
@@ -1711,13 +1792,12 @@ if (live && motion) {
     set('--card-y', cardCY); set('--word-size', size);
     set('--scr-y', scrY); set('--scr-w', scrW); set('--scr-h', scrH);
     set('--floor-y', floorY); set('--floor-h', floorH);
-    set('--floor-w', Math.min(W * 1.02, scrW * (wide ? 1.75 : 1.2)));
+    set('--floor-w', Math.min(W * 1.02, scrW * (wide ? 1.4 : 1.15)));
     LM.beam = wide ? 0.55 : 0.34;
     LM.floorY = floorY; LM.wide = wide;
     // the beams are soft, so their canvas can be coarse
     beamCv.width = Math.ceil(W / 2); beamCv.height = Math.ceil(H / 2);
-    rig.classList.toggle('is-narrow', !wide);
-    fx.width = Math.ceil(W * LM.dpr); fx.height = Math.ceil(H * LM.dpr);
+    fx.width = Math.ceil(W * LM.dpr); fx.height = Math.ceil(CH * LM.dpr);
     buildCrowd();
   }
 
@@ -1733,10 +1813,13 @@ if (live && motion) {
     const dim    = Math.max(0.9 * Math.min(k, steps) / steps, 0.97 * nightK) * (1 - upK);
     vig.style.opacity  = Math.min(1, dim * 1.6).toFixed(4);
     dark.style.opacity = Math.pow(dim, 1.7).toFixed(4);
-    // the type turns over quickly as the room crosses mid-grey, never grey on grey
-    const turn = smooth(range(dim, 0.34, 0.56));
+    // The type turns over from ink to pale inside a single roll of the count,
+    // between the 5 and 4 DAYS holds, so no held step sits grey on grey. The
+    // small grey type darkens toward ink first, as the room darkens under it.
+    const turn = smooth(range(dim, 0.52, 0.58));
     copy.style.color = mix(INK, PALE, turn);
-    kicker.style.color = lede.style.color = mix(MID, MIST, turn);
+    const small = MID.map((v, i) => lerp(v, INK[i], smooth(range(dim, 0.12, 0.45))));
+    kicker.style.color = lede.style.color = mix(small, MIST, turn);
     nav.classList.toggle('is-dim', dim > 0.45);
 
     /* the headlines: the intro rises as the blade arrives and rolls away at
@@ -1801,7 +1884,7 @@ if (live && motion) {
   /* The runner: read the blade's progress, ease toward it, draw. While the
      show is on it keeps drawing even when the scroll holds still, so the
      crowd and the beams keep moving. */
-  let liveTarget = 0, liveShown = -2, liveRunning = false, liveNear = false;
+  let liveTarget = 0, liveShown = -2, liveRunning = false, liveNear = false, liveFar = true;
   /** -1 → 0 while the blade's top scrolls from the bottom of the screen to
       the top, then 0 → 1 across the pinned run */
   const readLive = () => {
@@ -1818,23 +1901,46 @@ if (live && motion) {
     liveRunning = liveShown !== liveTarget || showing;
     if (liveRunning) requestAnimationFrame(liveFrame);
   };
+  /* Checked on every scroll rather than left to the observer, which can be a
+     frame or two behind a jump. Arriving from far away (a nav link, a fling)
+     snaps straight to the right frame instead of replaying the run on the way. */
   const kickLive = () => {
-    if (!liveNear) return;
+    const r = live.getBoundingClientRect();
+    if (r.bottom < -0.15 * innerHeight || r.top > 1.15 * innerHeight) { liveFar = true; return; }
     liveTarget = readLive();
-    if (liveShown < -1) liveShown = liveTarget;       // first sight, or after a resize: jump
+    if (liveShown < -1 || liveFar) { liveShown = liveTarget; liveFar = false; }
     if (!liveRunning) { liveRunning = true; requestAnimationFrame(liveFrame); }
   };
   new IntersectionObserver(([e]) => {
     liveNear = e.isIntersecting;
     live.classList.toggle('is-near', liveNear);
-    if (liveNear) kickLive(); else nav.classList.remove('is-dim');
+    if (liveNear) kickLive(); else { liveFar = true; nav.classList.remove('is-dim'); }
   }, {rootMargin: '15% 0px 15% 0px'}).observe(live);
   addEventListener('scroll', kickLive, {passive: true});
   const relayout = () => { measureLive(); drawLive(readLive(), performance.now() / 1000); };
-  addEventListener('resize', () => { measureLive(); liveShown = -2; kickLive(); });
+  /* Rotating a phone, or crossing a breakpoint, changes the runway's height,
+     and the browser keeps the old scroll offset, which lands somewhere else in
+     the run or past it. Put the reader back at the same point of the story.
+     (A phone's toolbars retracting fires resize too, but leaves vh alone.) */
+  let liveH = live.offsetHeight;
+  addEventListener('resize', () => {
+    const was = liveTarget;
+    measureLive();
+    const h = live.offsetHeight;
+    if (h !== liveH && was > 0 && was < 1) {
+      const span = h - liveTrack.offsetHeight;
+      scrollTo({top: live.getBoundingClientRect().top + scrollY + was * span, behavior: 'instant'});
+    }
+    liveH = h; liveShown = -2; kickLive();
+  });
   // the card's type is a web font; measure again once it has arrived
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(relayout);
+  // the card describes the whole run to a screen reader, not the one frame
+  evCard.setAttribute('aria-label', "The Events tab's Next up card, counting down from four weeks to the night of " +
+    'LE SSERAFIM PUREFLOW in Amsterdam, then turning over to the next show: aespa SYNK TOUR in Copenhagen ' +
+    'on Sunday 24 January, in 14 weeks.');
   relayout();                // in place before it is ever reached
+  live.classList.add('is-drawn');
 }
 
 /* nav flips to light once the dark story is behind us */

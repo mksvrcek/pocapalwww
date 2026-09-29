@@ -14,11 +14,6 @@
 <!-- motion is opt-in: without script, or with reduced motion asked for, the
      page renders complete and still -->
 <script>if(!matchMedia('(prefers-reduced-motion: reduce)').matches)document.documentElement.classList.add('motion')</script>
-<!-- the heavy, wide face the app sets its titles and numbers in, only for the
-     Events card and its countdown, cut down to capitals and digits -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,800..900&amp;display=swap&amp;text=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789%C2%B7">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -262,12 +257,10 @@
           <div class="live-vig" aria-hidden="true"></div>
           <div class="live-dark" aria-hidden="true"></div>
           <!-- the venue, which only exists once the lights are down: a stage
-               with its big screen and side screens, light beams off the truss,
-               and a canvas for the crowd and the confetti -->
+               with its big screen, light beams off its front edge, and a
+               canvas for the crowd and the confetti -->
           <div class="live-rig" aria-hidden="true">
             <canvas class="rig-beams"></canvas>
-            <div class="rig-side rig-side-l"></div>
-            <div class="rig-side rig-side-r"></div>
             <div class="rig-screen"><span class="rig-word">TONIGHT</span></div>
             <div class="rig-floor"></div>
           </div>
