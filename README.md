@@ -105,9 +105,9 @@ What each part does:
 | Players | the stage swings up into place; switching slides the new player in from the side you're heading towards |
 | Events | a second pinned run: the card counts down as the room goes dark, then a stage with TONIGHT on its screen, beams, confetti and a crowd waving lightsticks, then lights up and the next show (see The Events blade) |
 | rail | cards arrive one after another, and each illustration plays a short scene (a binder's pockets filling, the scanner sweeping a haul, the spending chart drawing as its total counts up, the ranking podium rising) once in view and again on hover |
-| Fanclub | the membership card lifts off the page and turns towards the reader, then floats with a sheen crossing it every few seconds; the members' list fades up in turn |
 | CTA | a hand of photocards fans out behind the app icon, which springs in; the fan opens wider on hover |
 | FAQ | questions fade up in turn; an answer settles in just behind the opening |
+| Fanclub | the membership card lifts off the page and turns towards the reader, then floats with a sheen crossing it every few seconds; the members' list fades up in turn |
 
 The rail's artwork is inline SVG so its parts can move. Where a piece of the
 art already carries a `transform` attribute it is wrapped in a `<g>` that the
@@ -361,7 +361,8 @@ or the button still turns it, landing at once.
 
 ## The Fanclub
 
-`#fanclub` sits between the rail and the download button. The card is the
+`#fanclub` closes the page, under the FAQ, and picks up the FAQ's white
+before fading back to the footer's paper. The card is the
 membership card the app prints (name and member number on the bottom line),
 in CSS; the list under it uses the Fanclub sheet's own titles and lines. The
 price isn't on the page, only that it is a one-time purchase with no
