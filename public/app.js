@@ -1315,17 +1315,18 @@ function replay(el, cls, ms) {
    along the rail wait until it is scrolled to them: the observer counts the
    rail's own clipping. Hovering one with a mouse plays its scene again. */
 const railCards = [...document.querySelectorAll('.rail-card')];
-/** the completion figure in the sets artwork counts up alongside its ring */
+/** a figure in the artwork (.sv-count) counts up as its chart draws */
 function countUp(card) {
   const el = card.querySelector('.sv-count');
   if (!el || !motion) return;
-  const to = Number(el.dataset.to), t0 = performance.now() + 700, dur = 1600;
+  const to = Number(el.dataset.to), t0 = performance.now() + 600, dur = 1500;
+  const pre = el.dataset.pre || '', suf = el.dataset.suf ?? '%';
   const step = now => {
     const k = clamp01((now - t0) / dur);
-    el.textContent = Math.round(to * easeOut(k)) + '%';
+    el.textContent = pre + Math.round(to * easeOut(k)) + suf;
     if (k < 1) requestAnimationFrame(step);
   };
-  el.textContent = '0%';
+  el.textContent = pre + '0' + suf;
   requestAnimationFrame(step);
 }
 if (motion && hasIO) {
@@ -1941,6 +1942,93 @@ if (live && motion && window.CSS && CSS.supports('overflow', 'clip')) {
     'on Sunday 24 January, in 14 weeks.');
   relayout();                // in place before it is ever reached
   live.classList.add('is-drawn');
+}
+
+/* -------------------------------------------------------------
+   8e. THE CARD
+   The photocard in #cards is a 3D object, as on the app's card page.
+   Scrolled past, it drifts a few degrees and turns over half way, so
+   the holo front is seen first and the designed back after it. A drag
+   turns it on top of that and, let go, it settles on the nearest face;
+   a tap or the button turns it over. CSS reads --a (the turn, in
+   degrees) and --h (its strength) for the sheen, --b (how far the back
+   faces the reader) for the stickers and --sw for the shadow.
+   ------------------------------------------------------------- */
+const spin = document.getElementById('spin');
+if (spin) {
+  const card = document.getElementById('spinCard');
+  const box  = spin.parentElement;       // measured, since .spin itself moves
+  const DEG  = Math.PI / 180;
+  let scrollA = -16, drag = 0, dragTo = 0, tilt = 0;
+  let held = null, x0 = 0, y0 = 0, d0 = 0, moved = false, raf = 0, near = !hasIO;
+
+  function readScroll() {
+    if (!motion) return;
+    const r = box.getBoundingClientRect(), vh = innerHeight;
+    const p = clamp01((vh - r.top) / (vh + r.height));
+    scrollA = -30 + 44 * p + 180 * smooth(range(p, .45, .62));
+  }
+  function paint() {
+    const a = scrollA + drag, c = Math.cos(a * DEG);
+    card.style.transform = `rotateX(${tilt.toFixed(2)}deg) rotateY(${a.toFixed(2)}deg)`;
+    spin.style.setProperty('--a', a.toFixed(2));
+    spin.style.setProperty('--b', range(-c, .2, .9).toFixed(3));
+    spin.style.setProperty('--sw', (.5 + .5 * Math.abs(c)).toFixed(3));
+    spin.style.setProperty('--h', (.08 + .3 * Math.abs(Math.sin(a * DEG))).toFixed(3));
+  }
+  function frame() {
+    raf = 0;
+    readScroll();
+    if (held === null) {
+      // with reduced motion it lands at once rather than easing round
+      const k = motion ? .13 : 1;
+      drag += (dragTo - drag) * k;
+      tilt -= tilt * k;
+      if (Math.abs(dragTo - drag) < .05) drag = dragTo;
+      if (Math.abs(tilt) < .05) tilt = 0;
+    }
+    paint();
+    if (held !== null || drag !== dragTo || tilt !== 0) raf = requestAnimationFrame(frame);
+  }
+  const kickSpin = () => { if (!raf && (near || held !== null)) raf = requestAnimationFrame(frame); };
+  /** a half turn on from wherever it is heading */
+  const turnOver = () => { dragTo = Math.round(dragTo / 180) * 180 + 180; near = true; kickSpin(); };
+
+  card.addEventListener('pointerdown', e => {
+    if (e.button !== 0 || held !== null) return;
+    held = e.pointerId; x0 = e.clientX; y0 = e.clientY; d0 = drag; moved = false;
+    card.setPointerCapture(e.pointerId);
+    card.classList.add('is-held');
+    kickSpin();
+  });
+  card.addEventListener('pointermove', e => {
+    if (e.pointerId !== held) return;
+    const dx = e.clientX - x0, dy = e.clientY - y0;
+    if (Math.abs(dx) + Math.abs(dy) > 6) moved = true;
+    drag = d0 + dx * .55;
+    tilt = clamp(-dy * .08, -14, 14);
+  });
+  const release = e => {
+    if (e.pointerId !== held) return;
+    held = null;
+    card.classList.remove('is-held');
+    if (moved || e.type === 'pointercancel') dragTo = Math.round(drag / 180) * 180;
+    else turnOver();                   // a tap
+    kickSpin();
+  };
+  card.addEventListener('pointerup', release);
+  card.addEventListener('pointercancel', release);
+  spin.querySelector('.spin-turn').addEventListener('click', turnOver);
+
+  if (hasIO) {
+    new IntersectionObserver(([e]) => { near = e.isIntersecting; kickSpin(); },
+      {rootMargin: '20% 0px 20% 0px'}).observe(box);
+  }
+  if (motion) {
+    addEventListener('scroll', kickSpin, {passive: true});
+    addEventListener('resize', kickSpin);
+  }
+  readScroll(); paint();
 }
 
 /* nav flips to light once the dark story is behind us */

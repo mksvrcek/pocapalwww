@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>PocaPal · Everything. Finally in one place.</title>
-<meta name="description" content="PocaPal is the collection app for K-pop collectors. File every photocard, album and polaroid, see what you're still missing, and theme the whole app around your bias.">
+<meta name="description" content="PocaPal is the collection app for K-pop fans. File every photocard and album, page through your binders, count down to every show, and theme the whole app around your bias.">
 <meta name="theme-color" content="#07070a">
 <meta property="og:title" content="PocaPal · Everything. Finally in one place.">
-<meta property="og:description" content="The collection app for K-pop collectors. Photocards, albums, polaroids and everything in between.">
+<meta property="og:description" content="The collection app for K-pop fans. Photocards, albums, lightsticks and every show you've been to.">
 <meta property="og:type" content="website">
 <link rel="icon" href="assets/app-icon.png" type="image/png" sizes="204x204">
 <link rel="apple-touch-icon" href="assets/app-icon.png">
@@ -26,10 +26,11 @@
       PocaPal
     </a>
     <nav class="nav-links" aria-label="Primary">
-      <a href="#collection">Collection</a>
+      <a href="#cards">Cards</a>
       <a href="#themes">Themes</a>
       <a href="#players">Players</a>
-      <a href="#more">Features</a>
+      <a href="#events">Events</a>
+      <a href="#fanclub">Fanclub</a>
       <a href="#faq">FAQ</a>
     </nav>
     <a class="btn btn-sm" href="#get">Get the app</a>
@@ -47,7 +48,7 @@
         <div class="hero-copy" id="heroCopy">
           <p class="eyebrow">PocaPal for iPhone</p>
           <h1 class="h1" data-lines>Everything.<br>Finally in one place.</h1>
-          <p class="sub">Photocards, albums, polaroids and everything in between. Filed, searchable and always with you.</p>
+          <p class="sub">Photocards, albums, lightsticks and everything in between. Filed, searchable and always with you.</p>
           <div class="hero-scrollhint" aria-hidden="true">
             <span>Scroll</span>
             <span class="hint-line"></span>
@@ -86,7 +87,7 @@
         <!-- closing line of the story -->
         <div class="story-outro" id="storyOutro">
           <h2 class="h2" data-lines>Your whole binder.<br><span class="hl">Now in your pocket.</span></h2>
-          <p class="sub sub-tight">Every pull, every album, every polaroid. One collection that goes wherever you do.</p>
+          <p class="sub sub-tight">Every pull, every album, every ticket. One collection that goes wherever you do.</p>
         </div>
 
       </div>
@@ -99,8 +100,8 @@
     <section class="feature" id="collection">
       <div class="feature-copy" data-reveal>
         <p class="kicker rv">Collection</p>
-        <h2 class="h2" data-lines>Every card.<br><span class="hl">Every detail.</span></h2>
-        <p class="body rv">Add a card and PocaPal fills in the group, the idol and the rest for you. Sort by any of it, and find the one you're after in seconds.</p>
+        <h2 class="h2" data-lines>Every card.<br><span class="hl">Front and back.</span></h2>
+        <p class="body rv">Scan a card and PocaPal finds its edges and crops both sides for you. Pick who's on it, name the version if you like, and it's filed, ready to search, filter and sort.</p>
       </div>
       <div class="feature-art">
         <div class="scene scene-lay" data-scrub>
@@ -122,6 +123,50 @@
       </div>
     </section>
 
+    <!-- ─────────── the card: a photocard to pick up and turn over ───────────
+         The app's card page, where a card is a 3D object you drag round. It
+         turns over as the blade scrolls past and follows a drag on top of
+         that (8e in app.js). The front has a holo finish; the back is a
+         design from the card designer, its stickers landing as it comes
+         round. Without motion it stands still, front on, and still turns
+         when dragged or when the button is pressed. -->
+    <section class="feature feature-flip" id="cards">
+      <div class="feature-copy" data-reveal>
+        <p class="kicker rv">Photocards</p>
+        <h2 class="h2" data-lines>Pick it up.<br><span class="hl">Turn it over.</span></h2>
+        <p class="body rv">Every card is a 3D object you can hold. Drag it round to see the back, give it the finish the real one has, from holo to glitter and gold, or design a back of your own with stickers, text and photos.</p>
+        <p class="fine rv">Card effects and custom designs come with the Fanclub.</p>
+      </div>
+      <div class="feature-art" data-scrub>
+        <div class="spin" id="spin">
+          <div class="spin-glow" aria-hidden="true"></div>
+          <div class="spin-float">
+            <div class="spin-card" id="spinCard" role="img"
+                 aria-label="Kim Chaewon of LE SSERAFIM on a photocard with a holo finish. Its back is a design made in PocaPal: her name, a photo of her and stickers.">
+              <div class="spin-face spin-front">
+                <img src="assets/cards/poca-08.jpg" alt="" width="278" height="440" loading="lazy" draggable="false">
+                <span class="spin-holo"></span>
+                <span class="spin-glare"></span>
+              </div>
+              <div class="spin-face spin-back">
+                <span class="stk stk-photo" style="--k:0;--r:5deg"><img src="assets/cards/poca-07.jpg" alt="" width="301" height="440" loading="lazy" draggable="false"></span>
+                <span class="stk stk-name" style="--k:1;--r:-7deg">CHAEWON</span>
+                <span class="stk stk-heart" style="--k:2;--r:14deg"><svg viewBox="0 0 24 24"><path d="M12 20.6s-7.9-4.7-9.4-9.6C1.6 7.6 3.7 4.3 7.1 4.3c2 0 3.6 1.1 4.9 2.9 1.3-1.8 2.9-2.9 4.9-2.9 3.4 0 5.5 3.3 4.5 6.7-1.5 4.9-9.4 9.6-9.4 9.6z"/></svg></span>
+                <span class="stk stk-star" style="--k:3;--r:-12deg"><svg viewBox="0 0 24 24"><path d="M12 2.8l2.7 5.8 6.3.7-4.7 4.3 1.3 6.2L12 16.7l-5.6 3.1 1.3-6.2L3 9.3l6.3-.7z"/></svg></span>
+                <span class="stk stk-spark" style="--k:4;--r:0deg"><svg viewBox="0 0 24 24"><path d="M12 1.5c.6 5.2 2.3 7.6 7.5 8.5-5.2.9-6.9 3.3-7.5 8.5-.6-5.2-2.3-7.6-7.5-8.5 5.2-.9 6.9-3.3 7.5-8.5zM19.3 15.2c.3 2.2 1 3.2 3.2 3.6-2.2.4-2.9 1.4-3.2 3.6-.3-2.2-1-3.2-3.2-3.6 2.2-.4 2.9-1.4 3.2-3.6z"/></svg></span>
+                <span class="stk stk-tag" style="--k:5;--r:-2deg">AMSTERDAM · 2025</span>
+              </div>
+            </div>
+          </div>
+          <div class="spin-shadow" aria-hidden="true"></div>
+          <button class="spin-turn" type="button" aria-controls="spinCard">
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13.2 6.4A5.4 5.4 0 0 0 3.1 5M2.8 9.6a5.4 5.4 0 0 0 10.1 1.4M3 2.2V5h2.8M13 13.8V11h-2.8"/></svg>
+            Turn it over
+          </button>
+        </div>
+      </div>
+    </section>
+
     <section class="deck" id="views" aria-roledescription="carousel" aria-label="Ways to view your collection">
       <div class="deck-head" data-reveal>
         <h2 class="h2" data-lines>A tab for everything<br><span class="hl">you collect.</span></h2>
@@ -137,7 +182,7 @@
                   <img class="deck-frame" src="assets/phone-frame.webp" alt="" width="1470" height="3000">
                 </div>
               </div>
-              <figcaption><b>Photocards.</b> Your whole binder in one grid, with favourites and dupes marked at a glance.</figcaption>
+              <figcaption><b>Photocards.</b> Every card in one grid, with your favourites hearted and your duplicates counted.</figcaption>
             </figure>
           </li>
           <li class="deck-slide">
@@ -148,7 +193,7 @@
                   <img class="deck-frame" src="assets/phone-frame.webp" alt="" width="1470" height="3000">
                 </div>
               </div>
-              <figcaption><b>Events.</b> Concerts, fansigns and comebacks on one timeline, with the next one counting down.</figcaption>
+              <figcaption><b>Events.</b> Your tickets, and your artists' birthdays and anniversaries, with the next one counting down.</figcaption>
             </figure>
           </li>
           <li class="deck-slide">
@@ -159,7 +204,7 @@
                   <img class="deck-frame" src="assets/phone-frame.webp" alt="" width="1470" height="3000">
                 </div>
               </div>
-              <figcaption><b>Albums.</b> Every version you own, filed with its artwork and ready to play.</figcaption>
+              <figcaption><b>Albums.</b> Every version you own, with its artwork, ready to play from Apple Music.</figcaption>
             </figure>
           </li>
           <li class="deck-slide">
@@ -170,7 +215,7 @@
                   <img class="deck-frame" src="assets/phone-frame.webp" alt="" width="1470" height="3000">
                 </div>
               </div>
-              <figcaption><b>Others.</b> Toys, clothes, concert banners. Whatever else you've ended up with gets a shelf of its own.</figcaption>
+              <figcaption><b>Others.</b> Lightsticks, posters, toys, banners. Make a category for anything else you collect.</figcaption>
             </figure>
           </li>
         </ul>
@@ -186,7 +231,8 @@
       <div class="feature-copy" data-reveal>
         <p class="kicker rv">Themes</p>
         <h2 class="h2" data-lines>Your bias.<br><span class="hl">Your whole app.</span></h2>
-        <p class="body rv">Pick your bias and PocaPal takes on their colours, with their name in Hangul right across your home screen. Change it whenever you like.</p>
+        <p class="body rv">Pick your bias and PocaPal takes on their colours, with them standing in front of their name on Home. Use a photo of your own and PocaPal cuts them out for you.</p>
+        <p class="fine rv">With the Fanclub, your artists can take turns: a different one on Home every day.</p>
       </div>
       <div class="feature-art">
         <div class="scene scene-pair" id="themeScene" data-theme="chaewon" data-scrub>
@@ -225,7 +271,8 @@
       <div class="feature-copy" data-reveal>
         <p class="kicker rv">Players</p>
         <h2 class="h2 h2-tight" data-lines>Play your albums<br><span class="hl">the way they were</span><br><span class="hl">meant to be heard.</span></h2>
-        <p class="body rv">Cassette, vinyl, CD or something more modern. Choose the player that suits the album and press play, wherever you are.</p>
+        <p class="body rv">Find any album on Apple Music and file the version you own. Press play and it spins on a turntable, slides into a CD deck or clicks into a cassette, matched to the copy on your shelf.</p>
+        <p class="fine rv">Playback needs Apple Music. Vinyl, CD and cassette decks come with the Fanclub.</p>
       </div>
       <div class="feature-art art-stack" data-scrub>
         <div class="player-stage">
@@ -277,7 +324,7 @@
             <div class="live-heads">
               <div class="live-intro">
                 <h2 class="h2" id="liveHead"><span class="ln"><span class="ln-in li-1">Every show,</span></span> <span class="ln"><span class="ln-in li-2 hl">counted down.</span></span></h2>
-                <p class="body live-lede">Add a concert, a fansign or a comeback, and PocaPal counts down to it.</p>
+                <p class="body live-lede">Birthdays and anniversaries fill in from the artists you follow. Add your tickets, and PocaPal counts down to every one.</p>
               </div>
               <p class="h2 live-night" aria-hidden="true"><span class="ln"><span class="ln-in live-l1">Four weeks to go.</span></span> <span class="ln"><span class="ln-in live-l2 hl">Then, tonight.</span></span></p>
             </div>
@@ -327,7 +374,7 @@
                 <span class="ev-what"><b>LE SSERAFIM PUREFLOW</b> Concert · Amsterdam</span>
               </li>
             </ol>
-            <p class="body live-sub">When the night is over it stays on your timeline, and the next one starts counting.</p>
+            <p class="body live-sub">The day after, your ticket becomes a memory. Add your photos, what you brought home and the songs they played.</p>
           </div>
         </div>
       </div>
@@ -346,226 +393,45 @@
         <ul class="rail-track">
           <li class="rail-card">
             <div class="rail-art" aria-hidden="true">
-              <svg viewBox="0 0 800 600" fill="none">
-                <defs>
-                  <linearGradient id="bga" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#efe7ff"/><stop offset="1" stop-color="#ffe9f4"/></linearGradient>
-                  <linearGradient id="pocaa" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff5fae"/><stop offset="1" stop-color="#7a4cff"/></linearGradient>
-                  <filter id="sha" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#2a2038" flood-opacity="0.18"/></filter>
-                </defs>
-                <rect width="800" height="600" fill="url(#bga)"/>
-                <g class="sv-rise">
-                  <g transform="rotate(-4 400 262)" filter="url(#sha)">
-                    <rect x="320" y="150" width="160" height="224" rx="14.4" fill="url(#pocaa)"/>
-                    <circle cx="400" cy="230.64" r="24" fill="#fff" opacity=".92"/>
-                    <path d="M 361.6 306.8 a 38.4 41.6 0 0 1 76.8 0 Z" fill="#fff" opacity=".92"/>
-                  </g>
-                </g>
-                <g class="sv-frame" stroke="#2a2038" stroke-opacity=".55" stroke-width="7" stroke-linecap="round" fill="none">
-                  <path d="M250 190v-34a16 16 0 0 1 16-16h34"/>
-                  <path d="M550 190v-34a16 16 0 0 0-16-16h-34"/>
-                  <path d="M250 410v34a16 16 0 0 0 16 16h34"/>
-                  <path d="M550 410v34a16 16 0 0 0-16 16h-34"/>
-                </g>
-                <g class="sv-laser">
-                  <rect x="255" y="292" width="290" height="5" rx="2.5" fill="#ff2e8b" opacity=".9"/>
-                  <rect x="255" y="292" width="290" height="46" rx="6" fill="#ff2e8b" opacity=".13"/>
-                </g>
-              </svg>
+              <svg viewBox="0 0 800 600" fill="none"><defs><linearGradient id="bg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fdeef5"/><stop offset="1" stop-color="#efe9ff"/></linearGradient><linearGradient id="pc1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff5fae"/><stop offset="1" stop-color="#7a4cff"/></linearGradient><filter id="sh1" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#2a2038" flood-opacity="0.18"/></filter></defs><rect width="800" height="600" fill="url(#bg1)"/><g class="sv-rise" filter="url(#sh1)"><rect x="150" y="118" width="250" height="364" rx="18" fill="#fff"/><rect x="400" y="118" width="250" height="364" rx="18" fill="#fff"/></g><g class="sv-rise"><rect x="392" y="118" width="16" height="364" fill="#ece7f2"/><rect x="384" y="171" width="32" height="18" rx="9" fill="none" stroke="#c4bccf" stroke-width="5"/><rect x="384" y="291" width="32" height="18" rx="9" fill="none" stroke="#c4bccf" stroke-width="5"/><rect x="384" y="411" width="32" height="18" rx="9" fill="none" stroke="#c4bccf" stroke-width="5"/></g><rect class="sv-fade" style="--i:0" x="178" y="152" width="84" height="132" rx="9" fill="#f7f4fa" stroke="#e6e0ec" stroke-width="2.5"/><rect class="sv-fade" style="--i:1" x="290" y="152" width="84" height="132" rx="9" fill="#f7f4fa" stroke="#e6e0ec" stroke-width="2.5"/><rect class="sv-fade" style="--i:2" x="178" y="314" width="84" height="132" rx="9" fill="#f7f4fa" stroke="#e6e0ec" stroke-width="2.5"/><rect class="sv-fade" style="--i:3" x="290" y="314" width="84" height="132" rx="9" fill="#f7f4fa" stroke="#e6e0ec" stroke-width="2.5"/><rect class="sv-fade" style="--i:4" x="428" y="152" width="84" height="132" rx="9" fill="#f7f4fa" stroke="#e6e0ec" stroke-width="2.5"/><rect class="sv-fade" style="--i:5" x="540" y="152" width="84" height="132" rx="9" fill="#f7f4fa" stroke="#e6e0ec" stroke-width="2.5"/><rect class="sv-fade" style="--i:6" x="428" y="314" width="84" height="132" rx="9" fill="#f7f4fa" stroke="#e6e0ec" stroke-width="2.5"/><rect class="sv-fade" style="--i:7" x="540" y="314" width="84" height="132" rx="9" fill="#f7f4fa" stroke="#e6e0ec" stroke-width="2.5"/><g class="sv-pop" style="--i:2"><rect x="184" y="158" width="72" height="120" rx="6.48" fill="url(#pc1)"/><circle cx="220" cy="201.2" r="10.8" fill="#fff" opacity=".92"/><path d="M 202.72 242 a 17.28 22.32 0 0 1 34.56 0 Z" fill="#fff" opacity=".92"/></g><g class="sv-pop" style="--i:3"><rect x="296" y="158" width="72" height="120" rx="6.48" fill="#8ec9ff"/><circle cx="332" cy="201.2" r="10.8" fill="#fff" opacity=".92"/><path d="M 314.72 242 a 17.28 22.32 0 0 1 34.56 0 Z" fill="#fff" opacity=".92"/></g><g class="sv-pop" style="--i:4"><rect x="184" y="320" width="72" height="120" rx="6.48" fill="#ffb38a"/><circle cx="220" cy="363.2" r="10.8" fill="#fff" opacity=".92"/><path d="M 202.72 404 a 17.28 22.32 0 0 1 34.56 0 Z" fill="#fff" opacity=".92"/></g><g class="sv-pop" style="--i:5"><rect x="296" y="320" width="72" height="120" rx="6.48" fill="#b9a6ff"/><circle cx="332" cy="363.2" r="10.8" fill="#fff" opacity=".92"/><path d="M 314.72 404 a 17.28 22.32 0 0 1 34.56 0 Z" fill="#fff" opacity=".92"/></g><g class="sv-pop" style="--i:6"><rect x="434" y="158" width="72" height="120" rx="6.48" fill="#7fd6c2"/><circle cx="470" cy="201.2" r="10.8" fill="#fff" opacity=".92"/><path d="M 452.72 242 a 17.28 22.32 0 0 1 34.56 0 Z" fill="#fff" opacity=".92"/></g><g class="sv-pop" style="--i:7"><rect x="546" y="158" width="72" height="120" rx="6.48" fill="#ff8db5"/><circle cx="582" cy="201.2" r="10.8" fill="#fff" opacity=".92"/><path d="M 564.72 242 a 17.28 22.32 0 0 1 34.56 0 Z" fill="#fff" opacity=".92"/></g><g class="sv-pop" style="--i:8"><rect x="434" y="320" width="72" height="120" rx="6.48" fill="#ffd36e"/><circle cx="470" cy="363.2" r="10.8" fill="#fff" opacity=".92"/><path d="M 452.72 404 a 17.28 22.32 0 0 1 34.56 0 Z" fill="#fff" opacity=".92"/></g><g class="sv-fly"><g filter="url(#sh1)"><rect x="546" y="320" width="72" height="120" rx="6.48" fill="url(#pc1)"/><circle cx="582" cy="363.2" r="10.8" fill="#fff" opacity=".92"/><path d="M 564.72 404 a 17.28 22.32 0 0 1 34.56 0 Z" fill="#fff" opacity=".92"/></g></g><rect x="180" y="220.64" width="80" height="61.36" rx="7" fill="#fff" opacity=".28"/><rect x="292" y="220.64" width="80" height="61.36" rx="7" fill="#fff" opacity=".28"/><rect x="180" y="382.64" width="80" height="61.36" rx="7" fill="#fff" opacity=".28"/><rect x="292" y="382.64" width="80" height="61.36" rx="7" fill="#fff" opacity=".28"/><rect x="430" y="220.64" width="80" height="61.36" rx="7" fill="#fff" opacity=".28"/><rect x="542" y="220.64" width="80" height="61.36" rx="7" fill="#fff" opacity=".28"/><rect x="430" y="382.64" width="80" height="61.36" rx="7" fill="#fff" opacity=".28"/><rect x="542" y="382.64" width="80" height="61.36" rx="7" fill="#fff" opacity=".28"/></svg>
             </div>
-            <p><b>Scan to add.</b> Hold a card up to the camera and PocaPal works out the group, the album and the version, then files it. No typing, no scrolling through lists.</p>
+            <p><b>Binders you can page through.</b> Arrange your cards into photobooks, pocket by pocket, and turn the pages just like the binder on your shelf.</p>
           </li>
           <li class="rail-card">
             <div class="rail-art" aria-hidden="true">
-              <svg viewBox="0 0 800 600" fill="none">
-                <defs>
-                  <linearGradient id="bgf" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e8f4ff"/><stop offset="1" stop-color="#eaeaff"/></linearGradient>
-                  <linearGradient id="pocaf" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff5fae"/><stop offset="1" stop-color="#7a4cff"/></linearGradient>
-                  <filter id="shf" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#2a2038" flood-opacity="0.18"/></filter>
-                </defs>
-                <rect width="800" height="600" fill="url(#bgf)"/>
-                <g filter="url(#shf)"><rect x="168" y="140" width="330" height="296" rx="24" fill="#fff" opacity=".6"/></g>
-                <g fill="#ffffff" opacity=".85">
-                  <rect class="sv-pop" style="--i:0" x="196" y="168" width="88" height="112" rx="10"/>
-                  <rect class="sv-pop" style="--i:1" x="300" y="168" width="88" height="112" rx="10"/>
-                  <rect class="sv-pop" style="--i:2" x="404" y="168" width="88" height="112" rx="10"/>
-                  <rect class="sv-pop" style="--i:3" x="196" y="296" width="88" height="112" rx="10"/>
-                  <rect class="sv-pop" style="--i:4" x="300" y="296" width="88" height="112" rx="10"/>
-                  <rect class="sv-pop" style="--i:5" x="404" y="296" width="88" height="112" rx="10"/>
-                </g>
-                <g class="sv-fly">
-                  <g transform="rotate(9 545 341)" filter="url(#shf)">
-                    <rect x="470" y="236" width="150" height="210" rx="13.5" fill="url(#pocaf)"/>
-                    <circle cx="545" cy="311.6" r="22.5" fill="#fff" opacity=".92"/>
-                    <path d="M 509 383 a 36 39 0 0 1 72 0 Z" fill="#fff" opacity=".92"/>
-                  </g>
-                </g>
-                <path class="sv-draw" pathLength="1" d="M430 300h70M482 284l20 16-20 16" stroke="#ff2e8b" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-              </svg>
+              <svg viewBox="0 0 800 600" fill="none"><defs><linearGradient id="bg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#efe7ff"/><stop offset="1" stop-color="#ffe9f4"/></linearGradient><linearGradient id="pc2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff5fae"/><stop offset="1" stop-color="#7a4cff"/></linearGradient><filter id="sh2" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#2a2038" flood-opacity="0.18"/></filter></defs><rect width="800" height="600" fill="url(#bg2)"/><g class="sv-pop" style="--i:0"><g transform="rotate(-5 346 224)" filter="url(#sh2)"><rect x="300" y="160" width="92" height="128" rx="8.28" fill="url(#pc2)"/><circle cx="346" cy="206.08" r="13.8" fill="#fff" opacity=".92"/><path d="M 323.92 249.6 a 22.08 23.81 0 0 1 44.16 0 Z" fill="#fff" opacity=".92"/></g></g><g class="sv-pop" style="--i:1"><g transform="rotate(4 454 220)" filter="url(#sh2)"><rect x="408" y="156" width="92" height="128" rx="8.28" fill="#8ec9ff"/><circle cx="454" cy="202.08" r="13.8" fill="#fff" opacity=".92"/><path d="M 431.92 245.6 a 22.08 23.81 0 0 1 44.16 0 Z" fill="#fff" opacity=".92"/></g></g><g class="sv-pop" style="--i:2"><g transform="rotate(3 342 376)" filter="url(#sh2)"><rect x="296" y="312" width="92" height="128" rx="8.28" fill="#ffb38a"/><circle cx="342" cy="358.08" r="13.8" fill="#fff" opacity=".92"/><path d="M 319.92 401.6 a 22.08 23.81 0 0 1 44.16 0 Z" fill="#fff" opacity=".92"/></g></g><g class="sv-pop" style="--i:3"><g transform="rotate(-4 450 380)" filter="url(#sh2)"><rect x="404" y="316" width="92" height="128" rx="8.28" fill="#b9a6ff"/><circle cx="450" cy="362.08" r="13.8" fill="#fff" opacity=".92"/><path d="M 427.92 405.6 a 22.08 23.81 0 0 1 44.16 0 Z" fill="#fff" opacity=".92"/></g></g><g class="sv-frame" stroke="#2a2038" stroke-opacity=".55" stroke-width="7" stroke-linecap="round" fill="none"><path d="M262 178v-34a16 16 0 0 1 16-16h34"/><path d="M538 178v-34a16 16 0 0 0-16-16h-34"/><path d="M262 426v34a16 16 0 0 0 16 16h34"/><path d="M538 426v34a16 16 0 0 0-16 16h-34"/></g><g class="sv-laser"><rect x="268" y="292" width="264" height="5" rx="2.5" fill="#ff2e8b" opacity=".9"/><rect x="268" y="292" width="264" height="46" rx="6" fill="#ff2e8b" opacity=".13"/></g><g class="sv-rise" style="--i:7" filter="url(#sh2)"><rect x="296" y="500" width="208" height="52" rx="26" fill="#fff"/><text x="400" y="533" text-anchor="middle" font-family="Helvetica Neue, Arial, sans-serif" font-size="20" font-weight="700" fill="#2a2038" letter-spacing="1">4 NEW CARDS</text></g></svg>
             </div>
-            <p><b>Add a whole haul at once.</b> Point it at your camera roll and it lifts each card out of your unboxing photos. A new pull takes seconds, not an evening.</p>
+            <p><span class="tag">Fanclub</span> <b>Scan a whole stack.</b> Lay out a new haul and scan it once. Every card is cropped and paired front to back, ready for you to fill in.</p>
           </li>
           <li class="rail-card">
             <div class="rail-art" aria-hidden="true">
-              <svg viewBox="0 0 800 600" fill="none">
-                <defs>
-                  <linearGradient id="bgc" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#eaf7f0"/><stop offset="1" stop-color="#e9efff"/></linearGradient>
-                  <linearGradient id="pocac" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff5fae"/><stop offset="1" stop-color="#7a4cff"/></linearGradient>
-                  <filter id="shc" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#2a2038" flood-opacity="0.18"/></filter>
-                </defs>
-                <rect width="800" height="600" fill="url(#bgc)"/>
-                <g filter="url(#shc)"><rect x="210" y="122" width="290" height="390" rx="26" fill="#fff"/></g>
-                <g fill="url(#pocac)" opacity=".55">
-                  <rect class="sv-pop" style="--i:0" x="238" y="150" width="74" height="104" rx="9"/>
-                  <rect class="sv-pop" style="--i:1" x="328" y="150" width="74" height="104" rx="9"/>
-                  <rect class="sv-pop" style="--i:2" x="418" y="150" width="74" height="104" rx="9"/>
-                  <rect class="sv-pop" style="--i:3" x="238" y="272" width="74" height="104" rx="9"/>
-                  <rect class="sv-pop" style="--i:4" x="328" y="272" width="74" height="104" rx="9"/>
-                  <rect class="sv-pop" style="--i:6" x="238" y="394" width="74" height="104" rx="9"/>
-                  <rect class="sv-pop" style="--i:7" x="328" y="394" width="74" height="104" rx="9"/>
-                </g>
-                <g stroke="#ff2e8b" stroke-opacity=".45" stroke-width="3" stroke-dasharray="8 7">
-                  <rect class="sv-fade" style="--i:5" x="420" y="274" width="70" height="100" rx="8"/>
-                  <rect class="sv-fade" style="--i:8" x="420" y="396" width="70" height="100" rx="8"/>
-                </g>
-                <g class="sv-badge" filter="url(#shc)">
-                  <circle cx="570" cy="318" r="72" fill="#fff"/>
-                  <circle cx="570" cy="318" r="53" fill="none" stroke="#e7e7ec" stroke-width="13"/>
-                  <circle class="sv-ring" cx="570" cy="318" r="53" fill="none" stroke="#ff2e8b" stroke-width="13" stroke-linecap="round"
-                          stroke-dasharray="333" stroke-dashoffset="73" transform="rotate(-90 570 318)"/>
-                  <text class="sv-count" data-to="78" x="570" y="328" text-anchor="middle" font-family="Helvetica Neue, Arial, sans-serif" font-size="27" font-weight="700" fill="#2a2038">78%</text>
-                </g>
-              </svg>
+              <svg viewBox="0 0 800 600" fill="none"><defs><linearGradient id="bg3" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#eaf7f0"/><stop offset="1" stop-color="#e9efff"/></linearGradient><filter id="sh3" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#2a2038" flood-opacity="0.18"/></filter></defs><rect width="800" height="600" fill="url(#bg3)"/><g class="sv-rise" filter="url(#sh3)"><rect x="150" y="104" width="500" height="392" rx="26" fill="#fff"/></g><g class="sv-rise" style="--i:2"><text x="186" y="160" font-family="Helvetica Neue, Arial, sans-serif" font-size="17" font-weight="700" fill="#9a94a8" letter-spacing="2">SPENT</text><text class="sv-count" data-pre="£" data-suf="" data-to="466" x="184" y="222" font-family="Helvetica Neue, Arial, sans-serif" font-size="54" font-weight="700" fill="#2a2038">£466</text><text x="614" y="160" text-anchor="end" font-family="Helvetica Neue, Arial, sans-serif" font-size="17" font-weight="700" fill="#7a4cff" letter-spacing="2">WORTH £612</text></g><path d="M186 286h428" stroke="#efebf4" stroke-width="2"/><path d="M186 352h428" stroke="#efebf4" stroke-width="2"/><path d="M186 418h428" stroke="#efebf4" stroke-width="2"/><path class="sv-fade" style="--i:6" d="M186 456 226 452 262 446 300 446 338 434 372 430 408 418 444 414 478 392 512 384 546 346 580 318 614 302 L614 466 L186 466 Z" fill="#ff2e8b" opacity=".1"/><path class="sv-draw sv-chart" style="--i:2" pathLength="1" d="M186 454 226 448 262 440 300 436 338 420 372 414 408 398 444 390 478 362 512 348 546 306 580 278 614 258" stroke="#7a4cff" stroke-opacity=".75" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path class="sv-draw sv-chart" pathLength="1" d="M186 456 226 452 262 446 300 446 338 434 372 430 408 418 444 414 478 392 512 384 546 346 580 318 614 302" stroke="#ff2e8b" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><g class="sv-badge" style="--i:9"><circle cx="614" cy="302" r="11" fill="#ff2e8b" stroke="#fff" stroke-width="5"/></g></svg>
             </div>
-            <p><b>See how close you are.</b> Every album shows how complete it is, with the missing versions called out, so you know exactly what you're hunting before you buy.</p>
+            <p><span class="tag">Fanclub</span> <b>See what it’s worth.</b> Watch your collection grow, and see what you’ve spent and what it’s worth now, by kind and by year.</p>
           </li>
           <li class="rail-card">
             <div class="rail-art" aria-hidden="true">
-              <svg viewBox="0 0 800 600" fill="none">
-                <defs>
-                  <linearGradient id="bgb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e9f6ff"/><stop offset="1" stop-color="#f2ecff"/></linearGradient>
-                  <linearGradient id="pocab" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff5fae"/><stop offset="1" stop-color="#7a4cff"/></linearGradient>
-                  <filter id="shb" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#2a2038" flood-opacity="0.18"/></filter>
-                </defs>
-                <rect width="800" height="600" fill="url(#bgb)"/>
-                <g class="sv-split-l">
-                  <g transform="rotate(-9 325 275)" filter="url(#shb)">
-                    <rect x="250" y="170" width="150" height="210" rx="13.5" fill="#8ec9ff"/>
-                    <circle cx="325" cy="245.6" r="22.5" fill="#fff" opacity=".92"/>
-                    <path d="M 289 317 a 36 39 0 0 1 72 0 Z" fill="#fff" opacity=".92"/>
-                  </g>
-                </g>
-                <g class="sv-split-r">
-                  <g transform="rotate(7 475 265)" filter="url(#shb)">
-                    <rect x="400" y="160" width="150" height="210" rx="13.5" fill="url(#pocab)"/>
-                    <circle cx="475" cy="235.6" r="22.5" fill="#fff" opacity=".92"/>
-                    <path d="M 439 307 a 36 39 0 0 1 72 0 Z" fill="#fff" opacity=".92"/>
-                  </g>
-                </g>
-                <g class="sv-badge" style="--i:4" filter="url(#shb)">
-                  <circle cx="552" cy="170" r="32" fill="#ff2e8b"/>
-                  <text x="552" y="182" text-anchor="middle" font-family="Helvetica Neue, Arial, sans-serif" font-size="30" font-weight="700" fill="#fff">2</text>
-                </g>
-                <g class="sv-rise" style="--i:6" filter="url(#shb)">
-                  <rect x="286" y="452" width="228" height="56" rx="28" fill="#fff"/>
-                  <text x="400" y="488" text-anchor="middle" font-family="Helvetica Neue, Arial, sans-serif" font-size="21" font-weight="600" fill="#2a2038" letter-spacing="1">TRADE READY</text>
-                </g>
-              </svg>
+              <svg viewBox="0 0 800 600" fill="none"><defs><linearGradient id="bg4" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff1e8"/><stop offset="1" stop-color="#ffe9f6"/></linearGradient><linearGradient id="pc4" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff5fae"/><stop offset="1" stop-color="#7a4cff"/></linearGradient><filter id="sh4" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#2a2038" flood-opacity="0.18"/></filter></defs><rect width="800" height="600" fill="url(#bg4)"/><defs><radialGradient id="sp4" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ff5fae" stop-opacity=".32"/><stop offset="1" stop-color="#ff5fae" stop-opacity="0"/></radialGradient><clipPath id="cl40"><circle cx="400" cy="228" r="54"/></clipPath><clipPath id="cl41"><circle cx="260" cy="304" r="44"/></clipPath><clipPath id="cl42"><circle cx="540" cy="344" r="40"/></clipPath></defs><circle class="sv-fade" cx="400" cy="250" r="190" fill="url(#sp4)"/><g class="sv-rise" style="--i:0" filter="url(#sh4)"><rect x="330" y="300" width="140" height="230" rx="16" fill="#fff"/><text x="400" y="356" text-anchor="middle" font-family="Helvetica Neue, Arial, sans-serif" font-size="40" font-weight="700" fill="#ff2e8b">1</text></g><g class="sv-rise" style="--i:2" filter="url(#sh4)"><rect x="190" y="370" width="140" height="160" rx="16" fill="#fff"/><text x="260" y="426" text-anchor="middle" font-family="Helvetica Neue, Arial, sans-serif" font-size="40" font-weight="700" fill="#2a2038">2</text></g><g class="sv-rise" style="--i:4" filter="url(#sh4)"><rect x="470" y="404" width="140" height="126" rx="16" fill="#fff"/><text x="540" y="460" text-anchor="middle" font-family="Helvetica Neue, Arial, sans-serif" font-size="40" font-weight="700" fill="#2a2038">3</text></g><g class="sv-pop" style="--i:3" filter="url(#sh4)"><circle cx="400" cy="228" r="54" fill="url(#pc4)"/><g clip-path="url(#cl40)"><circle cx="400" cy="219.36" r="18.36" fill="#fff" opacity=".92"/><ellipse cx="400" cy="270.12" rx="33.48" ry="27" fill="#fff" opacity=".92"/></g><circle cx="400" cy="228" r="54" stroke="#fff" stroke-width="6"/></g><g class="sv-pop" style="--i:5" filter="url(#sh4)"><circle cx="260" cy="304" r="44" fill="#8ec9ff"/><g clip-path="url(#cl41)"><circle cx="260" cy="296.96" r="14.96" fill="#fff" opacity=".92"/><ellipse cx="260" cy="338.32" rx="27.28" ry="22" fill="#fff" opacity=".92"/></g><circle cx="260" cy="304" r="44" stroke="#fff" stroke-width="6"/></g><g class="sv-pop" style="--i:6" filter="url(#sh4)"><circle cx="540" cy="344" r="40" fill="#ffb38a"/><g clip-path="url(#cl42)"><circle cx="540" cy="337.6" r="13.6" fill="#fff" opacity=".92"/><ellipse cx="540" cy="375.2" rx="24.8" ry="20" fill="#fff" opacity=".92"/></g><circle cx="540" cy="344" r="40" stroke="#fff" stroke-width="6"/></g><g class="sv-badge" style="--i:9"><path d="M370 150 l8 -34 18 22 4 -28 4 28 18 -22 8 34z" fill="#ffd23f" stroke="#fff" stroke-width="5" stroke-linejoin="round"/></g></svg>
             </div>
-            <p><b>Dupes, kept apart.</b> Mark a spare and it leaves your main count but stays on your trade list, ready for whoever asks.</p>
+            <p><b>Every artist, on file.</b> Profiles for your groups and idols, with their members, their history and their top songs. Rank your favourites, and number one gets the spotlight.</p>
           </li>
           <li class="rail-card">
             <div class="rail-art" aria-hidden="true">
-              <svg viewBox="0 0 800 600" fill="none">
-                <defs>
-                  <linearGradient id="bgd" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff1e8"/><stop offset="1" stop-color="#ffe9f6"/></linearGradient>
-                  <linearGradient id="pocad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff5fae"/><stop offset="1" stop-color="#7a4cff"/></linearGradient>
-                  <filter id="shd" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#2a2038" flood-opacity="0.18"/></filter>
-                </defs>
-                <rect width="800" height="600" fill="url(#bgd)"/>
-                <g class="sv-rise" filter="url(#shd)">
-                  <rect x="150" y="170" width="500" height="76" rx="38" fill="#fff"/>
-                  <circle cx="204" cy="208" r="16" fill="none" stroke="#9a94a8" stroke-width="6"/>
-                  <path d="M216 220l18 18" stroke="#9a94a8" stroke-width="6" stroke-linecap="round"/>
-                  <rect class="sv-type" x="248" y="196" width="172" height="24" rx="12" fill="#d9d6e2"/>
-                </g>
-                <g filter="url(#shd)">
-                  <rect class="sv-pop" style="--i:4" x="150" y="290" width="126" height="52" rx="26" fill="#ff2e8b"/>
-                  <rect class="sv-pop" style="--i:5" x="292" y="290" width="150" height="52" rx="26" fill="#ffffff"/>
-                  <rect class="sv-pop" style="--i:6" x="458" y="290" width="116" height="52" rx="26" fill="#ffffff"/>
-                  <rect class="sv-pop" style="--i:7" x="590" y="290" width="60" height="52" rx="26" fill="#ffffff"/>
-                </g>
-                <g class="sv-rise" style="--i:9" filter="url(#shd)">
-                  <rect x="150" y="382" width="500" height="76" rx="20" fill="#fff"/>
-                  <rect x="176" y="404" width="38" height="32" rx="6" fill="url(#pocad)"/>
-                  <rect x="234" y="408" width="210" height="14" rx="7" fill="#d9d6e2"/>
-                  <rect x="234" y="430" width="132" height="12" rx="6" fill="#e7e5ee"/>
-                </g>
-              </svg>
+              <svg viewBox="0 0 800 600" fill="none"><defs><linearGradient id="bgd" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff1e8"/><stop offset="1" stop-color="#ffe9f6"/></linearGradient><linearGradient id="pocad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff5fae"/><stop offset="1" stop-color="#7a4cff"/></linearGradient><filter id="shd" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#2a2038" flood-opacity="0.18"/></filter></defs><rect width="800" height="600" fill="url(#bgd)"/><g class="sv-rise" filter="url(#shd)"><rect x="150" y="170" width="500" height="76" rx="38" fill="#fff"/><circle cx="204" cy="208" r="16" fill="none" stroke="#9a94a8" stroke-width="6"/><path d="M216 220l18 18" stroke="#9a94a8" stroke-width="6" stroke-linecap="round"/><rect class="sv-type" x="248" y="196" width="172" height="24" rx="12" fill="#d9d6e2"/></g><g filter="url(#shd)"><rect class="sv-pop" style="--i:4" x="150" y="290" width="126" height="52" rx="26" fill="#ff2e8b"/><rect class="sv-pop" style="--i:5" x="292" y="290" width="150" height="52" rx="26" fill="#ffffff"/><rect class="sv-pop" style="--i:6" x="458" y="290" width="116" height="52" rx="26" fill="#ffffff"/><rect class="sv-pop" style="--i:7" x="590" y="290" width="60" height="52" rx="26" fill="#ffffff"/></g><g class="sv-rise" style="--i:9" filter="url(#shd)"><rect x="150" y="382" width="500" height="76" rx="20" fill="#fff"/><rect x="176" y="404" width="38" height="32" rx="6" fill="url(#pocad)"/><rect x="234" y="408" width="210" height="14" rx="7" fill="#d9d6e2"/><rect x="234" y="430" width="132" height="12" rx="6" fill="#e7e5ee"/></g></svg>
             </div>
-            <p><b>Search that knows what you mean.</b> Filter by member, era, album or version, or pull up everything you're still missing from one release.</p>
+            <p><b>Find any card in seconds.</b> Search, then filter by group, idol or status, or show just your favourites or your duplicates.</p>
           </li>
           <li class="rail-card">
             <div class="rail-art" aria-hidden="true">
-              <svg viewBox="0 0 800 600" fill="none">
-                <defs>
-                  <linearGradient id="bge" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e9f0ff"/><stop offset="1" stop-color="#f7e9ff"/></linearGradient>
-                  <linearGradient id="pocae" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff5fae"/><stop offset="1" stop-color="#7a4cff"/></linearGradient>
-                  <filter id="she" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#2a2038" flood-opacity="0.18"/></filter>
-                </defs>
-                <rect width="800" height="600" fill="url(#bge)"/>
-                <g class="sv-split-l">
-                  <g transform="rotate(-7 323 241)" filter="url(#she)">
-                    <rect x="258" y="150" width="130" height="182" rx="11.7" fill="url(#pocae)"/>
-                    <circle cx="323" cy="215.5" r="19.5" fill="#fff" opacity=".92"/>
-                    <path d="M 291.8 277.4 a 31.2 33.8 0 0 1 62.4 0 Z" fill="#fff" opacity=".92"/>
-                  </g>
-                </g>
-                <g class="sv-split-r">
-                  <g transform="rotate(6 477 241)" filter="url(#she)">
-                    <rect x="412" y="150" width="130" height="182" rx="11.7" fill="#b9a6ff"/>
-                    <circle cx="477" cy="215.5" r="19.5" fill="#fff" opacity=".92"/>
-                    <path d="M 445.8 277.4 a 31.2 33.8 0 0 1 62.4 0 Z" fill="#fff" opacity=".92"/>
-                  </g>
-                </g>
-                <g class="sv-rise" style="--i:4" filter="url(#she)">
-                  <rect x="196" y="420" width="408" height="72" rx="36" fill="#fff"/>
-                  <path class="sv-draw" style="--i:7" pathLength="1" d="M258 456h84M334 440l18 16-18 16" stroke="#ff2e8b" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-                  <rect class="sv-type" style="--i:8" x="376" y="447" width="168" height="18" rx="9" fill="#ddd9e6"/>
-                </g>
-              </svg>
+              <svg viewBox="0 0 800 600" fill="none"><defs><linearGradient id="bg6" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e9f6ff"/><stop offset="1" stop-color="#f2ecff"/></linearGradient><linearGradient id="pc6" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff5fae"/><stop offset="1" stop-color="#7a4cff"/></linearGradient><filter id="sh6" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#2a2038" flood-opacity="0.18"/></filter></defs><rect width="800" height="600" fill="url(#bg6)"/><g class="sv-split-l"><g transform="rotate(-8 318 262)" filter="url(#sh6)"><rect x="243" y="157" width="150" height="210" rx="13.5" fill="url(#pc6)"/><circle cx="318" cy="232.6" r="22.5" fill="#fff" opacity=".92"/><path d="M 282 304 a 36 39.06 0 0 1 72 0 Z" fill="#fff" opacity=".92"/></g></g><g class="sv-split-r"><g transform="rotate(7 482 256)"><rect x="407" y="151" width="150" height="210" rx="13.5" fill="#fff" fill-opacity=".6" stroke="#ff2e8b" stroke-opacity=".55" stroke-width="4" stroke-dasharray="11 9"/><path class="sv-badge" style="--i:5" d="M482 286s-34-20-40-41c-4-14 5-28 19-28 9 0 16 5 21 12 5-7 12-12 21-12 14 0 23 14 19 28-6 21-40 41-40 41z" fill="#ff2e8b"/></g></g><g class="sv-rise" style="--i:6" filter="url(#sh6)"><rect x="170" y="448" width="460" height="60" rx="30" fill="#fff"/></g><rect class="sv-pop" style="--i:10" x="480" y="455" width="143" height="46" rx="23" fill="#ff2e8b"/><g class="sv-rise" style="--i:6" font-family="Helvetica Neue, Arial, sans-serif" font-size="18" font-weight="700" letter-spacing=".5" text-anchor="middle"><text x="247" y="484" fill="#8a8496">OWNED</text><text x="400" y="484" fill="#8a8496">PREORDERED</text><text x="551.5" y="484" fill="#fff">WISHLIST</text></g></svg>
             </div>
-            <p><b>Share your binder.</b> Send a link to your collection or your wishlist. Whoever opens it doesn't need the app, or an account, to have a look.</p>
+            <p><b>Know what you’re hunting.</b> Mark anything Owned, Preordered or Wishlist, so you know exactly what’s still missing before you get to the pop-up.</p>
           </li>
           <li class="rail-card">
             <div class="rail-art" aria-hidden="true">
-              <svg viewBox="0 0 800 600" fill="none">
-                <defs>
-                  <linearGradient id="bgg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#eef0f4"/><stop offset="1" stop-color="#e7f3ee"/></linearGradient>
-                  <linearGradient id="pocag" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff5fae"/><stop offset="1" stop-color="#7a4cff"/></linearGradient>
-                  <filter id="shg" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#2a2038" flood-opacity="0.18"/></filter>
-                </defs>
-                <rect width="800" height="600" fill="url(#bgg)"/>
-                <g class="sv-rise" filter="url(#shg)">
-                  <rect x="290" y="108" width="220" height="392" rx="34" fill="#fff"/>
-                  <rect x="306" y="124" width="188" height="360" rx="24" fill="#f3f3f7"/>
-                </g>
-                <g fill="url(#pocag)">
-                  <rect class="sv-pop" style="--i:3" x="324" y="186" width="46" height="66" rx="7"/>
-                  <rect class="sv-pop" style="--i:4" x="382" y="186" width="46" height="66" rx="7" opacity=".65"/>
-                  <rect class="sv-pop" style="--i:5" x="440" y="186" width="46" height="66" rx="7"/>
-                  <rect class="sv-pop" style="--i:6" x="324" y="268" width="46" height="66" rx="7" opacity=".65"/>
-                  <rect class="sv-pop" style="--i:7" x="382" y="268" width="46" height="66" rx="7"/>
-                  <rect class="sv-pop" style="--i:8" x="440" y="268" width="46" height="66" rx="7" opacity=".65"/>
-                </g>
-                <g class="sv-badge" style="--i:9" filter="url(#shg)">
-                  <circle cx="500" cy="452" r="42" fill="#fff"/>
-                  <path d="M480 452a28 28 0 0 1 40 0" stroke="#2a2038" stroke-opacity=".5" stroke-width="7" stroke-linecap="round" fill="none"/>
-                  <circle cx="500" cy="466" r="6.5" fill="#2a2038" fill-opacity=".5"/>
-                  <path class="sv-draw" style="--i:12" pathLength="1" d="M478 430l44 44" stroke="#ff2e8b" stroke-width="7" stroke-linecap="round"/>
-                </g>
-              </svg>
+              <svg viewBox="0 0 800 600" fill="none"><defs><linearGradient id="bg7" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e9f0ff"/><stop offset="1" stop-color="#f7e9ff"/></linearGradient><linearGradient id="pc7" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff5fae"/><stop offset="1" stop-color="#7a4cff"/></linearGradient><filter id="sh7" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#2a2038" flood-opacity="0.18"/></filter></defs><rect width="800" height="600" fill="url(#bg7)"/><g class="sv-split-l"><g transform="rotate(-7 268 300)" filter="url(#sh7)"><rect x="172" y="164" width="196" height="272" rx="18" fill="#fff"/><rect class="sv-type" style="--i:3" x="196" y="196" width="128" height="14" rx="7" fill="#c9c3d6"/><rect class="sv-type" style="--i:4" x="196" y="240" width="92" height="14" rx="7" fill="#e2deea"/><rect class="sv-type" style="--i:5" x="196" y="284" width="140" height="14" rx="7" fill="#c9c3d6"/><rect class="sv-type" style="--i:6" x="196" y="328" width="104" height="14" rx="7" fill="#e2deea"/><rect class="sv-type" style="--i:7" x="196" y="372" width="120" height="14" rx="7" fill="#c9c3d6"/></g></g><g class="sv-rise" filter="url(#sh7)"><rect x="384" y="92" width="232" height="416" rx="32" fill="#fff"/><rect x="398" y="106" width="204" height="388" rx="22" fill="#fdecf4"/></g><g class="sv-pop" style="--i:3"><g filter="url(#sh7)"><rect x="445" y="140" width="110" height="154" rx="9.9" fill="url(#pc7)"/><circle cx="500" cy="195.44" r="16.5" fill="#fff" opacity=".92"/><path d="M 473.6 247.8 a 26.4 28.64 0 0 1 52.8 0 Z" fill="#fff" opacity=".92"/></g></g><rect class="sv-type" style="--i:5" x="426" y="330" width="148" height="18" rx="9" fill="#2a2038" fill-opacity=".78"/><rect class="sv-type" style="--i:6" x="450" y="360" width="100" height="12" rx="6" fill="#ff2e8b" fill-opacity=".55"/><rect class="sv-type" style="--i:7" x="466" y="448" width="68" height="18" rx="9" fill="#fff"/><g class="sv-badge" style="--i:9" filter="url(#sh7)"><circle cx="612" cy="118" r="40" fill="#fff"/><path d="M612 96v30M601 106l11-11 11 11M598 116h-4v22h36v-22h-4" stroke="#ff2e8b" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></g></svg>
             </div>
-            <p><b>Works with no signal.</b> Your collection lives on your phone, so it's there in the queue, at the venue, or halfway through a trade in a car park.</p>
+            <p><b>Show it off.</b> Turn a card or a night out into a story for Instagram, or send your list as text.</p>
           </li>
         </ul>
       </div>
@@ -574,6 +440,42 @@
         <button class="rail-btn" type="button" data-dir="-1" aria-label="Previous features" aria-controls="rail"></button>
         <button class="rail-btn" type="button" data-dir="1" aria-label="More features" aria-controls="rail"></button>
       </div>
+    </section>
+
+    <!-- ─────────── the Fanclub: the one-time purchase ───────────
+         The membership card the app prints with your name and number, lifted
+         off the page as the blade scrolls in, catching the light every few
+         seconds; then what members get, in the app's own words. -->
+    <section class="club" id="fanclub" aria-labelledby="clubHead">
+      <div class="club-art" data-scrub>
+        <div class="club-float">
+          <div class="club-card" role="img" aria-label="The PocaPal Fanclub membership card, printed with the member's name and number.">
+            <span class="club-badge" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 20.4s-7.6-4.6-9.1-9.3C1.9 7.8 4 4.6 7.2 4.6c2 0 3.6 1.1 4.8 2.8 1.2-1.7 2.8-2.8 4.8-2.8 3.2 0 5.3 3.2 4.3 6.5-1.5 4.7-9.1 9.3-9.1 9.3z"/></svg></span>
+            <svg class="club-stick" viewBox="0 0 24 32" aria-hidden="true"><path d="M12 2.6c3.9 0 7 3.1 7 7s-3.1 7-7 7-7-3.1-7-7 3.1-7 7-7z" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 6.2l1 2.4 2.5.2-1.9 1.6.6 2.5L12 11.6l-2.2 1.3.6-2.5-1.9-1.6 2.5-.2z" fill="currentColor"/><path d="M10.4 16.4h3.2l-.4 13h-2.4z" fill="currentColor"/></svg>
+            <p class="club-word" aria-hidden="true"><small>POCAPAL</small>FANCLUB</p>
+            <p class="club-who" aria-hidden="true"><span>YOUR NAME</span><span>#000240</span></p>
+            <span class="club-sheen" aria-hidden="true"></span>
+          </div>
+        </div>
+        <div class="club-shadow" aria-hidden="true"></div>
+      </div>
+      <div class="club-copy" data-reveal>
+        <p class="kicker rv">PocaPal Fanclub</p>
+        <h2 class="h2" id="clubHead" data-lines>Pay once.<br><span class="hl">Yours for good.</span></h2>
+        <p class="body rv">PocaPal is free to download and free to collect in. When you want more, join the Fanclub: every extra, on all your devices, and a membership card with your name on it.</p>
+      </div>
+      <ul class="club-list" data-reveal>
+          <li class="club-item rv"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5a8.5 8.5 0 1 0 0 17c1.2 0 1.8-.8 1.8-1.7 0-1.2-1-1.5-1-2.6 0-1 .8-1.7 1.8-1.7h2.2a3.7 3.7 0 0 0 3.7-3.7C20.5 6.8 16.7 3.5 12 3.5z"/><circle cx="7.6" cy="11.2" r="1.2"/><circle cx="10.4" cy="7.4" r="1.2"/><circle cx="15" cy="7.6" r="1.2"/></svg><p><b>Theme rotation and spotlight</b>Your artists take turns on Home.</p></li>
+          <li class="club-item rv"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5h16"/><path d="M5 15.5l4.2-4.4 3.3 2.9L19 7.2"/><path d="M15 7h4v4"/></svg><p><b>Collection statistics</b>Growth, spending and value over time.</p></li>
+          <li class="club-item rv"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5V6a2 2 0 0 1 2-2h2.5M15.5 4H18a2 2 0 0 1 2 2v2.5M20 15.5V18a2 2 0 0 1-2 2h-2.5M8.5 20H6a2 2 0 0 1-2-2v-2.5"/><rect x="8.5" y="7.5" width="7" height="9" rx="1.2"/></svg><p><b>Batch scan</b>A whole stack of cards in one go.</p></li>
+          <li class="club-item rv"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6.5C10.4 5.2 8 4.6 4.5 4.8v13.4c3.5-.2 5.9.4 7.5 1.7 1.6-1.3 4-1.9 7.5-1.7V4.8C16 4.6 13.6 5.2 12 6.5z"/><path d="M12 6.5v13.4"/></svg><p><b>Unlimited photobooks</b>As many binders as you like.</p></li>
+          <li class="club-item rv"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.6 5.4l4 4L8.8 19.2l-4.6.6.6-4.6z"/><path d="M12.8 7.2l4 4"/></svg><p><b>Custom designs</b>Card backs, covers and mood boards.</p></li>
+          <li class="club-item rv"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.4"/><path d="M12 6.4a5.6 5.6 0 0 1 5.6 5.6"/></svg><p><b>Vinyl, CD and cassette players</b>Play what you own on the format you own.</p></li>
+          <li class="club-item rv"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="6.5" width="12" height="11" rx="2.2"/><path d="M15.5 10.5l5-3v9l-5-3"/></svg><p><b>Spinning story videos</b>Share a card turning round as a story.</p></li>
+          <li class="club-item rv"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6.6" height="6.6" rx="1.6"/><rect x="13.4" y="4" width="6.6" height="6.6" rx="1.6"/><rect x="4" y="13.4" width="6.6" height="6.6" rx="1.6"/><rect x="13.4" y="13.4" width="6.6" height="6.6" rx="1.6"/></svg><p><b>Unlimited categories</b>Lightsticks, posters, anything else.</p></li>
+          <li class="club-item rv"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 3.5c.5 4.3 2 6.3 6.5 7-4.5.7-6 2.7-6.5 7-.5-4.3-2-6.3-6.5-7 4.5-.7 6-2.7 6.5-7z"/><path d="M18 14.5c.2 1.8.8 2.6 2.5 2.9-1.7.3-2.3 1.1-2.5 2.9-.2-1.8-.8-2.6-2.5-2.9 1.7-.3 2.3-1.1 2.5-2.9z"/></svg><p><b>Card effects</b>Holo, glitter, gold and transparent finishes.</p></li>
+      </ul>
+      <p class="fine club-fine">One-time purchase. No subscription.</p>
     </section>
 
     <section class="cta" id="get">
@@ -590,7 +492,7 @@
       </div>
       <div data-reveal>
         <h2 class="h2" data-lines>Start your collection.</h2>
-        <p class="body cta-body rv">Free on the App Store. No ads, and nothing behind a paywall.</p>
+        <p class="body cta-body rv">Free on the App Store, for iPhone and Mac.</p>
         <div class="store-row rv">
           <a class="store" href="#" aria-label="Download on the App Store">
             <span class="store-icon" data-store="apple"></span>
@@ -611,52 +513,47 @@
             Is PocaPal free?<span class="faq-mark" aria-hidden="true"></span>
           </button>
           <div class="faq-a" id="faq-a1" role="region" aria-labelledby="faq-q1">
-            <div><p>Yes. Download it and start filing. There are no ads, and nothing sits behind a paywall.</p></div>
+            <div><p>Yes. Download it and collect as much as you like. If you want the extras, like statistics, batch scan, card effects and the vinyl, CD and cassette players, the PocaPal Fanclub unlocks them with a one-time purchase. There's no subscription.</p></div>
           </div>
         </div>
-
         <div class="faq-item rv">
           <button class="faq-q" type="button" aria-expanded="false" aria-controls="faq-a2" id="faq-q2">
             How do I add a card?<span class="faq-mark" aria-hidden="true"></span>
           </button>
           <div class="faq-a" id="faq-a2" role="region" aria-labelledby="faq-q2">
-            <div><p>Take a photo of it, or pick it out of your camera roll. PocaPal fills in the group, the idol and the version, and you can correct anything it gets wrong.</p></div>
+            <div><p>Tap +, then scan it with your camera or pick its photos from your library. PocaPal finds the edges and crops the front and the back for you. Pick who's on it, name the version if you like, and it's filed. Fanclub members can scan a whole stack in one go.</p></div>
           </div>
         </div>
-
         <div class="faq-item rv">
           <button class="faq-q" type="button" aria-expanded="false" aria-controls="faq-a3" id="faq-q3">
             Is it just for photocards?<span class="faq-mark" aria-hidden="true"></span>
           </button>
           <div class="faq-a" id="faq-a3" role="region" aria-labelledby="faq-q3">
-            <div><p>No. Albums, polaroids, toys, clothes, banners, lightsticks, whatever you've ended up with. Each kind gets its own tab or shelf.</p></div>
+            <div><p>No. Albums have a tab of their own, and so do your events. Others holds everything else, from lightsticks to posters and banners, in categories you make yourself.</p></div>
           </div>
         </div>
-
         <div class="faq-item rv">
           <button class="faq-q" type="button" aria-expanded="false" aria-controls="faq-a4" id="faq-q4">
             Can I keep track of what I'm still missing?<span class="faq-mark" aria-hidden="true"></span>
           </button>
           <div class="faq-a" id="faq-a4" role="region" aria-labelledby="faq-q4">
-            <div><p>Yes. Anything you're after goes on your wishlist, next to what you already own, so you know what you're looking for before you get to the pop-up.</p></div>
+            <div><p>Yes. Mark anything as Owned, Preordered or Wishlist and filter by it, so you know exactly what you're looking for before you get to the pop-up.</p></div>
           </div>
         </div>
-
         <div class="faq-item rv">
           <button class="faq-q" type="button" aria-expanded="false" aria-controls="faq-a5" id="faq-q5">
-            Does it work without signal?<span class="faq-mark" aria-hidden="true"></span>
+            Do I need Apple Music?<span class="faq-mark" aria-hidden="true"></span>
           </button>
           <div class="faq-a" id="faq-a5" role="region" aria-labelledby="faq-q5">
-            <div><p>Yes. Your collection lives on your phone, so it's there in a basement venue or on a plane. Back it up whenever you're online.</p></div>
+            <div><p>Only to play your albums. PocaPal finds them in the Apple Music catalogue, and playback uses your Apple Music subscription. Everything else works without one.</p></div>
           </div>
         </div>
-
         <div class="faq-item rv">
           <button class="faq-q" type="button" aria-expanded="false" aria-controls="faq-a6" id="faq-q6">
-            Is there an iPad version?<span class="faq-mark" aria-hidden="true"></span>
+            Is there an iPad or Mac version?<span class="faq-mark" aria-hidden="true"></span>
           </button>
           <div class="faq-a" id="faq-a6" role="region" aria-labelledby="faq-q6">
-            <div><p>Not yet, but one is on the way. PocaPal is made for iPhone and runs on iPad at iPhone size in the meantime. When the iPad version arrives, your collection will be waiting on the bigger screen, with nothing to move across.</p></div>
+            <div><p>PocaPal already runs on Mac. An iPad version is on the way, and in the meantime PocaPal runs on iPad at iPhone size. A Fanclub membership covers all your devices.</p></div>
           </div>
         </div>
 

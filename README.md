@@ -99,11 +99,13 @@ What each part does:
 | story | the phone arrives tipped back and stands up; the closing line's two lines rise at different rates (`--o`) |
 | story → light | as the light sheet slides over, the dark stage sinks back at under half speed and dims (`recede()`) |
 | Collection | the phone stands up out of the table while the four cards are dealt onto it, each dropping out of the air above the plane on its own slice of `--e` |
+| Cards | the photocard rises into place, drifts a few degrees and turns over half way through its pass, its holo sliding across the front and the back's stickers landing one by one as it comes round; it also follows a drag (see The card blade) |
 | carousel | the row slides in from the right; neighbours sit back at 93% and the current slide's phone rises into its window |
 | Themes | the back phone starts tucked flat behind the front one and swings out to its angle; picking a theme makes the pair take a small breath |
 | Players | the stage swings up into place; switching slides the new player in from the side you're heading towards |
 | Events | a second pinned run: the card counts down as the room goes dark, then a stage with TONIGHT on its screen, beams, confetti and a crowd waving lightsticks, then lights up and the next show (see The Events blade) |
-| rail | cards arrive one after another, and each illustration plays a short scene (scan line sweeping, haul sliding into the grid, completion ring filling) once in view and again on hover |
+| rail | cards arrive one after another, and each illustration plays a short scene (a binder's pockets filling, the scanner sweeping a haul, the spending chart drawing as its total counts up, the ranking podium rising) once in view and again on hover |
+| Fanclub | the membership card lifts off the page and turns towards the reader, then floats with a sheen crossing it every few seconds; the members' list fades up in turn |
 | CTA | a hand of photocards fans out behind the app icon, which springs in; the fan opens wider on hover |
 | FAQ | questions fade up in turn; an answer settles in just behind the opening |
 
@@ -335,6 +337,58 @@ longer stick. Browsers without `overflow: clip` (Safari 15 and older) get the
 still instead, as do reduced motion and no script: the opening headline, the
 card at four weeks, and the timeline under it.
 
+## The card blade
+
+`#cards` is the app's card page: a photocard as a 3D object. `.spin-card`
+holds two faces back to back (`backface-visibility: hidden`); the front is a
+card photo under a holo layer and a glare, the back a design from the card
+designer, built from `.stk` stickers sized in container units of the back.
+
+Section 8e of `app.js` drives it. The turn is the scroll angle (it drifts a
+few degrees across the blade's pass and turns over between 45% and 62% of it)
+plus a drag offset. Letting go eases the drag offset to the nearest half turn;
+a tap, or the Turn it over button, adds one. Each frame JS writes:
+
+| variable | read by |
+|---|---|
+| `--a` | the turn in degrees: the holo and glare slide with it |
+| `--h` | the holo's strength, stronger the further the card is tilted |
+| `--b` | how far the back faces the reader: each sticker lands on its own slice of it (`--k`) |
+| `--sw` | the shadow's width, narrow when the card is edge on |
+
+Without motion the scroll angle is fixed, the card stands front on, and a drag
+or the button still turns it, landing at once.
+
+## The Fanclub
+
+`#fanclub` sits between the rail and the download button. The card is the
+membership card the app prints (name and member number on the bottom line),
+in CSS; the list under it uses the Fanclub sheet's own titles and lines. The
+price isn't on the page, only that it is a one-time purchase with no
+subscription, so a price change needs nothing here.
+
+## What the copy promises
+
+The copy was checked against the product review of the app. Keep it in step
+when the app changes:
+
+- **Free, with the Fanclub as a one-time purchase.** Fanclub only: statistics,
+  batch scan, vinyl, CD and cassette players (Digital is free), theme rotation,
+  card effects, custom designs, spinning story videos, more than one photobook,
+  and unlimited categories. The page marks these with a footnote under the
+  blade (`.fine`) or a tag in the rail (`.tag`).
+- **Adding a card**: scan or pick photos, the edges are found and both sides
+  cropped, then you pick who's on it. Nothing claims the app recognises the
+  group or the version by itself.
+- **Albums** come from the Apple Music catalogue, and playback needs Apple
+  Music.
+- **Events** follows the reviewed redesign: Coming Up fills in birthdays and
+  debut anniversaries from the artists you follow, and a ticket becomes a
+  memory the day after, with photos, what you brought home and the songs you
+  heard. If those ship later than the site, soften the Events lede, its
+  closing line and the carousel caption.
+- **Platforms**: iPhone and Mac now, iPad on the way.
+
 ## The feature rail
 
 The horizontally scrolling section near the bottom (`.rail-sec`) is a plain
@@ -345,7 +399,9 @@ than the viewport edge; without it the browser snaps the card to the very edge.
 
 Cards, copy and artwork all live in `index.html`, add or remove `<li
 class="rail-card">` entries freely, the arrows adapt. The artwork is inline
-SVG, and the `sv-*` classes on its parts pick the animation (see Motion).
+SVG, and the `sv-*` classes on its parts pick the animation (see Motion). A
+figure with `.sv-count` counts up to its `data-to`, between `data-pre` and
+`data-suf` (`%` unless given).
 
 ## Swapping in real artwork
 Drop images into `public/assets/cards/` and edit the `ASSETS` array at the
