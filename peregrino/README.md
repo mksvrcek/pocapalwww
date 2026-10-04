@@ -6,15 +6,22 @@ requests. `peregrino/` is the whole site.
 
 ```
 peregrino/
-  index.html          structure + all copy
-  styles.css          all styling (night-sky story → warm paper body, ticket-blue accent)
-  app.js              both scroll stories + the smaller interactions; tuning constants up top
-  assets/data/world.json   country outlines for the globe, stamps and passport map
-  assets/screens/     app screens (590×1278, from peregrinoApp/redesign/prototype/screens)
-  assets/photos/      illustrations cropped from the prototype's photo grid (luggage tags, tiles)
-  assets/flags/       round flags for the passport's visited page (from the app's FlagKit)
+  index.html        structure + all copy
+  styles.css        all styling (night-sky journey → warm paper body, ticket-blue accent)
+  app.js            the journey, the tour and the smaller interactions; tuning constants up top
+  globe.js          the app's SceneKit globe, ported to WebGL (window.PeregrinoGlobe)
+  artifacts.js/.css the app's print family: stamps, tickets, tags, receipt, polaroids (window.PeregrinoArt)
+  assets/globe/     textures, height map and country outlines, built by tools/peregrino-globe
+  assets/screens/   app screens from peregrinoApp/redesign/prototype/screens (590×1278)
+                    and the lower halves of four of them (*-sheet.webp) for the live-globe screens
+  assets/photos/    illustrations cropped from the prototype's photo grid
+  assets/fonts/     Archivo (OFL), standing in for SF Pro Expanded / Condensed on the artifacts
   assets/phone-frame.webp  the same device frame PocaPal uses
 ```
+
+Everything on the page is taken from the app's current code or the redesign
+prototype's screens. The old screenshots in `peregrinoApp/screenshots/` show the
+app before the redesign and are not used.
 
 ## Run locally
 ```
@@ -26,77 +33,103 @@ python3 dev-server.py 5174 peregrino
 
 | Section | What it does |
 |---|---|
-| **The journey** (`#story`) | Scroll story 1. The globe rises out of the bottom of the hero, flies a year of trips while the countries fill in and a stamp lands on each arrival, then shrinks into the phone's own globe on the Statistics screen. |
-| **Today** | The "new country detected" card pops out of the phone; the Austria stamp thumps down on a loop. |
-| **Passport** (`#passport`) | Scroll story 2. A 3D passport: the cover opens on the data page (counting up), the visited flags fill in, a leaf turns and twelve stamps land on the spread. The copy beside it changes with each beat. |
-| **Tickets** | A printer that prints the next journey. Pick Flight / Train / Ferry / Bus / Event and the old ticket drops out as the new one feeds. Planned / Booked / Used restyles it (pencilled in, countdown, stub torn and inked). Cycles on its own until someone clicks. |
-| **Statistics** | A dark band; figures count up on reveal and again when you pick a year. *All time* quotes the journey's own distance, so the numbers agree. |
-| **Journal** | Trips as luggage tags swaying on strings around the phone. |
-| **Places, events, photos** | A snapping rail of phones with arrows and dots. |
-| **More** | Bento tiles: Flighty share, Schengen ring, enamel pins, globe layers, photos, calendar, Pinpoint. |
-| CTA, FAQ, footer | Same shape as PocaPal's. |
+| **The journey** (`#story`) | The big scroll story. The globe rises out of the hero and follows one summer: a drive from Prague to Vienna, a flight to Lisbon, the Camino Português on foot to Santiago, a flight to Stockholm, the train to Oslo, then Reykjavík and home. A country is painted the moment the route crosses into it (one at a time), and its stamp thumps down there. Then a closed passport comes up, the globe settles onto the emblem on its cover, the cover swings open underneath it, and the globe dives into the data page and unrolls into its map. The summer's six stamps land on the next page, the count goes 26 → 32, and the phone comes to sit beside the passport. |
+| **The tour** (`#tour`) | One phone pinned while the blades scroll past, crossing sides (right, left, right, left, right, centre) to sit opposite each one. Each stop changes the screen and brings out what the app prints for it: *Today* stamps Österreich, *Journal* hangs two luggage tags off the phone, *Tickets* runs the printer, *Places* fans out polaroids, *Statistics* feeds a receipt, *Customise* fans the passport covers. |
+| **More** | Bento tiles: Flighty share, Schengen ring, enamel pins, globe layers, Pinpoint, calendar. |
+| CTA, FAQ, footer | Same shape as PocaPal's. The download blade fans a hand of the app's paper (passport, ticket, polaroid, tag) behind the icon, the way PocaPal fans photocards. |
 
-## The globe
+## The globe (`globe.js`)
 
-Drawn straight onto a canvas, no library. `world.json` is the app's own
-`countries.geojson` cut down to outer rings at 0.1° (≈38 KB gzipped). Every
-point is kept as a unit vector so a rotation is a handful of multiplies, and a
-ring point that falls behind the globe is pushed out to the limb, with a run of
-them drawn as an arc along the limb. That keeps countries cut by the horizon
-clean instead of folding back across the face.
+A WebGL port of `peregrino/Home/Globe`: the same displaced sphere (240 × 120
+segments, height × 0.09), the same texture recipe, the app's three lights
+(ambient 0.6 × 800, a warm sun 1200 from the upper right, a cool fill 400 from
+the lower left) lit in linear light as SceneKit does, and the blue atmosphere
+rim. It is a real sphere with a depth buffer, so nothing on the far side can
+fold over the near one.
 
-Colours are sampled off the app's own render (`stats.jpg`), so when the live
-globe hands over to the screenshot there is no jump. Where it lands is
-`SHOT_GLOBE` in `app.js`, measured off that screenshot: centre at 50% / 27.9%
-of the screen, radius 41% of its width. Re-measure if you swap the shot, and
-point `T.END` at whatever the new one faces.
+Countries are painted live rather than baked. `ids-*.png` holds one country
+index per texel and a 256 × 4 lookup texture says what each index wears: its
+natural land colour, a paint colour and amount, a hatch ink and amount. Paint
+keeps the texture's own shading (it is scaled by base ÷ natural land colour),
+so borders, foam and relief show through, and the four ids around a pixel are
+blended so painted edges stay smooth. `paint(a3, rgb, amount)` and
+`hatch(a3, rgb, amount)` are all the page calls; an amount between 0 and 1 is
+how a country fills in.
+
+Close in over Europe a sharper texture takes over (`europe-*`, 4096 × 2048 over
+30°W–50°E, 31°N–71°N, about 4.5× the world texture's detail), fading in with
+zoom and out towards its edges. Its noise and dots are tied to the world
+texture, so the two meet without a seam. `EUROPE` in `globe.js` must match the
+build script.
+
+The mesh can also unroll into a flat Mercator map (`morph`) and turn into
+print (`print`): that is how the globe ends up on the passport's data page.
+
+Planes, ships, routes, pins and the traveller are drawn on a 2D canvas over the
+globe (`#over`), placed with `globe.project()`.
 
 ## Tuning the journey
 
-**`LEGS` in `app.js`** is the trip: each leg flies city to city and, on
-arrival, fills `fill` (ISO3 codes) and pops a stamp for `stamp`. Codes with no
-outline on the map (Monaco, Vatican, Hong Kong) still count, they just have
-nothing to paint. Legs share the journey's span by distance, so a long haul
-takes longer, though not proportionally. The camera follows the plane and
-pulls back on long legs.
+**`LEGS` in `app.js`** is the summer. Ground legs follow the road or rail
+through their `via` points; flights take the great circle. Nothing lists which
+countries a leg adds: `findEvents()` walks each route through the country
+outlines and notes where it crosses into somewhere new (or, for a flight, where
+it lands), so moving a route moves its stamps with it. `STAMP_DATE` dates
+them.
 
 **`T` in `app.js`** holds the beats as scroll progress across `#story`:
 
 | key | what it controls |
 |---|---|
-| `heroOut` | the headline fading out |
-| `rise` | the globe coming up from the bottom and centring |
-| `journey` | the span the legs share |
-| `settle` | the phone rising and the globe shrinking into it |
-| `swap` | the live globe fading to the screenshot under it |
-| `outro` | the closing line |
+| `heroOut`, `rise` | the headline leaving, the globe coming up |
+| `journey` | the span the legs share (ground legs get more room, flights scale with distance) |
+| `settle` | the camera pulling back to the whole summer |
+| `rise2`, `dock` | the closed passport coming up; the globe settling onto its emblem |
+| `open` | the cover swinging open, on the app's book-opening spring |
+| `fly`, `unroll`, `print` | the globe diving into the data page, unrolling, becoming print |
+| `stamps` | the six stamps landing |
+| `side`, `outro` | the passport moving aside for the phone, the closing line |
 
-The length of the run is the `height` of `.story` in `styles.css` (`640vh`).
+The length of the run is the `height` of `.story` in `styles.css` (`900vh`,
+`820vh` on narrow screens). `ZG` is how close the camera comes for the ground
+legs.
 
-## Tuning the passport
+## The tour
 
-`PP` in `app.js` holds its beats as progress across `#passport` (`open`,
-`count`, `flags`, `turn`, `stamps`, `beats`). The page size is `--pw` on
-`.pp-art`; everything inside the book is sized off it, so the book scales as
-one piece. The leaves turn in their own 3D (perspective on `.book-body`) but
-the spread is flat, so `z-index` decides which leaf is on top: on the right,
-earlier leaves sit higher; on the left, later ones do.
+Each stop is an `<article class="stop">` with `data-side` (`left`, `right` or
+`centre`) and `data-screen`. Between two stops the phone crosses over with a
+little turn, and the screens change half way. `LIVE` in `app.js` is the screens
+that show a live globe in their top pane (where it looks, its routes, its pill),
+with the page under it from `SHEETS`; `FULL` is the screens shown whole.
 
-`PP_STAMPS` is which stamps land, six per page in landing order. Stamps come
-from `STAMP` (name in the country's own language, shape, ink, continent,
-date), drawn as SVG through one shared `#ink` filter in `index.html` that
-roughens the edges and knocks a little ink out. The silhouette inside is the
-country's largest ring from `world.json`.
+Artifacts sit on the phone's open side, away from the copy, and partly over the
+phone where the gap is narrow. The printer grows out of the Dynamic Island on a
+spring, feeds the ticket out of its slot stub first and turned a quarter, the
+way the app prints it, then shrinks back into the island; the ticket turns back
+and is filed across the phone's edge. `KINDS` holds the tickets the chips
+print; the state buttons pencil it in, book it or tear the stub.
 
 ## Reduced motion
 
-Under `prefers-reduced-motion` both scroll stories collapse to a calm layout:
-the hero shows a still of the finished globe behind the phone, the passport
-opens straight to its stamps, and the printer swaps tickets without feeding.
+Under `prefers-reduced-motion` the journey is a still: the headline, the
+summer's globe drawn once, the closing line, then the open passport with all
+six stamps beside the phone. The tour becomes plain blades of copy (the ticket
+buttons go with the printer they drive).
+
+## Rebuilding the globe's textures
+
+```
+node tools/peregrino-globe/build.js ../peregrinoApp
+```
+
+reads the app's own country data and runs its `GlobeTextureGenerator` recipe
+(ported in `tools/peregrino-globe/gen.js`) in headless Chromium. See that
+folder's README. Images on this site are cached as immutable for a year, so
+give regenerated files new names (and update `globe.js`) once the site is live.
 
 ## Deploy
 
-`firebase.json` now declares two hosting targets, `pocapal` (`public/`) and
+`firebase.json` declares two hosting targets, `pocapal` (`public/`) and
 `peregrino` (`peregrino/`). Map each to its Firebase Hosting site once:
 
 ```

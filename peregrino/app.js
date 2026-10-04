@@ -1,406 +1,206 @@
 /* =============================================================
    Peregrino — product page choreography
 
-   Two scroll-scrubbed runs, both pure functions of scroll progress
-   so scrubbing up and down gives identical frames:
+   1. The journey (#story): scroll-scrubbed. The globe (globe.js) rises
+      out of the hero and follows one summer: a drive, flights, the Camino
+      on foot and a train. A country is painted the moment the route
+      crosses into it, one at a time, and its stamp lands there. Then a
+      closed passport comes up, the globe settles onto the emblem on its
+      cover, the cover swings open underneath it the way the app's book
+      opens, and the globe dives into the data page and unrolls into its
+      map. The summer's stamps land on the next page and the phone comes
+      to sit beside it.
+   2. The tour (#tour): one phone pinned while the blades scroll past,
+      crossing sides to sit opposite each one, bringing out what the app
+      prints for it (artifacts.js).
+   3. The small things, the download blade and the FAQ.
 
-   1. The journey (#story). A globe rises out of the bottom of the
-      hero, flies a year of trips (countries filling in and getting
-      stamped as each one is reached), then shrinks into the phone's
-      own globe on the Statistics screen.
-   2. The passport (#passport). The book opens on its data page,
-      a leaf turns and the stamps land on the spread.
-
-   Everything else is triggered once on reveal or by a click.
+   Everything in (1) is a pure function of scroll progress, so scrubbing
+   back and forth gives identical frames; only the planes and ships keep
+   their own time.
    ============================================================= */
 (() => {
 'use strict';
 
 const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const $  = s => document.querySelector(s);
+const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const clamp = (v, a = 0, b = 1) => v < a ? a : v > b ? b : v;
-const lerp  = (a, b, t) => a + (b - a) * t;
-const seg   = (p, a, b) => clamp((p - a) / (b - a));
-const ease  = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const lerp = (a, b, t) => a + (b - a) * t;
+const seg = (p, a, b) => clamp((p - a) / (b - a));
+const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 const easeOut = t => 1 - Math.pow(1 - t, 3);
-const D2R = Math.PI / 180;
-const EARTH_KM = 6371;
+const easeIn = t => t * t * t;
+const smooth = t => t * t * (3 - 2 * t);
+/* the app's book-opening spring (response 0.8, damping 0.8) over t = 0…1, a touch of overshoot */
+const springOut = (() => {
+  const w = 2 * Math.PI / .8, k = .8 * w, wd = w * .6;
+  const x = t => 1 - Math.exp(-k * t) * (Math.cos(wd * t) + k / wd * Math.sin(wd * t));
+  const end = x(1);
+  return t => t <= 0 ? 0 : t >= 1 ? 1 : x(t) / end;
+})();
+const D2R = Math.PI / 180, EARTH_KM = 6371;
 const fmt = n => Math.round(n).toLocaleString('en-GB');
+const GL = window.PeregrinoGlobe, ART = window.PeregrinoArt;
 
 /* -------------------------------------------------------------
-   1. THE TRIP
-   Cities are [lon, lat]. Each leg flies from one to the next and,
-   on arrival, fills `fill` (ISO3) and pops a stamp for `stamp`.
-   Codes with no outline on the map (microstates, Hong Kong) still
-   count, they just have nothing to paint. Prague is home, so it is
-   filled at the start. The total comes to 32, the same as the
-   passport and the phone.
+   THE TRAVELLER
+   Twenty-six countries before the summer (Europe 19, Asia 6, North
+   America 1); the summer adds six, which makes the 32 (Europe 25,
+   Asia 6, North America 1) on the app's own Statistics screen.
    ------------------------------------------------------------- */
+const INK = {visited: [217, 69, 59], lived: [224, 162, 26], wishlist: [124, 91, 230], planned: [138, 147, 160]};
+const LIVED = ['CZE', 'GBR', 'KOR'];
+const VISITED = ['DEU', 'POL', 'SVK', 'HUN', 'ITA', 'FRA', 'NLD', 'BEL', 'LUX', 'DNK', 'CHE', 'HRV', 'SVN', 'GRC', 'IRL', 'FIN', 'MCO',
+                 'JPN', 'CHN', 'THA', 'VNM', 'HKG', 'USA'];
+const BASE_COUNT = LIVED.length + VISITED.length;        // 26
+const WISHLIST = ['MAR', 'CAN'];
+const PLANNED = ['ISL', 'NOR'];                          // pencilled in, inked once reached
+
+/* route colours: TravelMode.tintColor, outer mixed 45% to black, inner 35% to white */
+const TINT = {flight: [0, 122, 255], train: [52, 199, 89], bus: [255, 149, 0], drive: [255, 59, 48], ferry: [48, 176, 199], walk: [162, 132, 94]};
+const outer = m => `rgb(${TINT[m].map(v => Math.round(v * .55))})`;
+const inner = m => `rgb(${TINT[m].map(v => Math.round(v * .65 + 255 * .35))})`;
+const AIRLINES = [['#f5f5f5', '#2659b3'], ['#f2f2f2', '#cc2626'], ['#ebebe0', '#008059'], ['#f5f5f5', '#e69900'], ['#334d80', '#334d80'], ['#f5f5f5', '#8c008c']];
+
 const CITY = {
-  PRG:[14.42,50.08,'Prague'],   VIE:[16.37,48.21,'Vienna'],  ROM:[12.50,41.90,'Rome'],
-  LIS:[-9.14,38.72,'Lisbon'],   LON:[-0.13,51.51,'London'],  CPH:[12.57,55.68,'Copenhagen'],
-  AMS:[4.90,52.37,'Amsterdam'], SEL:[126.98,37.57,'Seoul'],  TYO:[139.69,35.69,'Tokyo'],
-  HKG:[114.17,22.32,'Hong Kong'], BKK:[100.50,13.76,'Bangkok'], NYC:[-74.00,40.71,'New York'],
+  PRG: {ll: [14.42, 50.08], n: 'Prague'},   VIE: {ll: [16.37, 48.21], n: 'Vienna'},
+  LIS: {ll: [-9.2, 38.76], n: 'Lisbon'},    SCQ: {ll: [-8.54, 42.88], n: 'Santiago'},
+  STO: {ll: [18.07, 59.33], n: 'Stockholm'}, OSL: {ll: [10.75, 59.91], n: 'Oslo'},
+  RKV: {ll: [-21.88, 64.13], n: 'Reykjavík'},
 };
-const HOME = {city:'PRG', fill:['CZE'], lived:['CZE'], stamp:'CZE'};
+/* the summer: ground legs follow their roads and rails through these points */
 const LEGS = [
-  {from:'PRG', to:'VIE', fill:['AUT','SVK','HUN'],                    stamp:'AUT'},
-  {from:'VIE', to:'ROM', fill:['ITA','VAT','SMR','MLT','SVN','HRV'],  stamp:'ITA'},
-  {from:'ROM', to:'LIS', fill:['PRT','ESP','MCO'],                    stamp:'PRT'},
-  {from:'LIS', to:'LON', fill:['GBR','IRL'], lived:['GBR'],           stamp:'GBR'},
-  {from:'LON', to:'CPH', fill:['DNK','SWE','NOR','FIN'],              stamp:'DNK'},
-  {from:'CPH', to:'AMS', fill:['NLD','BEL','LUX','DEU','FRA'],        stamp:'NLD'},
-  {from:'AMS', to:'SEL', fill:['KOR'], lived:['KOR'],                 stamp:'KOR'},
-  {from:'SEL', to:'TYO', fill:['JPN'],                                stamp:'JPN'},
-  {from:'TYO', to:'HKG', fill:['HKG','CHN'],                          stamp:'HKG'},
-  {from:'HKG', to:'BKK', fill:['THA','VNM'],                          stamp:'THA'},
-  {from:'BKK', to:'NYC', fill:['USA','CAN'],                          stamp:'USA'},
+  {mode: 'drive', from: 'PRG', to: 'VIE', title: 'Drive', via: [[14.62, 49.96], [15.2, 49.62], [15.59, 49.40], [16.12, 49.27], [16.61, 49.19], [16.66, 48.98], [16.64, 48.80], [16.55, 48.58], [16.45, 48.38]]},
+  {mode: 'flight', from: 'VIE', to: 'LIS', title: 'OS 381', air: 1},
+  {mode: 'walk', from: 'LIS', to: 'SCQ', title: 'Camino Português', via: [[-9.0, 38.9], [-8.68, 39.24], [-8.41, 39.60], [-8.43, 40.21], [-8.45, 40.57], [-8.61, 41.15], [-8.62, 41.53], [-8.58, 41.77], [-8.64, 42.03], [-8.61, 42.28], [-8.65, 42.43], [-8.64, 42.60], [-8.66, 42.74]]},
+  {mode: 'flight', from: 'SCQ', to: 'STO', title: 'SK 1592', air: 2},
+  {mode: 'train', from: 'STO', to: 'OSL', title: 'Train', via: [[17.3, 59.5], [16.54, 59.61], [15.84, 59.39], [15.21, 59.27], [14.11, 59.31], [13.50, 59.38], [13.32, 59.50], [12.59, 59.65], [12.29, 59.89], [12.00, 60.19], [11.05, 59.96]]},
+  {mode: 'flight', from: 'OSL', to: 'RKV', title: 'FI 319', air: 5},
+  {mode: 'flight', from: 'RKV', to: 'PRG', title: 'FI 532', air: 0, home: true},
 ];
+const STAMP_DATE = {AUT: '04.07.2026', PRT: '06.07.2026', ESP: '24.07.2026', SWE: '02.08.2026', NOR: '06.08.2026', ISL: '09.08.2026'};
 
-/* -------------------------------------------------------------
-   2. STAMPS
-   One entry per country that gets a stamp anywhere on the page:
-   its name in its own language, the stamp's shape and ink, the
-   continent code and the date it was stamped.
-   ------------------------------------------------------------- */
-const INK = {blue:'#3b67b5', red:'#c2453c', green:'#3b7d52', purple:'#7a4c9e',
-             navy:'#2f3d74', orange:'#c4702a', teal:'#2b7c84'};
-const STAMP = {
-  CZE:{n:'Česko',          s:'circle', c:'blue',   k:'EU', d:'01.06.2026'},
-  AUT:{n:'Österreich',     s:'oval',   c:'navy',   k:'EU', d:'01.10.2026'},
-  ITA:{n:'Italia',         s:'circle', c:'green',  k:'EU', d:'25.05.2026'},
-  PRT:{n:'Portugal',       s:'oval',   c:'teal',   k:'EU', d:'14.05.2022'},
-  ESP:{n:'España',         s:'shield', c:'red',    k:'EU', d:'14.05.2022'},
-  GBR:{n:'United Kingdom', s:'circle', c:'navy',   k:'EU', d:'11.09.2019'},
-  DNK:{n:'Danmark',        s:'rect',   c:'red',    k:'EU', d:'20.06.2019'},
-  NLD:{n:'Nederland',      s:'hex',    c:'orange', k:'EU', d:'04.02.2026'},
-  FRA:{n:'France',         s:'hex',    c:'blue',   k:'EU', d:'09.10.2019'},
-  KOR:{n:'대한민국',        s:'rect',   c:'red',    k:'AS', d:'21.08.2021'},
-  JPN:{n:'日本',            s:'shield', c:'red',    k:'AS', d:'01.03.2023'},
-  HKG:{n:'香港',            s:'circle', c:'red',    k:'AS', d:'13.12.2025'},
-  THA:{n:'Thailand',       s:'rect',   c:'purple', k:'AS', d:'02.01.2026'},
-  USA:{n:'United States',  s:'shield', c:'navy',   k:'NA', d:'12.03.2027'},
-  MCO:{n:'Monaco',         s:'hex',    c:'purple', k:'EU', d:'25.05.2026'},
-  VAT:{n:'Vaticano',       s:'shield', c:'purple', k:'EU', d:'24.05.2026'},
-  SWE:{n:'Sverige',        s:'circle', c:'blue',   k:'EU', d:'20.06.2019'},
-  DEU:{n:'Deutschland',    s:'rect',   c:'navy',   k:'EU', d:'02.04.2024'},
-  GRC:{n:'Ελλάδα',          s:'oval',   c:'blue',   k:'EU', d:'18.07.2024'},
-};
-
-/* -------------------------------------------------------------
-   3. WORLD
-   assets/data/world.json is the app's own countries.geojson, cut
-   down to outer rings at 0.1° (ISO3 → [[lon,lat,lon,lat…], …]).
-   For the globe every point is kept as cos·cos, cos·sin, sin so a
-   rotation is a handful of multiplies.
-   ------------------------------------------------------------- */
-let RAW = null;       // ISO3 → rings in degrees
-let GEO = null;       // [{id, rings:[Float32Array(a,b,c,…)]}]
-const geoReady = fetch('assets/data/world.json').then(r => r.json()).then(w => {
-  RAW = w;
-  GEO = Object.entries(w).filter(([id]) => id !== 'ATA').map(([id, rings]) => ({
-    id,
-    rings: rings.map(r => {
-      const out = new Float32Array(r.length / 2 * 3);
-      for (let i = 0, j = 0; i < r.length; i += 2, j += 3) {
-        const lo = r[i] * D2R, la = r[i + 1] * D2R, cl = Math.cos(la);
-        out[j] = cl * Math.cos(lo); out[j + 1] = cl * Math.sin(lo); out[j + 2] = Math.sin(la);
-      }
-      return out;
-    }),
-  }));
-  return w;
-}).catch(() => null);
-
-/* The largest ring of a country, as an SVG path fitted into a box. Used
-   for the silhouette inside a stamp. */
-function silhouette(id, bx, by, bw, bh) {
-  const rings = RAW && RAW[id];
-  if (!rings) return null;
-  let best = null, bestA = 0;
-  for (const r of rings) {
-    let a = 0;
-    for (let i = 0; i < r.length - 2; i += 2) a += r[i] * r[i + 3] - r[i + 2] * r[i + 1];
-    a = Math.abs(a);
-    if (a > bestA) { bestA = a; best = r; }
-  }
-  let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
-  for (let i = 0; i < best.length; i += 2) {
-    x0 = Math.min(x0, best[i]); x1 = Math.max(x1, best[i]);
-    y0 = Math.min(y0, best[i + 1]); y1 = Math.max(y1, best[i + 1]);
-  }
-  const k = Math.cos((y0 + y1) / 2 * D2R);
-  const w = (x1 - x0) * k, h = y1 - y0;
-  const s = Math.min(bw / w, bh / h);
-  const ox = bx + (bw - w * s) / 2, oy = by + (bh - h * s) / 2;
-  let d = '';
-  for (let i = 0; i < best.length; i += 2) {
-    d += (i ? 'L' : 'M') + (ox + (best[i] - x0) * k * s).toFixed(1) + ' ' + (oy + (y1 - best[i + 1]) * s).toFixed(1);
-  }
-  return d + 'Z';
-}
-
-const SHAPES = {
-  circle: '<circle cx="50" cy="50" r="46" stroke-width="3.4"/><circle cx="50" cy="50" r="40.5" stroke-width="1.2"/>',
-  oval:   '<ellipse cx="50" cy="50" rx="48" ry="37" stroke-width="3.4"/><ellipse cx="50" cy="50" rx="42.5" ry="31.5" stroke-width="1.2"/>',
-  rect:   '<rect x="7" y="9" width="86" height="82" rx="9" stroke-width="3.4"/><rect x="12.5" y="14.5" width="75" height="71" rx="5" stroke-width="1.2"/>',
-  shield: '<path d="M8 8H92V54Q92 80 50 95Q8 80 8 54Z" stroke-width="3.4"/><path d="M13.5 13.5H86.5V53Q86.5 75.5 50 89Q13.5 75.5 13.5 53Z" stroke-width="1.2"/>',
-  hex:    '<path d="M3 50L24 13H76L97 50L76 87H24Z" stroke-width="3.4"/><path d="M9.5 50L27.2 18.8H72.8L90.5 50L72.8 81.2H27.2Z" stroke-width="1.2"/>',
-};
-const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
-/** The stamp as an SVG string, drawn through the shared #ink filter. */
-function stampSVG(id, over = {}) {
-  const st = {...STAMP[id], ...over};
-  const c = INK[st.c] || st.c;
-  const wide = [...st.n].reduce((w, ch) => w + (ch.charCodeAt(0) > 0x2e80 ? 1.7 : 1), 0);
-  const fs = clamp(76 / (wide * .6), 8, 15.5);
-  const top = st.s === 'oval' ? 34 : st.s === 'hex' ? 33 : 31;
-  const sil = st.text ? null : silhouette(id, 34, 41, 34, 25);
-  const mid = st.text
-    ? `<text x="50" y="58" text-anchor="middle" font-size="19" font-weight="800" letter-spacing="1.5" fill="${c}" stroke="none">${esc(st.text)}</text>`
-    : sil ? `<path d="${sil}" fill="${c}" fill-opacity=".55" stroke="none"/>`
-          : `<circle cx="51" cy="53" r="6.5" fill="${c}" fill-opacity=".7" stroke="none"/>`;
-  return `<svg viewBox="0 0 100 100" aria-hidden="true"><g filter="url(#ink)" fill="none" stroke="${c}">
-${SHAPES[st.s]}
-<text x="50" y="${top}" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif" font-size="${fs.toFixed(1)}" font-weight="750" fill="${c}" stroke="none">${esc(st.n)}</text>
-${st.k ? `<text x="${st.s === 'hex' ? 19 : 20}" y="58" font-family="-apple-system,sans-serif" font-size="7.5" font-weight="700" fill="${c}" stroke="none" opacity=".75">${st.k}</text>` : ''}
-${mid}
-<text x="50" y="${st.s === 'oval' ? 76 : 80}" text-anchor="middle" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="8.6" font-weight="700" fill="${c}" stroke="none">${st.d}</text>
-</g></svg>`;
-}
-
-/* -------------------------------------------------------------
-   4. THE GLOBE
-   Orthographic, drawn straight onto a canvas. A ring point behind
-   the globe is pushed out to the limb, and a run of them is drawn as
-   an arc along the limb, so a country cut by the horizon is clipped
-   cleanly instead of folding back across the face.
-   ------------------------------------------------------------- */
-const COL = {
-  land:[125,180,94], visited:[217,88,74], lived:[234,162,58],
-  border:'rgba(36,66,28,.42)',
-};
-const mix = (a, b, t) => `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * t)).join(',')})`;
-
-function makeGlobe(canvas) {
-  const ctx = canvas.getContext('2d');
-  let W = 0, H = 0, dpr = 1;
-  function size() {
-    dpr = Math.min(2, window.devicePixelRatio || 1);
-    W = canvas.clientWidth; H = canvas.clientHeight;
-    canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
-  }
-
-  /* trace one ring into the current path */
-  function ring(r, cx, cy, R, sl, cl, sp, cp) {
-    let started = false, prevBack = false, prevAng = 0, anyFront = false;
-    const n = r.length / 3;
-    for (let k = 0; k <= n; k++) {
-      const j = (k % n) * 3, a = r[j], b = r[j + 1], c = r[j + 2];
-      const x = b * cl - a * sl;
-      const kk = a * cl + b * sl;
-      const y = cp * c - sp * kk;
-      const z = sp * c + cp * kk;
-      if (z >= 0) {
-        anyFront = true;
-        const px = cx + x * R, py = cy - y * R;
-        if (!started) { ctx.moveTo(px, py); started = true; }
-        else if (prevBack) {
-          const ang = Math.atan2(-y, x);
-          let d = ang - prevAng; d -= Math.PI * 2 * Math.round(d / (Math.PI * 2));
-          ctx.arc(cx, cy, R, prevAng, prevAng + d, d < 0);
-          ctx.lineTo(px, py);
-        } else ctx.lineTo(px, py);
-        prevBack = false;
-      } else {
-        const ang = Math.atan2(-y, x);
-        if (!started) { ctx.moveTo(cx + Math.cos(ang) * R, cy + Math.sin(ang) * R); started = true; }
-        else if (prevBack) {
-          let d = ang - prevAng; d -= Math.PI * 2 * Math.round(d / (Math.PI * 2));
-          ctx.arc(cx, cy, R, prevAng, prevAng + d, d < 0);
-        } else ctx.lineTo(cx + Math.cos(ang) * R, cy + Math.sin(ang) * R);
-        prevBack = true; prevAng = ang;
-      }
-    }
-    if (started) ctx.closePath();
-    return anyFront;
-  }
-
-  /* project a geographic unit vector (+ altitude) to the screen */
-  function project(v, h, view) {
-    const {cx, cy, R, sl, cl, sp, cp} = view;
-    const s = 1 + h, a = v[0] * s, b = v[1] * s, c = v[2] * s;
-    const x = b * cl - a * sl, kk = a * cl + b * sl;
-    const y = cp * c - sp * kk, z = sp * c + cp * kk;
-    return {x: cx + x * R, y: cy - y * R, vis: z >= 0 || x * x + y * y > 1};
-  }
-
-  /** f: ISO3 → {t, lived}; arcs: [{pts:[[v,h]…], alpha, head}] */
-  function draw(o) {
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, W, H);
-    if (o.alpha <= 0 || o.R < 2) return null;
-    const {cx, cy, R} = o;
-    const view = {cx, cy, R, sl: Math.sin(o.lon * D2R), cl: Math.cos(o.lon * D2R),
-                  sp: Math.sin(o.lat * D2R), cp: Math.cos(o.lat * D2R)};
-    ctx.globalAlpha = o.alpha;
-
-    // atmosphere
-    const atm = ctx.createRadialGradient(cx, cy, R * .96, cx, cy, R * 1.22);
-    atm.addColorStop(0, 'rgba(120,175,255,.42)');
-    atm.addColorStop(.4, 'rgba(80,130,240,.12)');
-    atm.addColorStop(1, 'rgba(60,110,220,0)');
-    ctx.fillStyle = atm;
-    ctx.beginPath(); ctx.arc(cx, cy, R * 1.22, 0, Math.PI * 2); ctx.fill();
-
-    // ocean
-    const oc = ctx.createRadialGradient(cx - R * .36, cy - R * .42, R * .05, cx, cy, R);
-    oc.addColorStop(0, '#86c0f2'); oc.addColorStop(.5, '#3979c3'); oc.addColorStop(1, '#1d4479');
-    ctx.fillStyle = oc;
-    ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill();
-
-    if (GEO) {
-      ctx.save();
-      ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.clip();
-      ctx.lineJoin = 'round';
-      ctx.lineWidth = clamp(R / 420, .35, 1);
-      ctx.strokeStyle = COL.border;
-      // everything at rest in one path, then each painted country on its own
-      ctx.beginPath();
-      const painted = [];
-      for (const g of GEO) {
-        const st = o.fill[g.id];
-        if (st && st.t > 0) { painted.push(g); continue; }
-        for (const r of g.rings) ring(r, cx, cy, R, view.sl, view.cl, view.sp, view.cp);
-      }
-      ctx.fillStyle = mix(COL.land, COL.land, 0);  // nonzero: Lesotho sits on top of South Africa, not through it
-      ctx.fill(); ctx.stroke();
-      for (const g of painted) {
-        const st = o.fill[g.id];
-        ctx.beginPath();
-        for (const r of g.rings) ring(r, cx, cy, R, view.sl, view.cl, view.sp, view.cp);
-        ctx.fillStyle = mix(COL.land, st.lived ? COL.lived : COL.visited, st.t);
-        ctx.fill(); ctx.stroke();
-      }
-      ctx.restore();
-    }
-
-    // limb shading and a soft highlight: the bit that makes it round
-    const sh = ctx.createRadialGradient(cx, cy, R * .5, cx, cy, R);
-    sh.addColorStop(0, 'rgba(4,12,32,0)'); sh.addColorStop(1, 'rgba(4,12,32,.5)');
-    ctx.fillStyle = sh;
-    ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill();
-    const hi = ctx.createRadialGradient(cx - R * .42, cy - R * .48, 0, cx - R * .42, cy - R * .48, R * .95);
-    hi.addColorStop(0, 'rgba(255,255,255,.2)'); hi.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = hi;
-    ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill();
-
-    // flight arcs, the plane, the cities
-    let head = null;
-    if (o.arcs) for (const a of o.arcs) {
-      if (a.alpha <= 0) continue;
-      ctx.globalAlpha = o.alpha * a.alpha;
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = a.head ? 2.2 : 1.5;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      let pen = false, last = null;
-      for (const [v, h] of a.pts) {
-        const q = project(v, h, view);
-        if (q.vis) { pen ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y); pen = true; }
-        else pen = false;
-        last = q;
-      }
-      ctx.stroke();
-      if (a.head && last && last.vis && a.pts.length > 1) {
-        const prev = project(a.pts[a.pts.length - 2][0], a.pts[a.pts.length - 2][1], view);
-        head = {x: last.x, y: last.y, ang: Math.atan2(last.y - prev.y, last.x - prev.x)};
-      }
-    }
-    ctx.globalAlpha = o.alpha * (o.dotsAlpha ?? 1);
-    if (o.dots) for (const d of o.dots) {
-      const q = project(d.v, 0, view);
-      if (!q.vis) continue;
-      ctx.beginPath(); ctx.arc(q.x, q.y, d.now ? 5.5 : 3.6, 0, Math.PI * 2);
-      ctx.fillStyle = '#fff'; ctx.fill();
-      ctx.lineWidth = d.now ? 2.6 : 1.8; ctx.strokeStyle = d.now ? '#eaa23a' : '#2f5fe0'; ctx.stroke();
-      if (d.ring > 0) {
-        ctx.globalAlpha = o.alpha * (1 - d.ring) * .9;
-        ctx.beginPath(); ctx.arc(q.x, q.y, 6 + d.ring * 26, 0, Math.PI * 2);
-        ctx.lineWidth = 2; ctx.strokeStyle = '#fff'; ctx.stroke();
-        ctx.globalAlpha = o.alpha * (o.dotsAlpha ?? 1);
-      }
-    }
-    if (head) {
-      ctx.globalAlpha = o.alpha;
-      ctx.save();
-      ctx.translate(head.x, head.y); ctx.rotate(head.ang + Math.PI / 2);
-      ctx.scale(.95, .95);
-      ctx.fillStyle = '#fff';
-      ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 6;
-      ctx.beginPath();   // a little airliner, nose up
-      ctx.moveTo(0, -11); ctx.lineTo(1.6, -8); ctx.lineTo(1.6, -3); ctx.lineTo(10, 2.5); ctx.lineTo(10, 4.5);
-      ctx.lineTo(1.6, 2); ctx.lineTo(1.4, 7); ctx.lineTo(4, 9.5); ctx.lineTo(4, 11); ctx.lineTo(0, 9.8);
-      ctx.lineTo(-4, 11); ctx.lineTo(-4, 9.5); ctx.lineTo(-1.4, 7); ctx.lineTo(-1.6, 2); ctx.lineTo(-10, 4.5);
-      ctx.lineTo(-10, 2.5); ctx.lineTo(-1.6, -3); ctx.lineTo(-1.6, -8); ctx.closePath(); ctx.fill();
-      ctx.restore();
-    }
-    ctx.globalAlpha = 1;
-    return view;
-  }
-  return {size, draw, project};
-}
-
-/* geographic helpers */
-const vec = (lon, lat) => {
-  const lo = lon * D2R, la = lat * D2R, c = Math.cos(la);
-  return [c * Math.cos(lo), c * Math.sin(lo), Math.sin(la)];
-};
-const angle = (a, b) => Math.acos(clamp(a[0] * b[0] + a[1] * b[1] + a[2] * b[2], -1, 1));
+/* ---------- sphere helpers ---------- */
+const vec = ll => GL.geo(ll[0], ll[1]);
+const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const angle = (a, b) => Math.acos(clamp(dot(a, b), -1, 1));
 function slerp(a, b, t) {
   const w = angle(a, b);
-  if (w < 1e-6) return a.slice();
+  if (w < 1e-7) return a.slice();
   const s = Math.sin(w), ka = Math.sin((1 - t) * w) / s, kb = Math.sin(t * w) / s;
   return [a[0] * ka + b[0] * kb, a[1] * ka + b[1] * kb, a[2] * ka + b[2] * kb];
 }
-const toLonLat = v => [Math.atan2(v[1], v[0]) / D2R, Math.asin(clamp(v[2], -1, 1)) / D2R];
+const toLL = v => [Math.atan2(v[1], v[0]) / D2R, Math.asin(clamp(v[2], -1, 1)) / D2R];
+const catmull = (p0, p1, p2, p3, t) => {
+  const t2 = t * t, t3 = t2 * t;
+  return [0, 1].map(i => .5 * (2 * p1[i] + (-p0[i] + p2[i]) * t + (2 * p0[i] - 5 * p1[i] + 4 * p2[i] - p3[i]) * t2 + (-p0[i] + 3 * p1[i] - 3 * p2[i] + p3[i]) * t3));
+};
+const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+const norm3 = a => { const l = Math.hypot(...a) || 1; return a.map(x => x / l); };
+function rot(p, ax, a) {   // rotate p about the unit axis ax by a (Rodrigues)
+  const c = Math.cos(a), s = Math.sin(a), k = cross(ax, p), d = dot(ax, p);
+  return [0, 1, 2].map(i => p[i] * c + k[i] * s + ax[i] * d * (1 - c));
+}
+/** A route as dense unit vectors with the distance run so far. */
+function buildPath(points, flight) {
+  const pts = [];
+  if (flight) {
+    const a = vec(points[0]), b = vec(points[1]), n = Math.max(48, Math.round(angle(a, b) * 160));
+    for (let i = 0; i <= n; i++) pts.push(slerp(a, b, i / n));
+  } else {
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = points[Math.max(i - 1, 0)], p1 = points[i], p2 = points[i + 1], p3 = points[Math.min(i + 2, points.length - 1)];
+      const km = angle(vec(p1), vec(p2)) * EARTH_KM, n = Math.max(4, Math.ceil(km / 2));
+      for (let k = 0; k < n; k++) pts.push(vec(catmull(p0, p1, p2, p3, k / n)));
+    }
+    pts.push(vec(points[points.length - 1]));
+  }
+  const cum = [0];
+  for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + angle(pts[i - 1], pts[i]) * EARTH_KM);
+  return {pts, cum, km: cum[cum.length - 1]};
+}
+/** Point at fraction s of the way along. */
+function along(path, s) {
+  const d = clamp(s) * path.km, c = path.cum;
+  let lo = 0, hi = c.length - 1;
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (c[m] <= d) lo = m; else hi = m; }
+  const t = c[hi] > c[lo] ? (d - c[lo]) / (c[hi] - c[lo]) : 0;
+  return {v: slerp(path.pts[lo], path.pts[hi], t), i: lo, t};
+}
+
+/* ---------- point in country ---------- */
+let WORLD = null;
+function prepWorld(list) {
+  WORLD = list.map(c => {
+    let x0 = 180, x1 = -180, y0 = 90, y1 = -90;
+    for (const r of c.r) for (let i = 0; i < r.length; i += 2) {
+      x0 = Math.min(x0, r[i]); x1 = Math.max(x1, r[i]); y0 = Math.min(y0, r[i + 1]); y1 = Math.max(y1, r[i + 1]);
+    }
+    return {...c, box: [x0, x1, y0, y1]};
+  });
+}
+function inRing(r, x, y) {
+  let inside = false;
+  for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) {
+    const xi = r[i], yi = r[i + 1], xj = r[j], yj = r[j + 1];
+    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+function countryAt(lon, lat) {
+  if (!WORLD) return null;
+  for (const c of WORLD) {
+    const b = c.box;
+    if (lon < b[0] || lon > b[1] || lat < b[2] || lat > b[3]) continue;
+    for (const r of c.r) if (inRing(r, lon, lat)) return c.a3;
+  }
+  return null;
+}
+const a2of = a3 => (WORLD && WORLD.find(c => c.a3 === a3) || {}).a2;
+const nameOf = a3 => (WORLD && WORLD.find(c => c.a3 === a3) || {}).n || a3;
 
 /* -------------------------------------------------------------
-   5. THE JOURNEY: timeline
-   `T` holds the beats as scroll progress across #story (0 → 1).
+   1. THE JOURNEY
+   `T` is the beats as scroll progress across #story (0 → 1).
    ------------------------------------------------------------- */
 const T = {
-  heroOut:[.015, .09],     // headline fades and lifts
-  rise:[.0, .15],          // the globe comes up out of the bottom and centres
-  journey:[.15, .71],      // the legs, shared out by distance
-  settle:[.72, .865],      // the phone rises and the globe shrinks into it
-  swap:[.85, .885],        // the live globe hands over to the screenshot
-  outro:[.885, .955],      // the closing line
-  START:{lon:12, lat:8},   // where the globe faces as the page opens
-  END:{lon:42, lat:24},    // where the phone's globe faces (measured off stats.jpg)
+  heroOut: [.012, .06], rise: [0, .1], journey: [.1, .7],
+  settle: [.7, .745],       // the camera pulls back to the whole summer
+  rise2: [.725, .79],       // a closed passport comes up behind the globe…
+  dock: [.745, .795],       // …and the globe settles onto its cover's emblem
+  open: [.8, .848],         // the cover swings open underneath it
+  fly: [.848, .876],        // the globe dives into the data page…
+  unroll: [.856, .882],     // …unrolls into its map…
+  print: [.872, .892],      // …and becomes print
+  stamps: [.888, .935],     // the summer's stamps land, one at a time
+  side: [.93, .97],         // the phone comes to sit beside it
+  outro: [.955, .99],
+  START: [6, 14],           // where the globe faces as the page opens
 };
-/* where the globe sits in assets/screens/stats.jpg, as fractions of the screen */
-const SHOT_GLOBE = {x:.5, y:357 / 1278, r:242 / 590};
 
 const story = $('#story');
 if (story) initStory();
 
 function initStory() {
   const stage = $('#stage');
-  const sky = $('#sky'), skyCtx = sky.getContext('2d');
-  const globe = makeGlobe($('#globe'));
-  const heroCopy = $('#heroCopy'), hud = $('#hud'), leg = $('#leg'), legText = $('#legText');
-  const hudC = $('#hudCountries'), hudW = $('#hudWorld'), hudK = $('#hudKm');
-  const pop = $('#stampPop'), phone = $('#phoneWrap'), outro = $('#storyOutro'), nudge = $('#nudge');
+  const sky = $('#sky'), skx = sky.getContext('2d');
+  const over = $('#over'), ox = over.getContext('2d');
+  const globe = GL.create($('#globe'), {detail: true});
+  const heroCopy = $('#heroCopy'), hud = $('#hud'), leg = $('#leg'), legText = $('#legText'), legGlyph = $('#legGlyph');
+  const hudC = $('#hudCountries'), hudW = $('#hudWorld'), hudK = $('#hudKm'), hudShade = $('#hudShade');
+  const pop = $('#stampPop'), phone = $('#phoneWrap'), outro = $('#storyOutro'), nudge = $('#nudge'), pass = $('#pass');
+  let failed = !globe.ok;
 
-  // legs, timed by distance: a long haul takes longer, but not proportionally
+  /* ---- the legs, timed: the ground legs get the room, flights scale with distance ---- */
   const legs = LEGS.map(l => {
-    const a = vec(...CITY[l.from]), b = vec(...CITY[l.to]);
-    const d = angle(a, b);
-    return {...l, a, b, d, km: d * EARTH_KM, w: .55 + Math.sqrt(d) * 1.1, dwell: .55};
+    const pts = [CITY[l.from].ll, ...(l.via || []), CITY[l.to].ll];
+    const path = buildPath(pts, l.mode === 'flight');
+    const d = angle(vec(CITY[l.from].ll), vec(CITY[l.to].ll));
+    const w = l.mode === 'flight' ? .55 + .7 * Math.sqrt(d) : l.mode === 'walk' ? 1.55 : l.mode === 'train' ? 1.2 : 1.1;
+    return {...l, path, d, w, dwell: l.home ? .3 : .42, events: []};
   });
-  const homeW = .5;
+  const homeW = .55;
   const total = homeW + legs.reduce((s, l) => s + l.w + l.dwell, 0);
   let acc = homeW;
   for (const l of legs) {
@@ -409,639 +209,973 @@ function initStory() {
     l.t2 = lerp(T.journey[0], T.journey[1], acc / total);
   }
   const homeT = [T.journey[0], legs[0].t0];
-  const TOTAL_KM = legs.reduce((s, l) => s + l.km, 0);
-  window.__peregrinoKm = TOTAL_KM;   // the stats band quotes the same figure
+  const legEase = l => l.mode === 'flight' ? ease : smooth;
+  /* scroll position at which a leg's vehicle has gone fraction s of the way */
+  function pAt(l, s) {
+    const e = legEase(l);
+    let a = 0, b = 1;
+    for (let k = 0; k < 30; k++) { const m = (a + b) / 2; if (e(m) < s) a = m; else b = m; }
+    return lerp(l.t0, l.t1, (a + b) / 2);
+  }
 
-  // pre-sample each arc: [unit vector, altitude] at even steps
-  for (const l of legs) {
-    const n = Math.max(24, Math.round(l.d * 60));
-    const lift = Math.min(.22, .05 + l.d * .12);
-    l.samples = [];
-    for (let i = 0; i <= n; i++) {
-      const t = i / n;
-      l.samples.push([slerp(l.a, l.b, t), Math.sin(Math.PI * t) * lift]);
+  /* ---- where each new country starts: the border crossing, or the arrival ---- */
+  const events = [];            // {a3, p, ll, leg}
+  function findEvents() {
+    const seen = new Set([...LIVED, ...VISITED]);
+    for (const l of legs) {
+      if (l.mode === 'flight') {
+        const ll = CITY[l.to].ll, a3 = countryAt(ll[0], ll[1]);
+        if (a3 && !seen.has(a3)) { seen.add(a3); events.push({a3, p: l.t1, ll, leg: l}); }
+        continue;
+      }
+      let prev = countryAt(...CITY[l.from].ll);
+      for (let i = 0; i < l.path.pts.length; i += 2) {
+        const ll = toLL(l.path.pts[i]), a3 = countryAt(ll[0], ll[1]);
+        if (a3 && a3 !== prev) {
+          if (!seen.has(a3)) { seen.add(a3); events.push({a3, p: pAt(l, l.path.cum[i] / l.path.km), ll, leg: l}); }
+          prev = a3;
+        }
+      }
     }
   }
-  const stops = [{v: vec(...CITY.PRG), id:'PRG'}, ...legs.map(l => ({v: l.b, id: l.to}))];
 
-  // stamps for the pop, built once the outlines are in
-  const popSVG = {};
-  geoReady.then(() => {
-    // white ink: it has to read over sky, ocean and land alike
-    popSVG.HOME = stampSVG(HOME.stamp, {c:'#ffffff'});
-    for (const l of legs) popSVG[l.to] = stampSVG(l.stamp, {c:'#ffffff'});
-    popId = null; dirty = true;
-  });
-  let popId = null;
-
-  // ---- sizing ----
-  let vw = 0, vh = 0, R0 = 0, R1 = 0, phoneH = 0, phoneW = 0, settleY = 0, settleS = 1;
-  const css = getComputedStyle(document.documentElement);
-  const SCR = {w: parseFloat(css.getPropertyValue('--screen-w')) / 100,
-               h: parseFloat(css.getPropertyValue('--screen-h')) / 100,
-               t: parseFloat(css.getPropertyValue('--screen-t')) / 100};
+  /* ---- sizes ---- */
+  let vw = 0, vh = 0, R0 = 0, R1 = 0, dpr = 1, ZG = 8, PW = 420, phoneH = 612, FL = null;
   function measure() {
     vw = stage.clientWidth; vh = stage.clientHeight;
-    globe.size();
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
-    sky.width = Math.round(vw * dpr); sky.height = Math.round(vh * dpr);
-    skyCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    paintSky();
+    dpr = Math.min(2, window.devicePixelRatio || 1);
+    if (RM) {
+      // the still: the passport at a fixed size in the page's own flow
+      PW = Math.round(Math.min(400, vw * .84));
+      pass.style.setProperty('--pw', PW + 'px');
+      drawMap(mapCanvas && !!mapCanvas.dataset.summer);
+      drawStill();
+      return;
+    }
+    for (const c of [sky, over]) { c.width = Math.round(vw * dpr); c.height = Math.round(vh * dpr); }
+    globe.resize();
     R0 = Math.max(vw, vh) * .62;
-    R1 = Math.min(vw * (vw < 700 ? .43 : .36), vh * .36);
-    phoneW = phone.offsetWidth; phoneH = phone.offsetHeight;
-    // the settled phone sits under the closing line, as large as the room allows
+    R1 = Math.min(vw * (vw < 700 ? .42 : .34), vh * .36);
+    ZG = vw < 700 ? 8.5 : 8;
+    // the passport: as large as it can be under the closing line
     const outroBottom = outro.offsetTop + outro.offsetHeight;
-    const room = vh - 18 - (outroBottom + 22);
-    settleS = clamp(room / phoneH, .55, 1);
-    settleY = outroBottom + 22 + phoneH * settleS / 2 - vh / 2;
+    const room = vh - outroBottom - 28;
+    PW = Math.round(Math.min(440, vw * (vw < 700 ? .8 : .34), room / 1.4, (vh - 120) / 1.4));
+    pass.style.setProperty('--pw', PW + 'px');
+    const phoneW = phone.offsetWidth; phoneH = phone.offsetHeight;
+    const bookH = PW * 1.4;
+    const cy = outroBottom + 14 + room / 2 - vh / 2;
+    if (vw >= 700) {
+      const s = Math.min(1, bookH / phoneH * 1.02), gap = Math.max(36, vw * .04);
+      const width = PW + gap + phoneW * s;
+      FL = {passX: -width / 2 + PW / 2, passY: cy, phoneX: width / 2 - phoneW * s / 2, phoneY: cy, phoneS: s};
+    } else {
+      const s = Math.min(.5, bookH * .62 / phoneH);
+      FL = {passX: -vw * .08, passY: cy - 10, phoneX: vw * .3, phoneY: cy + bookH * .18, phoneS: s};
+    }
+    drawMap(mapCanvas && !!mapCanvas.dataset.summer);
+    measureEmblem();
     dirty = true;
   }
-  function paintSky() {
-    skyCtx.clearRect(0, 0, vw, vh);
-    const g = skyCtx.createRadialGradient(vw * .5, vh * .62, 0, vw * .5, vh * .62, Math.max(vw, vh) * .75);
-    g.addColorStop(0, 'rgba(36,70,150,.32)'); g.addColorStop(.5, 'rgba(44,33,99,.16)'); g.addColorStop(1, 'rgba(0,0,0,0)');
-    skyCtx.fillStyle = g; skyCtx.fillRect(0, 0, vw, vh);
-    let s = 7;   // seeded so a resize doesn't reshuffle the stars
-    const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
-    const n = Math.round(vw * vh / 2600);
-    for (let i = 0; i < n; i++) {
-      const r = rnd() < .92 ? rnd() * .8 + .3 : rnd() * 1.2 + .9;
-      skyCtx.globalAlpha = .25 + rnd() * .65;
-      skyCtx.fillStyle = '#fff';
-      skyCtx.beginPath(); skyCtx.arc(rnd() * vw, rnd() * vh, r, 0, Math.PI * 2); skyCtx.fill();
+  /* where the cover's emblem sits on the closed book (its circle is 22 of the 48 units across) */
+  let EMB = {x: 0, y: 0, r: 60};
+  function measureEmblem() {
+    const e = $('#coverEmblem');
+    if (e && e.offsetWidth) EMB = {x: e.offsetLeft + e.offsetWidth / 2, y: e.offsetTop + e.offsetHeight / 2, r: e.offsetWidth * 22 / 48};
+  }
+  /* with reduced motion, the globe is drawn once, the whole summer on it */
+  let stillReady = false;
+  function drawStill() {
+    if (!stillReady || !globe.data || !WORLD) return;
+    paintAt(globe, 1, true);
+    globe.resize();
+    globe.draw({cx: globe.w / 2, cy: globe.h / 2, R: Math.min(globe.w, globe.h) * .4, lon: 4, lat: 47, alpha: 1});
+  }
+
+  /* ---- the passport: PassportView on top, a stamp page below, the cover ---- */
+  const stampCells = [];
+  const globeSvg = '<svg viewBox="8 8 48 48" aria-hidden="true"><circle cx="32" cy="32" r="22"/><ellipse cx="32" cy="32" rx="9.5" ry="22"/><path d="M10 32h44M13.5 21h37M13.5 43h37"/></svg>';
+  pass.innerHTML = `
+    <div class="pass-board"></div>
+    <div class="pass-page pass-top dp">
+      <div class="dp-head"><div><p class="dp-title">Peregrino Passport</p><p class="dp-sub">Passport · Pas · 여권</p></div><span class="dp-btn">${ART.glyph('globe', '#fff', 14)}</span></div>
+      <div class="dp-body">
+        <div>
+          <p class="dp-k">Countries &amp; territories</p>
+          <p class="dp-big"><b id="dpCount">${BASE_COUNT}</b><span> / 248</span><em id="dpPct">(${Math.round(BASE_COUNT / 248 * 100)}%)</em></p>
+          <div class="dp-row"><div><p class="dp-k">Continents</p><p class="dp-v">3<span> / 7</span></p></div><div><p class="dp-k">Total trips</p><p class="dp-v" id="dpTrips">15</p></div></div>
+          <div class="dp-row"><div><p class="dp-k">Top continent</p><p class="dp-v">Europe</p></div><div><p class="dp-k">Member since</p><p class="dp-v">Apr 2026</p></div></div>
+        </div>
+        <div class="dp-map"><p class="dp-k">Map · Mapa · 지도</p><canvas id="dpMap"></canvas></div>
+      </div>
+      <p class="mrz">P&lt;PGNTRAVELER&lt;&lt;PEREGRINO&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;<br>ISSUED01OCT26&lt;&lt;&lt;32V&lt;&lt;&lt;248T&lt;&lt;&lt;EU&lt;AS&lt;NA&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</p>
+    </div>
+    <div class="pass-leaf" id="passLeaf">
+      <div class="pass-face pass-page sp"><p class="sp-head">Entries · Vstupy · 입국</p><div class="sp-grid" id="spGrid"></div><span class="sp-no">4</span></div>
+      <div class="pass-face cover"><p class="cover-name">Peregrino</p><span class="cover-emblem" id="coverEmblem">${globeSvg}</span><p class="cover-kind">Passport · Pas · 여권</p></div>
+    </div>`;
+  const dpCount = $('#dpCount'), dpPct = $('#dpPct'), dpTrips = $('#dpTrips'), mapCanvas = $('#dpMap');
+  const passLeaf = $('#passLeaf'), passBoard = pass.querySelector('.pass-board');
+  function fillStamps() {
+    const grid = $('#spGrid');
+    grid.innerHTML = '';
+    stampCells.length = 0;
+    for (const e of events) {
+      const cell = document.createElement('div');
+      cell.className = 'sp-cell';
+      const s = ART.stampEl(a2of(e.a3), 100, {dark: true, date: STAMP_DATE[e.a3]});
+      cell.appendChild(s);
+      grid.appendChild(cell);
+      stampCells.push(s);
     }
-    skyCtx.globalAlpha = 1;
+  }
+  /* the data page's map: Mercator, visited in white, the rest traced faintly */
+  const MERC = {top: 80, bottom: -58};
+  const merc = lat => Math.log(Math.tan(Math.PI / 4 + clamp(lat, -85, 85) * D2R / 2));
+  function drawMap(withSummer) {
+    if (!WORLD || !mapCanvas) return;
+    const w = mapCanvas.clientWidth;
+    if (!w) return;
+    const h = Math.round(w / (2 * Math.PI / (merc(MERC.top) - merc(MERC.bottom))));
+    mapCanvas.style.height = h + 'px';
+    mapCanvas.width = Math.round(w * dpr); mapCanvas.height = Math.round(h * dpr);
+    const c = mapCanvas.getContext('2d');
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const on = new Set([...LIVED, ...VISITED, ...(withSummer ? events.map(e => e.a3) : [])]);
+    const top = merc(MERC.top), span = top - merc(MERC.bottom);
+    c.lineWidth = .5; c.strokeStyle = 'rgba(255,255,255,.28)'; c.lineJoin = 'round';
+    for (const k of WORLD) {
+      if (k.a3 === 'ATA') continue;
+      c.beginPath();
+      for (const r of k.r) {
+        for (let i = 0; i < r.length; i += 2) {
+          const x = (r[i] + 180) / 360 * w, y = (top - merc(r[i + 1])) / span * h;
+          i ? c.lineTo(x, y) : c.moveTo(x, y);
+        }
+        c.closePath();
+      }
+      if (on.has(k.a3)) { c.fillStyle = '#fff'; c.fill(); } else { c.fillStyle = 'rgba(255,255,255,.07)'; c.fill(); c.stroke(); }
+    }
+    mapCanvas.dataset.summer = withSummer ? '1' : '';
   }
 
-  // ---- progress ----
-  let p = 0, dirty = true, spin = 0, lastT = performance.now();
-  function progress() {
-    const r = story.getBoundingClientRect();
-    return clamp(-r.top / (r.height - vh));
+  /* ---- stars on a sphere round the globe, so they wheel as it turns (the app's starfield) ---- */
+  const STARS = [];
+  {
+    let s = 9;
+    const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < 1100; i++) {
+      const z = rnd() * 2 - 1, a = rnd() * Math.PI * 2, r = Math.sqrt(1 - z * z);
+      STARS.push({v: [r * Math.cos(a), r * Math.sin(a), z], b: .35 + rnd() * .65, big: rnd() < .08, warm: rnd()});
+    }
+  }
+  function drawSky(basis, fade) {
+    skx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    skx.clearRect(0, 0, vw, vh);
+    if (fade <= 0) return;
+    const F = Math.max(vw, vh) * .9, cx = vw / 2, cy = vh / 2;
+    for (const st of STARS) {
+      const z = dot(st.v, basis.c);
+      if (z > -.15) continue;
+      const x = cx + dot(st.v, basis.e) / -z * F, y = cy - dot(st.v, basis.n) / -z * F;
+      if (x < -2 || y < -2 || x > vw + 2 || y > vh + 2) continue;
+      skx.globalAlpha = st.b * fade;
+      skx.fillStyle = st.warm > .7 ? '#fff4e6' : st.warm < .3 ? '#e8f0ff' : '#fff';
+      const r = st.big ? 1.4 : .85;
+      skx.fillRect(x - r / 2, y - r / 2, r, r);
+    }
+    skx.globalAlpha = 1;
   }
 
-  // where the phone is at progress p: its centre offset and scale
-  function phoneAt(p) {
-    const t = ease(seg(p, T.settle[0], T.settle[1] - .02));
-    return {y: lerp(vh * .75, settleY, t), s: lerp(settleS * .9, settleS, t), o: seg(p, T.settle[0], T.settle[0] + .04)};
+  /* ---- planes and ships on their own clock (the app's fleet) ---- */
+  const FLEET = [];
+  {
+    let s = 21;
+    const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < 6; i++) {
+      const p = vec([rnd() * 140 - 50, rnd() * 50 + 15]), q = vec([rnd() * 360 - 180, rnd() * 120 - 60]);
+      FLEET.push({kind: 'plane', p, ax: norm3(cross(p, q)), w: .028 + rnd() * .02, ph: rnd() * Math.PI * 2, c: AIRLINES[i % AIRLINES.length]});
+    }
+    for (const [lon, lat, hd] of [[-30, 45, 40], [-20, 30, -30], [4, 55.5, 10], [18, 34.5, 80], [-45, 25, 60], [150, 30, 20]]) {
+      const p = vec([lon, lat]), t = vec([lon + Math.cos(hd * D2R) * 4, lat + Math.sin(hd * D2R) * 4]);
+      FLEET.push({kind: 'ship', p, ax: norm3(cross(p, t)), ph: rnd() * 6});
+    }
   }
 
+  /* ---- drawing on the overlay ---- */
+  const proj = (v, lift, view) => { const ll = toLL(v); return globe.project(ll[0], ll[1], lift, view); };
+  function strokeRun(pts, w, col) {
+    ox.lineWidth = w; ox.strokeStyle = col; ox.lineCap = 'round'; ox.lineJoin = 'round';
+    ox.beginPath();
+    let pen = false;
+    for (const q of pts) {
+      if (q.vis) { pen ? ox.lineTo(q.x, q.y) : ox.moveTo(q.x, q.y); pen = true; } else pen = false;
+    }
+    ox.stroke();
+  }
+  /* routes are decals on the surface, a dark ribbon under a light one (GlobeArcs) */
+  function ribbon(path, s1, view, mode, R) {
+    const last = Math.max(1, Math.floor(clamp(s1) * (path.pts.length - 1)));
+    const pts = [];
+    for (let i = 0; i <= last; i++) pts.push(proj(path.pts[i], .001, view));
+    pts.push(proj(along(path, s1).v, .001, view));
+    const ow = clamp(R * .0085, 2.4, 6.5);
+    strokeRun(pts, ow, outer(mode));
+    strokeRun(pts, ow * .62, inner(mode));
+  }
+  function stopDot(ll, view, mode, R) {
+    const q = globe.project(ll[0], ll[1], .001, view);
+    if (!q.vis) return;
+    const r = clamp(R * .011, 3, 7.5);
+    ox.fillStyle = outer(mode); ox.beginPath(); ox.arc(q.x, q.y, r, 0, Math.PI * 2); ox.fill();
+    ox.fillStyle = inner(mode); ox.beginPath(); ox.arc(q.x, q.y, r * .64, 0, Math.PI * 2); ox.fill();
+  }
+  /* a thumbtack: a metal shaft out of the surface and a coloured head (GlobePins) */
+  function pin(ll, view, color, k, R) {
+    if (k <= 0) return;
+    const base = globe.project(ll[0], ll[1], 0, view);
+    if (!base.vis) return;
+    const e = easeOut(k), len = clamp(R * .03, 11, 20) * e, head = clamp(R * .009, 3.6, 6) * (.4 + .6 * e);
+    const hx = base.x + len * .32, hy = base.y - len;
+    ox.strokeStyle = 'rgba(214,214,220,.95)'; ox.lineWidth = 1.5;
+    ox.beginPath(); ox.moveTo(base.x, base.y); ox.lineTo(hx, hy); ox.stroke();
+    const g = ox.createRadialGradient(hx - head * .35, hy - head * .35, head * .1, hx, hy, head);
+    g.addColorStop(0, '#fff'); g.addColorStop(.3, color); g.addColorStop(1, shade(color, .55));
+    ox.fillStyle = g; ox.beginPath(); ox.arc(hx, hy, head, 0, Math.PI * 2); ox.fill();
+  }
+  const shade = (c, k) => `rgb(${c.match(/\d+/g).map(v => Math.round(v * k))})`;
+  /* the app's planes: white fuselage, coloured tail, and a contrail */
+  function plane(x, y, ang, size, colors, alpha = 1) {
+    ox.save();
+    ox.globalAlpha *= alpha;
+    ox.translate(x, y); ox.rotate(ang); ox.scale(size / 22, size / 22);
+    ox.shadowColor = 'rgba(0,0,0,.35)'; ox.shadowBlur = 4; ox.shadowOffsetY = 2;
+    ox.fillStyle = colors[0];
+    ox.beginPath();
+    ox.moveTo(11, 0); ox.quadraticCurveTo(10, -1.6, 7, -1.7); ox.lineTo(1.5, -1.8); ox.lineTo(-3, -10); ox.lineTo(-5.2, -10);
+    ox.lineTo(-2.6, -1.8); ox.lineTo(-8, -1.6); ox.lineTo(-10.4, -4.6); ox.lineTo(-11.6, -4.6); ox.lineTo(-10.6, 0);
+    ox.lineTo(-11.6, 4.6); ox.lineTo(-10.4, 4.6); ox.lineTo(-8, 1.6); ox.lineTo(-2.6, 1.8); ox.lineTo(-5.2, 10); ox.lineTo(-3, 10);
+    ox.lineTo(1.5, 1.8); ox.lineTo(7, 1.7); ox.quadraticCurveTo(10, 1.6, 11, 0); ox.closePath(); ox.fill();
+    ox.shadowColor = 'transparent';
+    ox.fillStyle = colors[1];
+    ox.beginPath(); ox.moveTo(-8, -1.4); ox.lineTo(-10.4, -4.6); ox.lineTo(-11.6, -4.6); ox.lineTo(-10.6, 0); ox.lineTo(-11.6, 4.6); ox.lineTo(-10.4, 4.6); ox.lineTo(-8, 1.4); ox.closePath(); ox.fill();
+    ox.restore();
+  }
+  function contrail(pts, alpha) {
+    ox.lineCap = 'round'; ox.lineWidth = 1.6;
+    for (let i = 1; i < pts.length; i++) {
+      const a = pts[i - 1], b = pts[i];
+      if (!a.vis || !b.vis) continue;
+      ox.strokeStyle = `rgba(255,255,255,${(alpha * i / pts.length * .8).toFixed(3)})`;
+      ox.beginPath(); ox.moveTo(a.x, a.y); ox.lineTo(b.x, b.y); ox.stroke();
+    }
+  }
+  /* the traveller on the ground: the mode's symbol on a white disc */
+  const glyphImg = {};
+  for (const m of ['drive', 'walk', 'train', 'flight']) {
+    const i = new Image();
+    i.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(ART.glyph(m, `rgb(${TINT[m].map(v => Math.round(v * .78))})`, 48).replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" '));
+    glyphImg[m] = i;
+  }
+  function badge(x, y, mode, scale = 1) {
+    const r = 13 * scale;
+    ox.save();
+    ox.shadowColor = 'rgba(0,0,0,.35)'; ox.shadowBlur = 8; ox.shadowOffsetY = 2;
+    ox.fillStyle = '#fff'; ox.beginPath(); ox.arc(x, y, r, 0, Math.PI * 2); ox.fill();
+    ox.restore();
+    ox.strokeStyle = outer(mode); ox.lineWidth = 2; ox.beginPath(); ox.arc(x, y, r, 0, Math.PI * 2); ox.stroke();
+    const img = glyphImg[mode];
+    if (img && img.complete) ox.drawImage(img, x - r * .62, y - r * .62, r * 1.24, r * 1.24);
+  }
+
+  /* ---- the state of the summer at p ---- */
+  function journeyAt(p) {
+    let cur = -1;
+    for (let i = 0; i < legs.length; i++) if (p >= legs[i].t0) cur = i;
+    const out = {cur, phase: 'home', s: 0, km: 0};
+    for (const l of legs) {
+      if (p >= l.t1) out.km += l.path.km;
+      else if (p > l.t0) out.km += l.path.km * legEase(l)(seg(p, l.t0, l.t1));
+    }
+    if (cur >= 0) {
+      const l = legs[cur];
+      out.phase = p < l.t1 ? 'move' : 'dwell';
+      out.s = legEase(l)(seg(p, l.t0, l.t1));
+    }
+    return out;
+  }
+  /* the camera follows the traveller: close in on the ground, further out in the air */
+  const zoomFor = (l, s) => l.mode === 'flight' ? 1.45 * (1 - .3 * Math.sin(Math.PI * s) * Math.min(1, l.d / .45)) : ZG;
+  const logLerp = (a, b, t) => Math.exp(lerp(Math.log(a), Math.log(b), t));
+  function cameraAt(p, J) {
+    if (J.cur < 0) return {v: vec(CITY.PRG.ll), Z: 1.9};
+    const l = legs[J.cur];
+    const prevZ = J.cur === 0 ? 1.9 : zoomFor(legs[J.cur - 1], 1);
+    if (J.phase === 'move') {
+      const u = seg(p, l.t0, l.t1);
+      return {v: along(l.path, J.s).v, Z: logLerp(prevZ, zoomFor(l, J.s), ease(seg(u, 0, .16)))};
+    }
+    return {v: vec(CITY[l.to].ll), Z: zoomFor(l, 1)};
+  }
+
+  /* ---- painting: the visited, the pencilled plans, and the summer as it happens ---- */
+  function paintAt(g, p, all) {
+    for (const a of LIVED) g.paint(a, INK.lived, 1);
+    for (const a of VISITED) g.paint(a, INK.visited, 1);
+    for (const a of WISHLIST) g.hatch(a, INK.wishlist, 1);
+    for (const a of PLANNED) g.hatch(a, INK.planned, 1);
+    for (const e of events) {
+      const k = all ? 1 : smooth(seg(p, e.p, e.p + .0065));
+      g.paint(e.a3, INK.visited, k);
+      if (PLANNED.includes(e.a3)) g.hatch(e.a3, INK.planned, 1 - k);
+    }
+  }
+
+  /* ---- progress ---- */
+  let p = 0, dirty = true, running = false, raf = 0, spinT = 0, last = performance.now(), overShown = true;
+  const progress = () => { const r = story.getBoundingClientRect(); return clamp(-r.top / (r.height - vh)); };
   function frame(now) {
-    const dt = Math.min(64, now - lastT); lastT = now;
+    const dt = Math.min(64, now - last); last = now;
     const np = progress();
-    // a slow idle turn at the top of the page, gone once the journey starts
-    const idle = 1 - seg(np, .02, T.rise[1]);
-    if (!RM && idle > 0 && np < T.rise[1]) { spin += dt * .004 * idle; dirty = true; }
     if (np !== p) { p = np; dirty = true; }
-    if (dirty) { render(); dirty = false; }
+    if (!RM && p < T.journey[0]) spinT += dt * .0035 * (1 - seg(p, .02, T.journey[0]));
+    // the fleet keeps flying while the globe is up
+    if (p < T.dock[0] + .025) dirty = true;
+    if (dirty) { render(now); dirty = false; }
     raf = running ? requestAnimationFrame(frame) : 0;
   }
 
-  function render() {
-    // ---- headline ----
+  function render(now) {
+    /* headline */
     const ho = seg(p, T.heroOut[0], T.heroOut[1]);
     heroCopy.style.opacity = 1 - ho;
     heroCopy.style.transform = `translate(-50%, ${-ho * 40}px)`;
     heroCopy.classList.toggle('is-through', ho > .3);
 
-    // ---- where the journey is ----
-    const fill = {};
-    const setFill = (ids, t, lived) => ids.forEach(id => fill[id] = {t, lived: lived && lived.includes(id)});
-    const homeF = seg(p, homeT[0], homeT[0] + (homeT[1] - homeT[0]) * .6);
-    setFill(HOME.fill, homeF, HOME.lived);
-    let count = homeF > .5 ? 1 : 0, km = 0, cur = -1, legU = 0, phase = 'home';
-    for (let i = 0; i < legs.length; i++) {
-      const l = legs[i];
-      if (p >= l.t0) { cur = i; }
-      if (p >= l.t1) {
-        const span = l.t2 - l.t1;
-        l.fill.forEach((id, k) => {
-          const t = seg(p, l.t1 + span * k * .1, l.t1 + span * (.35 + k * .1));
-          fill[id] = {t, lived: l.lived && l.lived.includes(id)};
-          if (t > .5) count++;
-        });
-      }
-      km += l.km * ease(seg(p, l.t0, l.t1));
-    }
-    if (cur >= 0) {
-      const l = legs[cur];
-      legU = seg(p, l.t0, l.t1);
-      phase = p < l.t1 ? 'fly' : 'land';
-    }
-
-    // ---- camera ----
-    let view, R, cx = vw / 2, cy = vh * .53;
-    const startV = vec(T.START.lon + spin, T.START.lat);
-    const prg = stops[0].v;
-    if (cur < 0) {
-      view = slerp(startV, prg, ease(seg(p, T.rise[0] + .03, T.journey[0])));
-    } else {
-      const l = legs[cur];
-      view = phase === 'fly' ? slerp(l.a, l.b, ease(legU)) : l.b;
-    }
+    const J = journeyAt(p);
+    /* camera: the rise, the summer, the pull-back, the flight into the passport */
     const rise = ease(seg(p, T.rise[0], T.rise[1]));
-    R = lerp(R0, R1, rise);
-    cy = lerp(vh + R0 * .6, vh * .53, rise);
-    if (cur >= 0 && phase === 'fly') {
-      const l = legs[cur];
-      R *= 1 - .32 * Math.sin(Math.PI * ease(legU)) * Math.min(1, l.d / 1.1);
+    const cam = cameraAt(p, J);
+    let v = cam.v, Z = cam.Z;
+    if (p < T.journey[0]) {
+      v = slerp(vec([T.START[0] + spinT, T.START[1]]), vec(CITY.PRG.ll), ease(seg(p, .02, T.journey[0])));
+      Z = 1.9;
     }
-
-    // ---- settling into the phone ----
-    const ph = phoneAt(p);
+    let R = R1 * Z, cx = vw / 2, cy = vh * .53;
+    if (rise < 1) {
+      R = logLerp(R0, R1 * 1.9, rise);
+      cy = lerp(vh + R0 * .6, vh * .53, rise);
+    }
     const st = ease(seg(p, T.settle[0], T.settle[1]));
-    let alpha = 1;
     if (st > 0) {
-      const sw = phoneW * ph.s * SCR.w, sh = phoneH * ph.s * SCR.h;
-      const sx = vw / 2 - sw / 2;
-      const syTop = vh / 2 + ph.y - phoneH * ph.s / 2 + phoneH * ph.s * SCR.t;
-      const tx = sx + sw * SHOT_GLOBE.x, ty = syTop + sh * SHOT_GLOBE.y, tr = sw * SHOT_GLOBE.r;
-      cx = lerp(cx, tx, st); cy = lerp(cy, ty, st); R = lerp(R, tr, st);
-      view = slerp(view, vec(T.END.lon, T.END.lat), st);
-      alpha = 1 - seg(p, T.swap[0], T.swap[1]);
+      v = slerp(v, vec([1, 54]), st);
+      R = logLerp(R, R1 * 1.05, st);
     }
-    const [lon, lat] = toLonLat(view);
+    let [lon, lat] = toLL(v);
 
-    // ---- arcs ----
-    const arcFade = 1 - seg(p, T.settle[0], T.settle[0] + .05);
-    const arcs = [];
-    for (let i = 0; i <= cur; i++) {
-      const l = legs[i];
-      const u = i === cur ? ease(legU) : 1;
-      const n = Math.max(1, Math.round(u * (l.samples.length - 1)));
-      arcs.push({pts: l.samples.slice(0, n + 1), alpha: (i === cur ? 1 : .5) * arcFade, head: i === cur && phase === 'fly'});
-    }
-    const dots = [];
-    const reached = cur < 0 ? 1 : (phase === 'land' ? cur + 2 : cur + 1);
-    for (let i = 0; i < reached; i++) {
-      const ring = i === 0 ? seg(p, homeT[0], homeT[1]) : (i - 1 <= cur ? seg(p, legs[i - 1].t1, legs[i - 1].t1 + (legs[i - 1].t2 - legs[i - 1].t1) * .7) : 0);
-      dots.push({v: stops[i].v, now: i === reached - 1, ring: ring > 0 && ring < 1 ? ring : 0});
+    /* the passport comes up closed, opens, then moves aside for the phone. The cover
+       swings down on the app's page-turn spring and darkens as it turns (sin × 0.5). */
+    const r2 = ease(seg(p, T.rise2[0], T.rise2[1])), opT = seg(p, T.open[0], T.open[1]), op = ease(opT);
+    const sd = ease(seg(p, T.side[0], T.side[1]));
+    const bookX = lerp(0, FL.passX, sd), bookY = lerp(vh * .7, 0, r2) + lerp(PW * .35, 0, op) + lerp(0, FL.passY, sd), bookS = lerp(.9, 1, r2);
+    pass.style.opacity = Math.min(1, r2 * 2);
+    pass.style.transform = `translate3d(${bookX}px, ${bookY}px, 0) scale(${bookS})`;
+    const turn = 180 * (1 - springOut(opT));
+    passLeaf.style.transform = `rotateX(${turn}deg)`;
+    passLeaf.style.setProperty('--shade', (Math.abs(Math.sin(turn * D2R)) * .5).toFixed(3));
+    passBoard.style.opacity = seg(op, .2, .8);
+
+    /* the globe settles onto the cover's emblem, and stays over the data page as the cover opens */
+    const dock = ease(seg(p, T.dock[0], T.dock[1]));
+    if (dock > 0) {
+      const ex = vw / 2 + bookX + bookS * (EMB.x - PW / 2), ey = vh / 2 + bookY + bookS * (EMB.y - PW * .7);
+      cx = lerp(cx, ex, dock); cy = lerp(cy, ey, dock); R = logLerp(R, EMB.r * bookS, dock);
     }
 
-    const v = globe.draw({cx, cy, R, lon, lat, alpha, fill, arcs, dots, dotsAlpha: arcFade});
+    /* the globe flies to the data page, unrolls and turns into print */
+    const fly = ease(seg(p, T.fly[0], T.fly[1])), unroll = ease(seg(p, T.unroll[0], T.unroll[1])), printK = smooth(seg(p, T.print[0], T.print[1]));
+    let flat = {x: 0, y: 0, w: 1, h: 1};
+    if (fly > 0) {
+      const m = mapCanvas.getBoundingClientRect(), s = stage.getBoundingClientRect();
+      flat = {x: m.left - s.left, y: m.top - s.top, w: m.width, h: m.height};
+      cx = lerp(cx, flat.x + flat.w / 2, fly);
+      cy = lerp(cy, flat.y + flat.h / 2, fly);
+      R = logLerp(R, flat.h * .62, fly);
+      // turn to the map's own middle on the way, so it unrolls the right way round
+      [lon, lat] = toLL(slerp(v, vec([0, 20]), fly));
+    }
+    const landed = seg(p, T.print[1], T.print[1] + .008);
+    if (WORLD && (landed > 0) !== !!mapCanvas.dataset.summer) drawMap(landed > 0);
+    const view = {cx, cy, R, lon, lat, alpha: 1 - landed, morph: unroll, flat, print: printK, mercTop: MERC.top, mercBottom: MERC.bottom, atmosphere: 1 - fly};
+    if (!failed) {
+      paintAt(globe, p);
+      globe.draw(view);
+    }
+    drawSky(GL.viewBasis(lon, lat), 1 - seg(p, T.rise2[0], T.open[1]) * .6);
 
-    // ---- instruments ----
-    const hudOn = seg(p, T.journey[0] - .02, T.journey[0] + .01) * (1 - seg(p, T.journey[1] - .005, T.settle[0] + .02));
+    /* overlay: the fleet, the routes, the stops, the traveller */
+    ox.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ox.clearRect(0, 0, vw, vh);
+    const overA = (1 - seg(p, T.dock[0], T.dock[0] + .025)) * seg(p, T.rise[0] + .03, T.rise[1]);
+    // hidden rather than left blank once there's nothing on it, so a cleared
+    // canvas can never linger on screen with its last frame
+    const overOn = overA > 0 && !!globe.data;
+    if (overOn !== overShown) { overShown = overOn; over.style.visibility = overOn ? '' : 'hidden'; }
+    if (overOn) {
+      ox.globalAlpha = overA;
+      const tt = now / 1000;
+      for (const f of FLEET) {
+        if (f.kind === 'plane') {
+          const a = f.ph + tt * f.w, pos = rot(f.p, f.ax, a), ahead = rot(f.p, f.ax, a + .02);
+          const q = proj(pos, .035, view), q2 = proj(ahead, .035, view);
+          if (!q.vis || q.z < .15) continue;
+          const trail = [];
+          for (let k = 12; k >= 0; k--) trail.push(proj(rot(f.p, f.ax, a - k * .012), .035, view));
+          contrail(trail, .7 * clamp(q.z * 3));
+          plane(q.x, q.y, Math.atan2(q2.y - q.y, q2.x - q.x), clamp(R * .03, 10, 20), f.c, clamp(q.z * 4));
+        } else {
+          const sw = Math.sin(tt * .08 + f.ph) * .05, dir = Math.sign(Math.cos(tt * .08 + f.ph)) || 1;
+          const q = proj(rot(f.p, f.ax, sw), .001, view), q2 = proj(rot(f.p, f.ax, sw + .01 * dir), .001, view);
+          if (!q.vis || q.z < .2) continue;
+          const L = clamp(R * .02, 5, 12);
+          ox.save(); ox.translate(q.x, q.y); ox.rotate(Math.atan2(q2.y - q.y, q2.x - q.x));
+          ox.strokeStyle = 'rgba(255,255,255,.55)'; ox.lineWidth = 1;
+          ox.beginPath(); ox.moveTo(-L * .6, 0); ox.lineTo(-L * 2.2, -L * .5); ox.moveTo(-L * .6, 0); ox.lineTo(-L * 2.2, L * .5); ox.stroke();
+          ox.fillStyle = 'rgb(64,64,77)'; ox.fillRect(-L / 2, -L * .16, L, L * .32);
+          ox.fillStyle = 'rgba(230,230,230,.95)'; ox.fillRect(-L * .25, -L * .1, L * .45, L * .2);
+          ox.restore();
+        }
+      }
+      for (let i = 0; i <= J.cur; i++) ribbon(legs[i].path, i === J.cur ? J.s : 1, view, legs[i].mode, R);
+      stopDot(CITY.PRG.ll, view, 'drive', R);
+      for (let i = 0; i <= J.cur; i++) if (i < J.cur || J.phase === 'dwell') stopDot(CITY[legs[i].to].ll, view, legs[i].mode, R);
+      pin(CITY.PRG.ll, view, 'rgb(224,162,26)', seg(p, homeT[0], homeT[0] + .01), R);
+      for (let i = 0; i <= J.cur; i++) if (!legs[i].home) pin(CITY[legs[i].to].ll, view, 'rgb(217,69,59)', seg(p, legs[i].t1, legs[i].t1 + .01), R);
+      if (J.cur >= 0 && J.phase === 'move') {
+        const l = legs[J.cur], at = along(l.path, J.s), ahead = along(l.path, Math.min(1, J.s + .01));
+        if (l.mode === 'flight') {
+          const lift = s => .012 + .03 * Math.sin(Math.PI * s);
+          const q = proj(at.v, lift(J.s), view), q2 = proj(ahead.v, lift(J.s), view);
+          if (q.vis) {
+            const trail = [];
+            for (let k = 14; k >= 0; k--) { const s0 = Math.max(0, J.s - k * .012); trail.push(proj(along(l.path, s0).v, lift(s0), view)); }
+            contrail(trail, .9);
+            plane(q.x, q.y, Math.atan2(q2.y - q.y, q2.x - q.x), clamp(R * .045, 18, 30), AIRLINES[l.air || 0]);
+          }
+        } else {
+          const q = proj(at.v, .002, view);
+          if (q.vis) badge(q.x, q.y, l.mode, vw < 700 ? .85 : 1);
+        }
+      }
+      ox.globalAlpha = 1;
+    }
+
+    /* instruments */
+    const hudOn = seg(p, T.journey[0] - .015, T.journey[0] + .01) * (1 - seg(p, T.settle[0], T.settle[0] + .02));
     hud.style.opacity = hudOn;
+    hudShade.style.opacity = hudOn;
     leg.style.opacity = hudOn;
+    let count = BASE_COUNT;
+    for (const e of events) if (p >= e.p + .003) count++;
     hudC.textContent = count;
     hudW.textContent = Math.round(count / 248 * 100) + '%';
-    hudK.textContent = fmt(km);
-    legText.textContent = cur < 0 ? `${CITY.PRG[2]} · home`
-      : phase === 'fly' ? `${CITY[legs[cur].from][2]} → ${CITY[legs[cur].to][2]}`
-      : `${CITY[legs[cur].to][2]} · stamped`;
-
-    // ---- the stamp that lands with each arrival ----
-    let pid = null, tau = -1, anchor = null;
-    if (cur < 0) {
-      pid = 'HOME'; tau = seg(p, homeT[0], homeT[1]); anchor = stops[0].v;
-    } else if (phase === 'land') {
-      const l = legs[cur]; pid = l.to; tau = seg(p, l.t1, l.t2); anchor = l.b;
+    hudK.textContent = fmt(J.km);
+    let text, mode = 'drive';
+    if (J.cur < 0) text = 'Prague · home';
+    else {
+      const l = legs[J.cur]; mode = l.mode;
+      const fresh = events.filter(e => p >= e.p && p < e.p + .03).pop();
+      if (fresh) text = `${nameOf(fresh.a3)} · new country`;
+      else if (J.phase === 'move') text = `${l.title} · ${CITY[l.from].n} → ${CITY[l.to].n}`;
+      else text = l.home ? 'Prague · home again' : CITY[l.to].n;
     }
-    if (pid && popSVG[pid] && v && p < T.settle[0]) {
-      if (popId !== pid) { pop.innerHTML = popSVG[pid]; popId = pid; }
-      const q = globe.project(anchor, 0, v);
-      const sz = clamp(R * .42, 70, 120);
-      const x = clamp(q.x + R * .14, 8, vw - sz - 8), y = clamp(q.y - sz - R * .06, 70, vh - sz - 70);
-      const inT = seg(tau, 0, .14), outT = seg(tau, .78, 1);
-      const sc = inT < 1 ? lerp(1.9, 1, easeOut(inT)) : 1;
-      pop.style.width = pop.style.height = sz + 'px';
-      pop.style.opacity = Math.min(inT * 1.6, 1) * (1 - outT);
-      pop.style.transform = `translate(${x}px, ${y - outT * 16}px) scale(${sc}) rotate(${lerp(-16, -6, easeOut(inT))}deg)`;
-    } else {
-      pop.style.opacity = 0;
-    }
+    if (legText.textContent !== text) legText.textContent = text;
+    if (legGlyph.dataset.m !== mode) { legGlyph.dataset.m = mode; legGlyph.innerHTML = ART.glyph(mode, `rgb(${TINT[mode].map(x => Math.round(x * .78))})`, 14); }
 
-    // ---- phone and outro ----
-    phone.style.opacity = ph.o;
-    phone.style.transform = `translate3d(0, ${ph.y}px, 0) scale(${ph.s})`;
+    /* the stamp that lands with each new country (StampThump: 2.2× → 0.92 → 1) */
+    const ev = events.filter(e => p >= e.p - .001).pop();
+    if (ev && p < ev.p + .034 && globe.data && p < T.settle[0]) {
+      const tau = seg(p, ev.p, ev.p + .034);
+      if (pop.dataset.a3 !== ev.a3) {
+        pop.dataset.a3 = ev.a3;
+        pop.innerHTML = '';
+        pop.appendChild(ART.stampEl(a2of(ev.a3), 120, {date: STAMP_DATE[ev.a3]}));
+      }
+      const q = globe.project(ev.ll[0], ev.ll[1], 0, view);
+      const size = clamp(Math.min(vw, vh) * .17, 92, 150);
+      pop.style.width = size + 'px';
+      pop.firstChild.style.width = size + 'px'; pop.firstChild.style.height = size * 1.15 + 'px';
+      const k = seg(tau, 0, .2);
+      const sc = k < .6 ? lerp(2.2, .92, easeIn(k / .6)) : lerp(.92, 1, easeOut((k - .6) / .4));
+      const x = clamp(q.x + size * .15, 12, vw - size - 12), y = clamp(q.y - size * 1.25, 90, vh - size * 1.2 - 70);
+      pop.style.opacity = Math.min(1, k * 5) * (1 - seg(tau, .8, 1));
+      pop.style.transform = `translate(${x}px, ${y}px) rotate(${lerp(-4, 0, k)}deg) scale(${sc})`;
+    } else pop.style.opacity = 0;
+
+    /* the summer's stamps land in the passport, and the count goes up with them */
+    let landedN = 0;
+    const n = stampCells.length;
+    stampCells.forEach((el, i) => {
+      const a = lerp(T.stamps[0], T.stamps[1], i / Math.max(1, n)), b = a + (T.stamps[1] - T.stamps[0]) / Math.max(1, n) * .8;
+      const k = seg(p, a, b);
+      if (k > .5) landedN++;
+      const sc = k < .5 ? lerp(2.2, .92, easeIn(k / .5)) : lerp(.92, 1, easeOut((k - .5) / .5));
+      el.style.opacity = Math.min(1, k * 4);
+      el.style.transform = `rotate(calc(var(--tilt) + ${lerp(-4, 0, k)}deg)) scale(${k > 0 ? sc : 2.2})`;
+    });
+    const c = BASE_COUNT + landedN;
+    if (dpCount.textContent !== String(c)) {
+      dpCount.textContent = c;
+      dpPct.textContent = `(${Math.round(c / 248 * 100)}%)`;
+    }
+    dpTrips.textContent = n && landedN >= n ? 16 : 15;
+
+    /* the phone comes to sit beside it */
+    const ph = ease(seg(p, T.side[0], T.side[1]));
+    phone.style.opacity = Math.min(1, ph * 2);
+    phone.style.transform = `translate3d(${lerp(vw * .5, FL.phoneX, ph)}px, ${lerp(vh * .2, FL.phoneY, ph)}px, 0) rotate(${lerp(8, 0, ph)}deg) scale(${FL.phoneS})`;
     const oo = seg(p, T.outro[0], T.outro[1]);
     outro.style.opacity = oo;
     outro.style.transform = `translate(-50%, ${(1 - easeOut(oo)) * 24}px)`;
   }
 
-  // ---- the nudge: stop half way and a small "keep scrolling" turns up ----
+  /* ---- the nudge: stop half way and a small "keep scrolling" turns up ---- */
   let nudgeTimer = 0;
-  function poke() {
+  addEventListener('scroll', () => {
     nudge.classList.remove('is-on');
     clearTimeout(nudgeTimer);
-    nudgeTimer = setTimeout(() => {
-      if (p > .04 && p < .88) nudge.classList.add('is-on');
-    }, 750);
-  }
+    nudgeTimer = setTimeout(() => { if (p > .03 && p < .9) nudge.classList.add('is-on'); }, 900);
+  }, {passive: true});
 
-  // ---- run only while the story is on screen ----
-  let running = false, raf = 0;
-  if (!RM) new IntersectionObserver(([e]) => {
-    running = e.isIntersecting;
-    if (running && !raf) { lastT = performance.now(); raf = requestAnimationFrame(frame); }
-  }).observe(story);
-  addEventListener('scroll', poke, {passive: true});
-  addEventListener('resize', measure);
-  geoReady.then(() => { dirty = true; });
-  measure();
-
-  if (RM) {
-    // a still: the finished globe, no story
-    geoReady.then(() => {
-      const fill = {};
-      [HOME, ...LEGS].forEach(l => l.fill.forEach(id => fill[id] = {t: 1, lived: (l.lived || []).includes(id)}));
-      const c = $('#globe');
-      globe.size();
-      globe.draw({cx: c.clientWidth / 2, cy: c.clientHeight * .55, R: Math.min(c.clientWidth, c.clientHeight) * .3,
-                  lon: T.END.lon, lat: T.END.lat, alpha: .35, fill});
-    });
-  }
-}
-
-/* -------------------------------------------------------------
-   6. THE PASSPORT
-   ------------------------------------------------------------- */
-const PP = {
-  open:[.1, .3],          // the cover swings open
-  count:[.24, .42],       // the data page counts up
-  flags:[.28, .47],       // the visited flags fill in
-  turn:[.5, .64],         // the leaf turns
-  stamps:[.62, .93],      // the stamps land, one at a time
-  beats:[.2, .49],        // where the copy changes
-};
-const FLAGS = ['cz','at','sk','hu','it','va','sm','mt','si','hr','pt','es','mc','gb','ie','dk','se','no','fi','nl','be','lu','de','fr','kr','jp','hk','cn','th','vn','us','ca'];
-const LIVED_FLAGS = ['cz','gb','kr'];
-/* six per page: left page then right, in the order they land */
-const PP_STAMPS = ['GBR','DNK','FRA','KOR','JPN','ESP', 'PRT','CZE','HKG','ITA','MCO','NLD'];
-
-const pp = $('#passport');
-if (pp) initPassport();
-
-function initPassport() {
-  const body = $('#bookBody'), cover = $('#leafCover'), turn = $('#leafTurn');
-  const shadow = $('.book-shadow');
-  const lines = $$('.pp-line');
-  const dpCount = $('#dpCount'), dpPct = $('#dpPct'), dpTrips = $('#dpTrips');
-  const flagsBox = $('#flags'), livedBox = $('#flagsLived');
-
-  // flags
-  const flagEls = FLAGS.map(c => {
-    const i = new Image(); i.src = `assets/flags/${c}.png`; i.alt = ''; i.loading = 'lazy';
-    flagsBox.appendChild(i); return i;
-  });
-  const livedEls = LIVED_FLAGS.map(c => {
-    const i = new Image(); i.src = `assets/flags/${c}.png`; i.alt = ''; i.loading = 'lazy';
-    livedBox.appendChild(i); return i;
-  });
-
-  // a shade on each turning face, darkened as it goes edge-on
-  const shades = [...cover.children, ...turn.children].map(f => {
-    const s = document.createElement('div'); s.className = 'shade'; f.appendChild(s); return s;
-  });
-
-  // stamps, placed on a loose two-by-three grid with some jitter
-  const pages = [$('#stampsLeft'), $('#stampsRight')];
-  const stampEls = [];
-  geoReady.then(() => {
-    let seed = 3;
-    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-    PP_STAMPS.forEach((id, i) => {
-      const el = document.createElement('div');
-      el.className = 'stamp';
-      el.innerHTML = stampSVG(id);
-      const k = i % 6, col = k % 2, row = (k / 2) | 0;
-      el.style.left = (9 + col * 46 + (rnd() - .5) * 8) + '%';
-      el.style.top = (6 + row * 30 + (rnd() - .5) * 5) + '%';
-      el._rot = (rnd() - .5) * 18;
-      pages[i < 6 ? 0 : 1].appendChild(el);
-      stampEls.push(el);
-    });
-    drawMiniMap();
+  const worldReady = Promise.all([GL.countries(), ART.ready]).then(([list]) => {
+    prepWorld(list);
+    findEvents();
+    fillStamps();
+    drawMap(false);
     dirty = true;
   });
-
-  function drawMiniMap() {
-    const c = $('#dpMap'); if (!c || !RAW) return;
-    const ctx = c.getContext('2d'), W = c.width, H = c.height;
-    const on = new Set([HOME, ...LEGS].flatMap(l => l.fill));
-    ctx.clearRect(0, 0, W, H);
-    ctx.lineWidth = .6; ctx.strokeStyle = 'rgba(255,255,255,.35)';
-    for (const [id, rings] of Object.entries(RAW)) {
-      if (id === 'ATA') continue;
-      ctx.beginPath();
-      for (const r of rings) {
-        for (let i = 0; i < r.length; i += 2) {
-          const x = (r[i] + 180) / 360 * W, y = (84 - r[i + 1]) / 144 * H;
-          i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
-        }
-        ctx.closePath();
-      }
-      if (on.has(id)) { ctx.fillStyle = '#fff'; ctx.fill(); }
-      ctx.stroke();
-    }
-  }
-
-  let dirty = true, q = -1, raf = 0, running = false;
-  function progress() {
-    const r = pp.getBoundingClientRect();
-    return clamp(-r.top / (r.height - innerHeight));
-  }
-  function frame() {
-    const nq = progress();
-    if (nq !== q || dirty) { q = nq; render(); dirty = false; }
-    raf = running ? requestAnimationFrame(frame) : 0;
-  }
-  const zOf = (ang, i) => ang < -90 ? 20 + i : 12 - i;
-  function render() {
-    // the book comes in tilted and settles flatter as it opens
-    const o = ease(seg(q, PP.open[0], PP.open[1]));
-    const intro = easeOut(seg(q, 0, PP.open[0]));
-    body.style.transform =
-      `translateX(${lerp(-25, 0, o)}%) rotateX(${lerp(26, 10, intro) - o * 4}deg) rotateZ(${lerp(-7, -2, intro) + o * 2}deg) scale(${lerp(.9, 1, intro)})`;
-    shadow.style.transform = `translateX(${lerp(-25, 0, o)}%) scaleX(${lerp(.5, 1, o)})`;
-
-    const ca = -180 * o;
-    cover.style.transform = `rotateY(${ca}deg)`;
-    cover.style.zIndex = zOf(ca, 0);
-    const ta = -180 * ease(seg(q, PP.turn[0], PP.turn[1]));
-    turn.style.transform = `rotateY(${ta}deg)`;
-    turn.style.zIndex = zOf(ta, 1);
-    // edge-on faces go darker
-    const sc = Math.abs(Math.sin(ca * Math.PI / 180)) * .35, st = Math.abs(Math.sin(ta * Math.PI / 180)) * .35;
-    shades[0].style.opacity = shades[1].style.opacity = sc;
-    shades[2].style.opacity = shades[3].style.opacity = st;
-
-    // data page
-    const c = easeOut(seg(q, PP.count[0], PP.count[1]));
-    const n = Math.round(32 * c);
-    dpCount.textContent = n;
-    dpPct.textContent = `(${Math.round(n / 248 * 100)}%)`;
-    dpTrips.textContent = Math.round(16 * c);
-
-    // flags
-    const fa = seg(q, PP.flags[0], PP.flags[1]);
-    flagEls.forEach((el, i) => el.classList.toggle('is-on', fa * (FLAGS.length + 3) > i));
-    livedEls.forEach((el, i) => el.classList.toggle('is-on', fa * (FLAGS.length + 3) > FLAGS.length + i));
-
-    // stamps: each one drops from above, hits the page and settles
-    const sa = seg(q, PP.stamps[0], PP.stamps[1]);
-    stampEls.forEach((el, i) => {
-      const t = clamp(sa * stampEls.length - i * .92);
-      const k = easeOut(seg(t, 0, .55));
-      el.style.opacity = clamp(t * 4);
-      el.style.transform = `scale(${lerp(1.9, 1, k) + Math.sin(seg(t, .45, 1) * Math.PI) * .03}) rotate(${el._rot + (1 - k) * -12}deg)`;
+  globe.ready.catch(() => { failed = true; });
+  addEventListener('resize', measure);
+  measure();
+  // the cover's lines move once the type has loaded
+  if (document.fonts) document.fonts.ready.then(() => { measureEmblem(); dirty = true; });
+  if (RM) {
+    // a still: the summer's globe, and under it the open passport with every stamp in
+    // it beside the phone
+    stillReady = true;
+    worldReady.then(() => {
+      stampCells.forEach(el => { el.style.opacity = 1; el.style.transform = 'rotate(var(--tilt))'; });
+      const c = BASE_COUNT + events.length;
+      dpCount.textContent = c; dpPct.textContent = `(${Math.round(c / 248 * 100)}%)`; dpTrips.textContent = 16;
+      drawMap(true);
     });
-
-    // copy
-    const beat = q < PP.beats[0] ? 0 : q < PP.beats[1] ? 1 : 2;
-    lines.forEach((l, i) => l.classList.toggle('is-on', i === beat));
+    Promise.all([globe.ready, worldReady]).then(drawStill).catch(() => {});
+    return;
   }
-
-  // reduced motion: no scrubbing, the book simply lies open on its stamps
-  if (RM) { geoReady.then(() => { q = 1; render(); }); return; }
   new IntersectionObserver(([e]) => {
     running = e.isIntersecting;
-    if (running && !raf) raf = requestAnimationFrame(frame);
-  }).observe(pp);
+    if (running && !raf) { last = performance.now(); raf = requestAnimationFrame(frame); }
+  }).observe(story);
 }
 
 /* -------------------------------------------------------------
-   7. TODAY: the stamp that answers "Stamp it"
+   2. THE TOUR
    ------------------------------------------------------------- */
-geoReady.then(() => {
-  const el = $('#todayStamp');
-  if (el) el.innerHTML = stampSVG('AUT');
-});
+const tour = $('#tour');
+if (tour) initTour();
 
-/* -------------------------------------------------------------
-   8. TICKETS: a printer
-   Each kind is one ticket. Picking another drops the current one
-   out of the bottom and prints the next out of the slot. The state
-   switch (planned / booked / used) restyles whatever is printed.
-   ------------------------------------------------------------- */
-const TICKETS = {
-  flight:{head:'Boarding pass', kind:'Flight', from:'PRG', fromN:'Prague · Václav Havel', to:'AMS', toN:'Amsterdam · Schiphol',
-          via:'✈', f:[['Flight','KL 1356'],['Boards','06:35'],['Seat','14A'],['Gate','B4'],['Class','Eco'],['Bag','23kg']],
-          day:'17', mon:'Oct', time:'07:05', when:'In 16 days'},
-  train: {head:'Train ticket', kind:'Train', from:'Praha', fromN:'Praha hlavní nádraží', to:'Wien', toN:'Wien Hauptbahnhof', word:true,
-          via:'→', f:[['Train','RJ 75'],['Departs','08:12'],['Arrives','12:10'],['Coach','6'],['Seat','41'],['Class','2nd']],
-          day:'24', mon:'Oct', time:'08:12', when:'In 23 days'},
-  ferry: {head:'Ferry ticket', kind:'Ferry', from:'HEL', fromN:'Helsinki · West Harbour', to:'TLL', toN:'Tallinn · Old City Harbour',
-          via:'⛴', f:[['Sailing','MS 07'],['Boards','07:30'],['Deck','7'],['Cabin','—'],['Vehicle','No'],['Pax','2']],
-          day:'02', mon:'Nov', time:'07:30', when:'In 32 days'},
-  bus:   {head:'Bus ticket', kind:'Bus', from:'Lisboa', fromN:'Lisboa · Oriente', to:'Porto', toN:'Porto · Campanhã', word:true,
-          via:'→', f:[['Line','4412'],['Departs','09:45'],['Arrives','13:20'],['Seat','22'],['Bay','11'],['Bags','1']],
-          day:'15', mon:'Nov', time:'09:45', when:'In 45 days'},
-  event: {head:'Admit one', kind:'Conference', from:'Prague Design Week', fromN:'Kafkův dům · Prague', to:'', toN:'', word:true, event:true,
-          via:'', f:[['Day','1 of 4'],['Doors','09:00'],['Hall','A'],['Row','—'],['Seat','Free'],['Pass','Full']],
-          day:'08', mon:'Oct', time:'09:00', when:'In 7 days'},
-};
-const printer = $('#printerScene');
-if (printer) initPrinter();
+function initTour() {
+  const rig = $('#rig'), screen = $('#tourScreen'), back = $('#artsBack'), front = $('#artsFront');
+  const stops = $$('.stop');
 
-function initPrinter() {
-  const out = $('#paperOut');
-  const kinds = $$('#ticketKinds .chip');
-  const states = $$('#ticketState button');
-  let kind = 'flight', state = 'booked', cur = null, auto = 0, touched = false, inView = false;
-  const usedInk = stampSVG('CZE', {n:'Peregrino', s:'circle', c:'red', k:'', text:'USED', d:'BEEN THERE'});
-
-  function build(k) {
-    const t = TICKETS[k];
-    const el = document.createElement('div');
-    el.className = 'ticket';
-    const used = state === 'used';
-    el.innerHTML = `<article class="tk is-${state}" aria-label="${t.kind} ticket, ${t.from}${t.to ? ' to ' + t.to : ''}, ${t.day} ${t.mon}">
-      <div class="tk-main">
-        <div class="tk-head"><span>${t.head}</span><span>${t.kind}</span></div>
-        ${t.event
-          ? `<div class="tk-route" style="grid-template-columns:1fr"><div class="tk-code is-word">${t.from}<span class="tk-name">${t.fromN}</span></div></div>`
-          : `<div class="tk-route">
-              <div class="tk-code${t.word ? ' is-word' : ''}">${t.from}<span class="tk-name">${t.fromN}</span></div>
-              <div class="tk-via">${t.via}</div>
-              <div class="tk-code tk-to${t.word ? ' is-word' : ''}">${t.to}<span class="tk-name">${t.toN}</span></div>
-            </div>`}
-        <dl class="tk-fields">${t.f.map(([a, b]) => `<div><dt>${a}</dt><dd>${b}</dd></div>`).join('')}</dl>
-      </div>
-      <div class="tk-perf"></div>
-      <div class="tk-stub">
-        <div class="tk-date"><b>${t.day}</b><span>${t.mon} · ${t.time}</span></div>
-        <div class="tk-bar"></div>
-        <div class="tk-when">${state === 'planned' ? 'Pencilled in' : used ? 'Been' : t.when}</div>
-      </div>
-      <div class="tk-ink">${usedInk}</div>
-    </article>`;
-    return el;
+  /* ---- the screens: for the globe pages a live globe on top and the page
+         under it (cut from the prototype); the others whole ---- */
+  const LIVE = {
+    today:   {lon: 16.4, lat: 47.6, r: 1.7, pill: 'Vienna · located 2 hours ago', loc: [16.37, 48.21]},
+    journal: {lon: 9.6, lat: 53.2, r: 2.4, pill: 'Pureflow weekend · Netherlands, Denmark', routes: [[[14.42, 50.08], [4.90, 52.37]], [[4.90, 52.37], [12.57, 55.68]]], only: ['NLD', 'DNK']},
+    tickets: {lon: 62, lat: 40, r: .43, pill: '13 journeys · 23,805 km', routes: [[[14.42, 50.08], [4.90, 52.37]], [[4.90, 52.37], [12.57, 55.68]], [[-0.45, 51.47], [126.45, 37.46]], [[126.45, 37.46], [113.9, 22.3]], [[126.45, 37.46], [140.39, 35.77]], [[14.42, 50.08], [-9.14, 38.72]], [[16.37, 48.21], [126.45, 37.46]]]},
+    stats:   {lon: 42, lat: 24, r: .41, pill: '32 countries · 13%'},
+  };
+  const SHEETS = {today: 'today-sheet.webp', journal: 'journal-sheet.webp', tickets: 'tickets-sheet.webp', stats: 'stats-sheet.webp'};
+  const FULL = {place: 'place.jpg', customize: 'customize.jpg'};
+  const layers = {};
+  const live = document.createElement('div');
+  live.className = 'scr scr-live';
+  live.innerHTML = `<div class="pane"><canvas class="mini"></canvas><canvas class="mini-over"></canvas>
+      <div class="pane-chrome">
+        <div class="pane-status"><span>9:41</span><svg viewBox="0 0 64 14"><rect x="0" y="8" width="3.2" height="5" rx="1"/><rect x="5" y="6" width="3.2" height="7" rx="1"/><rect x="10" y="3.5" width="3.2" height="9.5" rx="1"/><rect x="15" y="1" width="3.2" height="12" rx="1"/><path d="M28.5 4.2a9 9 0 0 1 12 0l-1.3 1.4a7 7 0 0 0-9.4 0Zm2.6 2.8a5.2 5.2 0 0 1 6.8 0l-1.3 1.4a3.3 3.3 0 0 0-4.2 0Zm3.4 3.4 1.4-1.4-1.4-.9-1.4.9Z"/><rect x="45" y="2" width="16" height="10" rx="2.8" fill="none" stroke="#fff" stroke-width="1.1" opacity=".5"/><rect x="46.6" y="3.6" width="12.8" height="6.8" rx="1.6"/><path d="M62.4 5.6v3a1.6 1.6 0 0 0 0-3Z" opacity=".5"/></svg></div>
+        <span class="pane-layers"><svg viewBox="0 0 24 24"><path d="M12 3 2.5 8.2 12 13.4l9.5-5.2Z"/><path d="m2.5 12.2 9.5 5.2 9.5-5.2"/><path d="m2.5 16.2 9.5 5.2 9.5-5.2"/></svg></span>
+        <span class="pane-pill" id="panePill"></span>
+      </div></div><span class="pane-handle"></span>`;
+  screen.appendChild(live);
+  for (const [k, f] of Object.entries(SHEETS)) {
+    const d = document.createElement('div');
+    d.className = 'scr';
+    d.innerHTML = `<img class="scr-sheet" src="assets/screens/${f}" alt="" style="top:50.55%;height:49.45%">`;
+    screen.appendChild(d); layers[k] = d;
+  }
+  for (const [k, f] of Object.entries(FULL)) {
+    const d = document.createElement('div');
+    d.className = 'scr scr-full';
+    d.innerHTML = `<img src="assets/screens/${f}" alt="" loading="lazy">`;
+    screen.appendChild(d); layers[k] = d;
+  }
+  const pill = $('#panePill');
+  const miniCanvas = live.querySelector('.mini'), miniOver = live.querySelector('.mini-over'), mo = miniOver.getContext('2d');
+  const mini = GL.create(miniCanvas, {hiRes: false});
+  {
+    // a scatter of stars behind the whole-globe views
+    const c = document.createElement('canvas'); c.width = c.height = 220;
+    const x = c.getContext('2d'); let s = 5;
+    const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < 70; i++) { x.globalAlpha = .3 + rnd() * .6; x.fillStyle = '#fff'; x.fillRect(rnd() * 220, rnd() * 220, rnd() < .1 ? 1.6 : 1, rnd() < .1 ? 1.6 : 1); }
+    live.querySelector('.pane').style.background = `#000 url(${c.toDataURL()}) 0 0 / 110px 110px`;
   }
 
-  function print(k, instant) {
-    if (cur) {
-      const old = cur;
-      if (instant || RM) old.remove();
-      else { old.classList.add('is-out'); old.addEventListener('animationend', () => old.remove(), {once: true}); }
+  /* ---- the printer: slides down under the island and feeds the ticket out of
+         its slot short edge first, stub leading; torn off, the ticket turns a
+         quarter back and is filed beside the phone ---- */
+  const KINDS = {
+    flight:  {mode: 'flight', ref: 'KL 1356', from: {code: 'PRG', sub: 'Prague · Václav Havel'}, to: {code: 'AMS', sub: 'Amsterdam · Schiphol'}, fields: [['DATE', '17 OCT 2026'], ['BOARDS', '06:35'], ['SEAT', '14A']], day: '17', month: 'OCT', line: '07:05', footer: 'IN 16 DAYS', seed: 'kl1356'},
+    train:   {mode: 'train', ref: 'RJ 75', from: {name: 'Praha', sub: 'Praha hlavní nádraží'}, to: {name: 'Wien', sub: 'Wien Hauptbahnhof'}, fields: [['DATE', '24 OCT 2026'], ['DEPARTS', '08:12'], ['SEAT', '41']], day: '24', month: 'OCT', line: '08:12', footer: 'IN 23 DAYS', seed: 'rj75'},
+    ferry:   {mode: 'ferry', ref: 'MEGASTAR', from: {code: 'HEL', sub: 'Helsinki · West Harbour'}, to: {code: 'TLL', sub: 'Tallinn · Old City Harbour'}, fields: [['DATE', '2 NOV 2026'], ['SAILS', '07:30'], ['DECK', '7']], day: '02', month: 'NOV', line: '07:30', footer: 'IN 32 DAYS', seed: 'megastar'},
+    walk:    {mode: 'walk', from: {name: 'Porto', sub: 'Sé Cathedral'}, to: {name: 'Santiago', sub: 'Praza do Obradoiro'}, fields: [['DATE', '12 JUL 2027'], ['DISTANCE', '260 KM'], ['STARTS', '06:30']], day: '12', month: 'JUL', line: '06:30', footer: 'NEXT JULY', seed: 'camino'},
+    concert: {mode: 'concert', kindLabel: 'CONCERT', ref: 'ROYAL ARENA', title: 'Le Sserafim', sub: 'Easy Crazy Hot · Copenhagen', fields: [['DATE', '18 OCT 2026'], ['DOORS', '18:30']], day: '18', month: 'OCT', line: '2026', footer: 'IN 17 DAYS', seed: 'pureflow'},
+  };
+  const wait = ms => new Promise(r => setTimeout(r, RM ? 0 : ms));
+  const printer = {
+    kind: 'flight', state: 'booked', busy: false, filed: null, root: null, queued: false,
+    mount(root) {
+      this.root = root;
+      root.innerHTML = `<div class="printer"><span class="printer-slot"></span><span class="printer-led"></span></div><span class="feed-shade"></span><div class="feed"></div>`;
+      this.el = root.querySelector('.printer'); this.feed = root.querySelector('.feed');
+    },
+    make() { return ART.ticket({...KINDS[this.kind], state: this.state}); },
+    async print() {
+      if (!this.root) return;
+      if (this.busy) { this.queued = true; return; }
+      this.busy = true;
+      if (this.filed) {
+        const old = this.filed; this.filed = null;
+        old.animate([{opacity: 1}, {opacity: 0, transform: getComputedStyle(old).transform + ' translateY(40px)'}], {duration: 320, easing: 'ease-in', fill: 'forwards'}).finished.then(() => old.remove());
+      }
+      this.el.classList.add('is-down');
+      await wait(480);
+      // the strip: the ticket turned a quarter clockwise, stub first out of the slot
+      const fw = this.feed.clientWidth, k = fw / 200;
+      const strip = document.createElement('div');
+      strip.className = 'feed-strip';
+      strip.style.height = 480 * k + 'px';
+      const t = this.make();
+      t.style.position = 'absolute'; t.style.left = '0'; t.style.top = '0';
+      t.style.transformOrigin = '0 0';
+      t.style.transform = `translate(${200 * k}px, 0) rotate(90deg) scale(${k})`;
+      strip.appendChild(t);
+      this.feed.appendChild(strip);
+      this.el.classList.add('is-printing');
+      const pulls = 10;
+      for (let i = 1; i <= pulls; i++) {
+        strip.style.transition = 'transform .09s ease-out';
+        strip.style.transform = `translateY(${-100 + i / pulls * 100}%)`;
+        await wait(125);
+      }
+      this.el.classList.remove('is-printing');
+      await wait(280);
+      // torn off: it turns back a quarter and is filed beside the phone
+      const sr = strip.getBoundingClientRect();
+      const filed = document.createElement('div');
+      filed.className = 'ticket-filed';
+      filed.appendChild(ART.frame(this.make(), 480, 200, 300));
+      this.root.appendChild(filed);
+      const fr = filed.getBoundingClientRect();
+      const kr = fr.width / 300;     // the rig's own scale
+      const dx = ((sr.left + sr.width / 2) - (fr.left + fr.width / 2)) / kr, dy = ((sr.top + sr.height / 2) - (fr.top + fr.height / 2)) / kr;
+      const s0 = sr.height / fr.width;
+      strip.remove();
+      filed.style.transform = 'rotate(-2.2deg)';
+      if (!RM) await filed.animate([
+        {transform: `translate(${dx}px, ${dy}px) rotate(90deg) scale(${s0})`},
+        {transform: `translate(${dx * .45}px, ${dy * .5 - 34}px) rotate(32deg) scale(${(s0 + 1) / 2})`, offset: .45},
+        {transform: 'rotate(-2.2deg)'},
+      ], {duration: 780, easing: 'cubic-bezier(.22,.61,.36,1)'}).finished;
+      this.filed = filed;
+      this.el.classList.remove('is-down');
+      this.busy = false;
+      if (this.queued) { this.queued = false; this.print(); }
+    },
+    restate(s) {
+      this.state = s;
+      if (!this.filed) return;
+      const f = this.filed.querySelector('.art-frame'), tk = f.querySelector('.tk'), fresh = this.make();
+      fresh.style.transform = tk.style.transform; fresh.style.transformOrigin = '0 0';
+      if (s === 'used' && !RM && !tk.classList.contains('is-used')) {
+        // the stub peels away along the perforation, then the ticket slides to centre
+        const stub = tk.querySelector('.tk-stub');
+        stub.style.opacity = '0'; stub.style.transform = 'translate(44px,16px) rotate(11deg)';
+        setTimeout(() => f.replaceChild(fresh, tk), 480);
+      } else f.replaceChild(fresh, tk);
+    },
+  };
+  $$('#ticketKinds .chip').forEach(b => b.addEventListener('click', () => {
+    $$('#ticketKinds .chip').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    printer.kind = b.dataset.kind;
+    printer.print();
+  }));
+  $$('#ticketState button').forEach(b => b.addEventListener('click', () => {
+    $$('#ticketState button').forEach(x => x.setAttribute('aria-checked', String(x === b)));
+    printer.restate(b.dataset.state);
+  }));
+
+  /* ---- what each stop brings out ---- */
+  const arts = {};
+  const el = (tag, cls, parent) => { const e = document.createElement(tag); e.className = cls; parent.appendChild(e); return e; };
+  function setupArtifacts() {
+    // Today: Österreich, stamped beside the "Stamp it" button
+    arts.today = el('div', 'art art-stamp', front);
+    arts.today.appendChild(ART.stampEl('AT', 160, {date: '01.10.2026'}));
+    // Journal: two tags hung off the phone's corner on their strings
+    arts.journal = el('div', 'art art-tags', front);
+    [ART.tag({title: 'Camino summer', countries: ['AT', 'PT', 'ES'], days: 44, dates: '4 JUL – 16 AUG 2026', img: 'assets/photos/mountains.jpg', state: 'used', seed: 'trip|camino'}),
+     ART.tag({title: 'Pureflow weekend', countries: ['NL', 'DK'], trailing: 'IN 16 DAYS', trailingAccent: true, dates: '17 – 20 OCT 2026', img: 'assets/photos/river.jpg', state: 'booked', seed: 'trip|pureflow'})]
+      .forEach((t, i) => {
+        const h = el('div', 'hang', arts.journal);
+        h.style.left = `${i * 10}px`; h.style.top = `${i * 14}px`;
+        // the eyelet at the hanging point: shift the frame so (34, 120) sits on (0, 0)
+        const w = 230 - i * 16, f = ART.frame(t, 460, 240, w), k = w / 460;
+        f.style.transform = `translate(${-34 * k}px, ${-120 * k}px)`;
+        f.style.transformOrigin = '0 0';
+        h.appendChild(f);
+      });
+    // Tickets: the printer
+    arts.tickets = el('div', 'art art-tickets', front);
+    arts.tickets.style.inset = '0';
+    printer.mount(arts.tickets);
+    // Places: polaroids fan out from behind
+    arts.place = el('div', 'art art-photos', back);
+    [['night.jpg', 'Seoul, late'], ['torii.jpg', 'Kyoto, day 3'], ['beach.jpg', 'Lisbon']].forEach(([img, cap], i) => {
+      const pl = ART.polaroid({img: 'assets/photos/' + img, caption: cap, seed: cap, pin: i === 1});
+      arts.place.appendChild(pl);
+    });
+    // Statistics: the travel receipt, fed out over the phone's edge
+    arts.stats = el('div', 'art art-receipt', front);
+    arts.stats.appendChild(ART.receipt({
+      title: "Michael's travels", stamp: '01 OCT 2026 · 09:41', footer: 'peregrino', code: '20261001',
+      lines: [{t: 'heading', l: 'All time'}, {t: 'item', l: 'Countries', v: '32'}, {t: 'item', l: 'Of the world', v: '13%'},
+              {t: 'item', l: 'Continents', v: '3 / 7'}, {t: 'item', l: 'Lived in', v: '3'}, {t: 'item', l: 'Trips', v: '16'},
+              {t: 'item', l: 'Travelled', v: '23,805 km'}, {t: 'rule'}, {t: 'total', l: 'Days abroad', v: '214'}, {t: 'note', l: 'Thank you for travelling'}],
+    }));
+    // Customise: the covers, fanned behind
+    arts.customize = el('div', 'art art-covers', back);
+    [['Classic', '#1f1a47', '#2e1f59', '#fff'], ['Navy', '#14254a', '#1e3055', '#e3e2d5'], ['Burgundy', '#5a1124', '#6e1a2d', '#f1e2b4'],
+     ['Swiss', '#c63c46', '#d54650', '#fff'], ['Leather', '#3b2316', '#5a3622', '#e8d9bf'], ['Dubu', '#d4637a', '#e07a8f', '#fff']]
+      .forEach(([n, a, b, ink]) => {
+        const c = el('div', 'cv', arts.customize);
+        c.style.background = `repeating-linear-gradient(-45deg, rgba(255,255,255,.03) 0 .5px, transparent .5px 8px), linear-gradient(135deg, ${a}, ${b} 55%, ${a})`;
+        c.style.color = ink;
+        c.textContent = n;
+      });
+    layoutArtifacts();
+  }
+  function layoutArtifacts() {
+    // the polaroids fan out on the phone's open side: away from the copy on a wide
+    // screen, and on a narrow one (copy above) towards the middle of the screen
+    if (arts.place) {
+      arts.place.style.left = mobile ? '92%' : '';
+      [...arts.place.children].forEach((pl, i) => {
+        pl._on = mobile ? `translate(${[10, 64, 24][i]}px, ${[0, 176, 340][i]}px) rotate(${[9, -5, 6][i]}deg)`
+                        : `translate(${[-20, 34, -46][i]}px, ${[0, 176, 340][i]}px) rotate(${[-11, 6, -5][i]}deg)`;
+        pl._off = `translate(${mobile ? -120 : 120}px, ${120 + i * 60}px) rotate(0deg) scale(.7)`;
+        pl.style.transform = arts.place.classList.contains('is-on') ? pl._on : pl._off;
+      });
     }
-    kind = k;
-    cur = build(k);
-    out.appendChild(cur);
-    kinds.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.kind === k)));
-    if (instant || RM) { cur.classList.add('is-printed'); return; }
-    const el = cur;
-    // let the old one clear the slot before the new one feeds
-    setTimeout(() => {
-      printer.classList.add('is-printing');
-      el.classList.add('is-printing');
-      el.addEventListener('animationend', () => {
-        el.classList.remove('is-printing'); el.classList.add('is-printed');
-        printer.classList.remove('is-printing');
-      }, {once: true});
-    }, 260);
-  }
-  function setState(s) {
-    state = s;
-    states.forEach(b => b.setAttribute('aria-checked', String(b.dataset.state === s)));
-    if (!cur) return;
-    const tk = cur.querySelector('.tk');
-    tk.classList.remove('is-planned', 'is-booked', 'is-used');
-    tk.classList.add('is-' + s);
-    tk.querySelector('.tk-when').textContent = s === 'planned' ? 'Pencilled in' : s === 'used' ? 'Been' : TICKETS[kind].when;
-  }
-
-  kinds.forEach(b => b.addEventListener('click', () => { touched = true; stopAuto(); if (b.dataset.kind !== kind) print(b.dataset.kind); }));
-  states.forEach(b => b.addEventListener('click', () => { touched = true; stopAuto(); setState(b.dataset.state); }));
-
-  const order = Object.keys(TICKETS);
-  function startAuto() {
-    if (RM || touched || auto) return;
-    auto = setInterval(() => print(order[(order.indexOf(kind) + 1) % order.length]), 4600);
-  }
-  function stopAuto() { clearInterval(auto); auto = 0; }
-
-  let printedOnce = false;
-  new IntersectionObserver(([e]) => {
-    inView = e.isIntersecting;
-    if (inView && !printedOnce) { printedOnce = true; print('flight'); }
-    inView ? startAuto() : stopAuto();
-  }, {threshold: .45}).observe(printer);
-}
-
-/* -------------------------------------------------------------
-   9. STATS: counting up, by year
-   All time quotes the journey above, so the numbers agree.
-   ------------------------------------------------------------- */
-const figs = $('#figs');
-if (figs) initStats();
-
-function initStats() {
-  const km = () => window.__peregrinoKm || 34000;
-  const DATA = {
-    all: {countries:32, world:13, continents:3, days:214, km:1,   journeys:11,
-          bars:[['Europe',24,50],['Asia',6,49],['North America',2,23],['Africa',0,54],['South America',0,12],['Oceania',0,14]]},
-    2026:{countries:9,  world:4,  continents:2, days:61,  km:.42, journeys:4,
-          bars:[['Europe',7,50],['Asia',2,49],['North America',0,23],['Africa',0,54],['South America',0,12],['Oceania',0,14]]},
-    2025:{countries:14, world:6,  continents:3, days:88,  km:.36, journeys:4,
-          bars:[['Europe',10,50],['Asia',3,49],['North America',1,23],['Africa',0,54],['South America',0,12],['Oceania',0,14]]},
-    2024:{countries:11, world:4,  continents:2, days:65,  km:.22, journeys:3,
-          bars:[['Europe',9,50],['Asia',2,49],['North America',0,23],['Africa',0,54],['South America',0,12],['Oceania',0,14]]},
-  };
-  const els = Object.fromEntries($$('#figs b').map(b => [b.dataset.k, b]));
-  const shown = {countries:0, world:0, continents:0, days:0, km:0, journeys:0};
-  const show = {
-    countries: v => fmt(v), world: v => Math.round(v) + '%', continents: v => Math.round(v) + '/7',
-    days: v => fmt(v), km: v => fmt(v), journeys: v => fmt(v),
-  };
-  const bars = $('#bars');
-  const barEls = DATA.all.bars.map(([name]) => {
-    const row = document.createElement('div'); row.className = 'bar';
-    row.innerHTML = `<span>${name}</span><div class="bar-track"><div class="bar-fill"></div></div><span class="bar-n"><b>0</b><span>/0</span></span>`;
-    bars.appendChild(row);
-    return row;
-  });
-
-  let anim = 0, year = 'all', seen = false;
-  function go(y) {
-    year = y;
-    const d = DATA[y];
-    const target = {...d, km: Math.round(km() * d.km / 10) * 10};
-    const from = {...shown}, t0 = performance.now(), dur = RM ? 1 : 1000;
-    cancelAnimationFrame(anim);
-    const step = now => {
-      const t = easeOut(clamp((now - t0) / dur));
-      for (const k in els) { shown[k] = lerp(from[k], target[k], t); els[k].textContent = show[k](shown[k]); }
-      if (t < 1) anim = requestAnimationFrame(step);
-    };
-    anim = requestAnimationFrame(step);
-    d.bars.forEach(([, n, of], i) => {
-      barEls[i].querySelector('.bar-fill').style.transform = `scaleX(${n / of})`;
-      barEls[i].querySelector('.bar-n b').textContent = n;
-      barEls[i].querySelector('.bar-n span').textContent = '/' + of;
+    if (arts.customize) [...arts.customize.children].forEach((c, i) => {
+      const side = i % 2 ? 1 : -1, row = Math.floor(i / 2);
+      c._on = `translate(${side * (mobile ? 120 : 236 + row * 24)}px, ${(row - 1) * (mobile ? 96 : 150)}px) rotate(${side * (7 + row * 5)}deg)`;
+      c._off = 'translate(0, 0) rotate(0deg) scale(.6)';
+      c.style.transform = arts.customize.classList.contains('is-on') ? c._on : c._off;
     });
   }
-  $$('#years button').forEach(b => b.addEventListener('click', () => {
-    $$('#years button').forEach(x => x.setAttribute('aria-selected', String(x === b)));
-    go(b.dataset.year);
-  }));
-  new IntersectionObserver(([e], o) => {
-    if (e.isIntersecting && !seen) { seen = true; go(year); o.disconnect(); }
-  }, {threshold: .35}).observe(figs);
-}
 
-/* -------------------------------------------------------------
-   10. JOURNAL: luggage tags on strings
-   ------------------------------------------------------------- */
-const TAGS = [
-  {k:'Trip · 3 countries', img:'night.jpg',     t:'2026 Korea & Asia',  d:'10 Aug – 6 Sep 2026', s:'KOR', side:'left',  x:'-7%', y:'12%', r0:-6, r1:2},
-  {k:'Trip · 2 countries', img:'river.jpg',     t:'Pureflow weekend',   d:'17 – 20 Oct 2026',    s:'NLD', side:'right', x:'-7%', y:'6%',  r0:4,  r1:-3},
-  {k:'Trip · Italy',       img:'mountains.jpg', t:'Dolomites week',     d:'18 – 25 May 2026',    s:'ITA', side:'left',  x:'-10%', y:'58%', r0:-3, r1:4},
-  {k:'Trip · Japan',       img:'torii.jpg',     t:'Spring in Kyoto',    d:'1 – 12 Mar 2023',     s:'JPN', side:'right', x:'-9%', y:'52%', r0:5,  r1:-2},
-];
-const tagBox = $('#tags');
-if (tagBox) geoReady.then(() => {
-  TAGS.forEach((g, i) => {
-    const el = document.createElement('div');
-    el.className = 'tag';
-    el.style[g.side] = `calc(${g.x} * var(--tag-out, 1))`; el.style.top = g.y;
-    el.style.setProperty('--r0', g.r0 + 'deg'); el.style.setProperty('--r1', g.r1 + 'deg');
-    el.style.animationDelay = (-i * 1.3) + 's';
-    el.innerHTML = `<span class="tag-string"></span><div class="tag-card">
-      <p class="tag-k">${g.k}</p>
-      <div class="tag-img"><img src="assets/photos/${g.img}" alt="" loading="lazy"></div>
-      <p class="tag-t">${g.t}</p><p class="tag-d">${g.d}</p>
-      <span class="tag-mini">${stampSVG(g.s)}</span></div>`;
-    tagBox.appendChild(el);
+  /* ---- scroll → which stop, and how far between two ---- */
+  let vw = 0, vh = 0, X = 300, anchors = [], mobile = false, scale = 1;
+  const sides = stops.map(s => s.dataset.side === 'left' ? -1 : s.dataset.side === 'right' ? 1 : 0);
+  function measure() {
+    vw = innerWidth; vh = innerHeight;
+    mobile = vw < 760;
+    X = mobile ? Math.min(vw * .14, 60) : Math.min(vw * .245, 330);
+    scale = mobile ? Math.min(.62, (vh * .5) / 612) : Math.min(1, (vh * .82) / 612);
+    anchors = stops.map(s => { const r = s.getBoundingClientRect(); return r.top + scrollY + r.height / 2 - vh / 2; });
+    mini.resize();
+    const d = Math.min(2, devicePixelRatio || 1);
+    miniOver.width = Math.round(miniOver.clientWidth * d); miniOver.height = Math.round(miniOver.clientHeight * d);
+    layoutArtifacts();
+  }
+  function stateAt() {
+    const y = scrollY;
+    let i = 0;
+    while (i < anchors.length - 1 && y >= anchors[i + 1]) i++;
+    if (y < anchors[0]) return {i: 0, j: 0, u: 0, move: 0, enter: seg(y, anchors[0] - vh * .9, anchors[0] - vh * .15)};
+    if (i >= anchors.length - 1) return {i, j: i, u: 0, move: 0, enter: 1};
+    const u = seg(y, anchors[i], anchors[i + 1]);
+    return {i, j: i + 1, u, move: ease(seg(u, .3, .7)), enter: 1};
+  }
+  const keyOf = i => stops[i].dataset.screen;
+
+  /* tags hang on strings: a damped pendulum, pushed by the phone's travel */
+  const swing = [{a: 0, w: 0}, {a: 0, w: 0}];
+  let lastX = null, active = -2, running = false, raf = 0, lastT = performance.now();
+  function frame(now) {
+    const dt = Math.min(.05, (now - lastT) / 1000); lastT = now;
+    render(dt, now);
+    raf = running ? requestAnimationFrame(frame) : 0;
+  }
+  function render(dt, now) {
+    if (!anchors.length) return;
+    const S = stateAt();
+    const xa = sides[S.i] * X, xb = sides[S.j] * X;
+    const x = lerp(xa, xb, S.move);
+    const dir = Math.sign(xb - xa), sw = Math.sin(Math.PI * S.move);
+    const centreK = lerp(sides[S.i] === 0 ? 1 : 0, sides[S.j] === 0 ? 1 : 0, S.move);
+    const lift = mobile ? 0 : -vh * .12 * centreK;
+    const sc = scale * lerp(1, .86, centreK);
+    const enterY = (1 - easeOut(S.enter)) * vh * .75;
+    rig.style.transform = `translate3d(${x}px, ${lift + enterY}px, 0) rotateY(${-dir * sw * 16}deg) rotateZ(${dir * sw * 2.5}deg) scale(${sc})`;
+
+    // screens change over half way between two stops
+    const ka = keyOf(S.i), kb = keyOf(S.j), key = S.u < .5 ? ka : kb;
+    for (const [k, d] of Object.entries(layers)) d.classList.toggle('is-on', k === key);
+    const liveOn = !!LIVE[key];
+    live.classList.toggle('is-on', liveOn);
+    if (liveOn) {
+      const va = LIVE[ka] || LIVE[kb], vb = LIVE[kb] || LIVE[ka];
+      drawMini(va, vb, S.move, key, now);
+      const t = LIVE[key].pill;
+      if (pill.dataset.t !== t) { pill.dataset.t = t; pill.innerHTML = (key === 'today' ? '<svg viewBox="0 0 24 24"><path d="M20 4 4 11l7 2 2 7Z"/></svg>' : '') + t; }
+    }
+
+    // the artifacts: out at a stop, put away while the phone moves
+    const at = S.enter < 1 ? -1 : S.move === 0 ? S.i : S.move === 1 ? S.j : -1;
+    if (at !== active) {
+      active = at;
+      const k = at >= 0 ? keyOf(at) : '';
+      for (const [name, a] of Object.entries(arts)) {
+        const on = name === k;
+        a.classList.toggle('is-on', on);
+        if (name === 'tickets' && on && !printer.filed) printer.print();
+        if (name === 'place') [...a.children].forEach(pl => { pl.style.transform = on ? pl._on : pl._off; });
+        if (name === 'customize') [...a.children].forEach(c => { c.style.transform = on ? c._on : c._off; });
+      }
+    }
+    // the tags swing with the phone's travel
+    const vx = lastX === null ? 0 : (x - lastX) / Math.max(dt, .001);
+    lastX = x;
+    swing.forEach((s, i) => {
+      const acc = -vx * .012 * (1 + i * .3) - s.a * 26 - s.w * 2.6;
+      s.w += acc * dt; s.a = clamp(s.a + s.w * dt, -.6, .6);
+    });
+    if (arts.journal) [...arts.journal.children].forEach((h, i) => {
+      // hanging from the eyelet, the tag points down, angled a little away from the phone
+      const deg = (i ? 62 : 94) + (swing[i].a + Math.sin(now / 1400 + i * 1.7) * .03) / D2R;
+      h.style.transform = `rotate(${deg}deg)`;
+    });
+  }
+
+  /* ---- the live top pane ---- */
+  function drawMini(va, vb, t, key, now) {
+    if (!mini.data) return;
+    const w = mini.w, h = mini.h;
+    const ll = toLL(slerp(vec([va.lon, va.lat]), vec([vb.lon, vb.lat]), t));
+    const R = Math.exp(lerp(Math.log(va.r), Math.log(vb.r), t)) * w;
+    // the journal's trip page paints only that trip's countries
+    const only = LIVE[key].only;
+    for (const a of LIVED) mini.paint(a, INK.lived, only ? 0 : 1);
+    for (const a of [...VISITED, 'AUT', 'PRT', 'ESP', 'SWE', 'NOR', 'ISL', 'NLD', 'DNK'])
+      mini.paint(a, INK.visited, only ? (only.includes(a) ? 1 : 0) : (key === 'today' && a === 'AUT' ? 0 : 1));
+    for (const a of WISHLIST) mini.hatch(a, INK.wishlist, only ? 0 : 1);
+    mini.hatch('AUT', INK.planned, key === 'today' ? 1 : 0);
+    const view = {cx: w / 2, cy: h * .5, R, lon: ll[0], lat: ll[1], alpha: 1};
+    mini.draw(view);
+    const d = Math.min(2, devicePixelRatio || 1);
+    mo.setTransform(d, 0, 0, d, 0, 0);
+    mo.clearRect(0, 0, w, h);
+    const ow = clamp(R * .0085, 1.6, 4);
+    for (const [a, b] of LIVE[key].routes || []) {
+      const A = vec(a), B = vec(b), pts = [];
+      for (let i = 0; i <= 48; i++) { const q = toLL(slerp(A, B, i / 48)); pts.push(mini.project(q[0], q[1], .001, view)); }
+      for (const [lw, c] of [[ow, 'rgb(0,67,140)'], [ow * .62, 'rgb(89,168,255)']]) {
+        mo.lineWidth = lw; mo.strokeStyle = c; mo.lineCap = 'round';
+        mo.beginPath(); let pen = false;
+        for (const q of pts) { if (q.vis) { pen ? mo.lineTo(q.x, q.y) : mo.moveTo(q.x, q.y); pen = true; } else pen = false; }
+        mo.stroke();
+      }
+      for (const e of [a, b]) {
+        const q = mini.project(e[0], e[1], .001, view);
+        if (!q.vis) continue;
+        const r = clamp(R * .011, 2.2, 4.4);
+        mo.fillStyle = 'rgb(0,67,140)'; mo.beginPath(); mo.arc(q.x, q.y, r, 0, 7); mo.fill();
+        mo.fillStyle = '#fff'; mo.beginPath(); mo.arc(q.x, q.y, r * .6, 0, 7); mo.fill();
+      }
+    }
+    if (LIVE[key].loc) {
+      const q = mini.project(LIVE[key].loc[0], LIVE[key].loc[1], .002, view);
+      const ph = (now / 1400) % 1;
+      mo.strokeStyle = `rgba(255,170,40,${1 - ph})`; mo.lineWidth = 2;
+      mo.beginPath(); mo.arc(q.x, q.y, 6 + ph * 16, 0, 7); mo.stroke();
+      mo.fillStyle = '#fff'; mo.beginPath(); mo.arc(q.x, q.y, 6, 0, 7); mo.fill();
+      mo.fillStyle = 'rgb(240,150,30)'; mo.beginPath(); mo.arc(q.x, q.y, 4, 0, 7); mo.fill();
+    }
+  }
+
+  Promise.all([ART.ready, mini.ready.catch(() => null)]).then(() => {
+    setupArtifacts();
+    measure();
   });
-});
-
-/* -------------------------------------------------------------
-   11. DECK: a rail of phones, arrows and dots
-   ------------------------------------------------------------- */
-const deck = $('#deck');
-if (deck) {
-  const slides = $$('#deck .deck-slide');
-  const dots = $('#deckDots');
-  slides.forEach(() => { const d = document.createElement('span'); d.className = 'deck-dot'; dots.appendChild(d); });
-  const dotEls = [...dots.children];
-  const btns = $$('#screens .rail-btn');
-  const setEdge = () => {
-    const edge = Math.max(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--pad')) || 22,
-                          (innerWidth - 1120) / 2 + 22);
-    deck.style.setProperty('--edge', edge + 'px');
-  };
-  const sync = () => {
-    const step = slides[1].offsetLeft - slides[0].offsetLeft;
-    const i = clamp(Math.round(deck.scrollLeft / step), 0, slides.length - 1);
-    dotEls.forEach((d, k) => d.classList.toggle('is-on', k === i));
-    btns[0].disabled = deck.scrollLeft < 4;
-    btns[1].disabled = deck.scrollLeft > deck.scrollWidth - deck.clientWidth - 4;
-  };
-  btns.forEach(b => b.addEventListener('click', () => {
-    const step = slides[1].offsetLeft - slides[0].offsetLeft;
-    deck.scrollBy({left: step * +b.dataset.dir, behavior: RM ? 'auto' : 'smooth'});
-  }));
-  deck.addEventListener('scroll', sync, {passive: true});
-  addEventListener('resize', () => { setEdge(); sync(); });
-  setEdge(); sync();
+  addEventListener('resize', measure);
+  if (RM) return;
+  new IntersectionObserver(([e]) => {
+    running = e.isIntersecting;
+    if (running && !raf) { lastT = performance.now(); raf = requestAnimationFrame(frame); }
+  }).observe(tour);
 }
 
 /* -------------------------------------------------------------
-   12. SMALL THINGS: Schengen ring, mini calendar
+   3. THE SMALL THINGS
    ------------------------------------------------------------- */
+ART.ready.then(() => {
+  // a Flighty itinerary, printed
+  const st = $('#shareTicket');
+  if (st) st.appendChild(ART.frame(ART.ticket({mode: 'flight', ref: 'BA 2816', from: {code: 'LGW', sub: 'London · Gatwick'}, to: {code: 'CPH', sub: 'Copenhagen · Kastrup'}, fields: [['DATE', '9 OCT 2026'], ['BOARDS', '07:05'], ['SEAT', '23C']], day: '09', month: 'OCT', line: '07:05', footer: 'IN 8 DAYS', seed: 'ba2816'}), 480, 200, 230));
+  // the hand of paper behind the download icon, dealt like PocaPal's photocards:
+  // every piece the same height, pivoting on a point below the hand
+  const fan = $('#ctaFan');
+  if (!fan) return;
+  const card = parseFloat(getComputedStyle(fan).getPropertyValue('--card')) || 110, H = card * 1.55;
+  const stand = (art, w, h) => {
+    // a landscape artifact stood on its end (turned a quarter clockwise), H tall
+    const box = document.createElement('div');
+    box.className = 'fan-turn';
+    const k = H / w;
+    box.style.width = h * k + 'px'; box.style.height = H + 'px';
+    art.style.position = 'absolute'; art.style.left = '50%'; art.style.top = '50%';
+    art.style.transform = `translate(-50%, -50%) rotate(90deg) scale(${k})`;
+    box.appendChild(art);
+    return box;
+  };
+  const items = [
+    [-2, () => { const c = document.createElement('div'); c.className = 'fan-pass'; c.style.height = H + 'px'; c.innerHTML = '<svg viewBox="8 8 48 48" aria-hidden="true"><circle cx="32" cy="32" r="22"/><ellipse cx="32" cy="32" rx="9.5" ry="22"/><path d="M10 32h44M13.5 21h37M13.5 43h37"/></svg><p>Peregrino</p><p>Passport</p>'; return c; }],
+    [-1, () => stand(ART.ticket({mode: 'flight', ref: 'TP 1185', from: {code: 'PRG', sub: 'Prague'}, to: {code: 'LIS', sub: 'Lisbon'}, fields: [['DATE', '24 OCT 2026'], ['BOARDS', '06:40'], ['SEAT', '—']], day: '24', month: 'OCT', line: '06:40', footer: 'IN 23 DAYS', seed: 'fan|tk'}), 480, 200)],
+    [1, () => { const pl = ART.polaroid({img: 'assets/photos/torii.jpg', caption: 'Kyoto, day 3'}); pl.style.setProperty('--w', H * .72 + 'px'); return pl; }],
+    [2, () => stand(ART.tag({title: 'Camino summer', countries: ['PT', 'ES'], days: 44, dates: '4 JUL – 16 AUG', img: 'assets/photos/mountains.jpg', state: 'used', seed: 'fan|tag', string: false}), 460, 240)],
+  ];
+  const icon = fan.querySelector('.cta-icon');
+  for (const [k, make] of items) {
+    const f = document.createElement('div');
+    f.className = 'fan-item';
+    f.style.setProperty('--k', k);
+    f.appendChild(make());
+    fan.insertBefore(f, icon);
+  }
+});
 const ring = $('#ring');
 if (ring) {
   const days = 47, C = 2 * Math.PI * 50, out = $('#ringDays');
@@ -1050,11 +1184,7 @@ if (ring) {
     o.disconnect();
     ring.style.strokeDashoffset = C * (1 - days / 90);
     const t0 = performance.now();
-    const step = now => {
-      const t = easeOut(clamp((now - t0) / (RM ? 1 : 1400)));
-      out.textContent = Math.round(days * t);
-      if (t < 1) requestAnimationFrame(step);
-    };
+    const step = now => { const t = easeOut(clamp((now - t0) / (RM ? 1 : 1400))); out.textContent = Math.round(days * t); if (t < 1) requestAnimationFrame(step); };
     requestAnimationFrame(step);
   }, {threshold: .5}).observe(ring);
 }
@@ -1065,21 +1195,20 @@ if (cal) {
   for (let d = 28; d <= 30; d++) cells.push({d, out: true});
   for (let d = 1; d <= 31; d++) cells.push({d});
   for (let d = 1; cells.length < 42; d++) cells.push({d, out: true});
-  const mark = d => d === 4 ? 'today' : d === 8 ? 't3' : d >= 17 && d <= 20 ? 't1' : d >= 24 && d <= 26 ? 't2' : '';
+  const mark = d => d === 1 ? 'today' : d === 8 ? 't3' : d >= 17 && d <= 20 ? 't1' : d >= 24 && d <= 26 ? 't2' : '';
   cal.innerHTML = cells.map(c => `<i class="${c.out ? '' : mark(c.d)}"${c.out ? ' style="opacity:.35"' : ''}>${c.d}</i>`).join('');
 }
 
 /* -------------------------------------------------------------
-   13. PAGE: reveal on scroll, the nav over paper, the FAQ
+   4. PAGE: reveal on scroll, the nav over paper, the FAQ
    ------------------------------------------------------------- */
 const io = new IntersectionObserver(es => es.forEach(e => {
   if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
 }), {threshold: .18, rootMargin: '0px 0px -6% 0px'});
-$$('.reveal').forEach(el => io.observe(el));
+$$('.reveal, #ctaBrand').forEach(n => io.observe(n));
 
 const nav = $('#nav'), paper = $('.paper');
-const navTone = () => nav.classList.toggle('is-light', paper.getBoundingClientRect().top < 48 &&
-  !(($('#stats').getBoundingClientRect().top < 48) && ($('#stats').getBoundingClientRect().bottom > 48)));
+const navTone = () => nav.classList.toggle('is-light', paper.getBoundingClientRect().top < 48);
 addEventListener('scroll', navTone, {passive: true});
 navTone();
 

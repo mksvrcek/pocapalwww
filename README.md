@@ -4,8 +4,9 @@ Static single page. No build step, no backend. `public/` is the whole site.
 
 `peregrino/` beside it is a second site in the same style, for the Peregrino
 travel app. It has its own README; run it with
-`python3 dev-server.py 5174 peregrino`. `firebase.json` declares both as
-hosting targets, see **Deploy** below.
+`python3 dev-server.py 5174 peregrino`. Its globe textures are built from the
+app by `tools/peregrino-globe/` (not deployed). `firebase.json` declares both
+sites as hosting targets, see **Deploy** below.
 
 ```
 public/
