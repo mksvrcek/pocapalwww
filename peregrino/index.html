@@ -38,23 +38,25 @@
 
   <!-- ─────────────────── the journey ───────────────────
        One scroll-scrubbed run. The globe rises out of the bottom of the
-       hero and follows a summer of travel: a drive, flights, the Camino
-       on foot and a train, each new country painted as you cross into it.
-       Then a closed passport comes up, the globe settles onto its cover,
-       the cover swings open under it and the globe unrolls into the map
-       on the data page; the trip's stamps land, and the phone comes to
-       sit beside it. -->
+       hero blank and goes round the world: drives, trains, the Camino on
+       foot, a ferry, a bus and flights, each new country painted as you
+       cross into it.
+       Then a big open passport comes up behind it and snaps shut on the
+       globe; the closed booklet opens again on the data page, now full,
+       the stamps land, and the phone slides in beside it. -->
   <section class="story" id="story">
     <div class="story-track">
       <div class="story-stage" id="stage">
 
         <canvas class="sky" id="sky" aria-hidden="true"></canvas>
 
-        <!-- the passport, built by app.js: comes up closed at the end and opens under the globe -->
+        <!-- the passport, built by app.js: its right-hand page under the globe, the
+             leaf that shuts on it above (both move as one book) -->
         <div class="pass" id="pass" aria-hidden="true"></div>
 
         <canvas class="globe" id="globe" aria-hidden="true"></canvas>
         <canvas class="over" id="over" aria-hidden="true"></canvas>
+        <div class="pass pass-upper" id="passUpper" aria-hidden="true"></div>
 
         <div class="hero-copy" id="heroCopy">
           <p class="eyebrow">Peregrino</p>
@@ -68,9 +70,9 @@
 
         <div class="hud-shade" id="hudShade" aria-hidden="true"></div>
         <div class="hud" id="hud" aria-hidden="true">
-          <div class="hud-stat"><b id="hudCountries">26</b><span>countries</span></div>
-          <div class="hud-stat"><b id="hudWorld">10%</b><span>of the world</span></div>
-          <div class="hud-stat"><b id="hudKm">0</b><span>km this summer</span></div>
+          <div class="hud-stat"><b id="hudCountries">0</b><span>countries</span></div>
+          <div class="hud-stat"><b id="hudWorld">0%</b><span>of the world</span></div>
+          <div class="hud-stat"><b id="hudKm">0</b><span>km travelled</span></div>
         </div>
         <div class="leg" id="leg" aria-hidden="true"><span class="leg-glyph" id="legGlyph"></span><span id="legText">Prague</span></div>
         <div class="stamp-pop" id="stampPop" aria-hidden="true"></div>
@@ -100,11 +102,14 @@
   <div class="paper">
 
     <!-- ─────────── the tour ───────────
-         One phone, pinned while the blades scroll past, crossing from side
-         to side to sit opposite each one. Each stop changes what it shows
-         and brings out the thing the app prints for it. -->
+         One phone, pinned while the blades scroll past, carried from side
+         to side to sit opposite each one by one of the app's vehicles
+         (data-carrier names the one that brings it to a stop). Each stop
+         changes what it shows and brings out the thing the app prints for it. -->
     <section class="tour" id="tour">
       <div class="tour-stage" aria-hidden="true">
+        <!-- the vehicles that take the phone from one stop to the next (built by app.js) -->
+        <div class="carrier" id="carrier"></div>
         <div class="tour-rig" id="rig">
           <div class="tour-back" id="artsBack"></div>
           <div class="device tour-phone" id="tourPhone">
@@ -128,7 +133,7 @@
           </div>
         </article>
 
-        <article class="stop" id="journal" data-side="left" data-screen="journal">
+        <article class="stop" id="journal" data-side="left" data-screen="journal" data-carrier="plane">
           <div class="stop-copy">
             <p class="kicker">Journal</p>
             <h2 class="h2">Every trip gets<br>a <span class="hl">luggage tag.</span></h2>
@@ -136,7 +141,7 @@
           </div>
         </article>
 
-        <article class="stop" id="tickets" data-side="right" data-screen="tickets">
+        <article class="stop" id="tickets" data-side="right" data-screen="tickets" data-carrier="train">
           <div class="stop-copy">
             <p class="kicker">Tickets</p>
             <h2 class="h2">Every journey<br><span class="hl">gets a ticket.</span></h2>
@@ -156,7 +161,7 @@
           </div>
         </article>
 
-        <article class="stop" id="places" data-side="left" data-screen="place">
+        <article class="stop" id="places" data-side="left" data-screen="place" data-carrier="car">
           <div class="stop-copy">
             <p class="kicker">Places and photos</p>
             <h2 class="h2">Right where<br><span class="hl">it happened.</span></h2>
@@ -164,7 +169,7 @@
           </div>
         </article>
 
-        <article class="stop stop-short" id="stats" data-side="right" data-screen="stats">
+        <article class="stop stop-short" id="stats" data-side="right" data-screen="stats" data-carrier="ship">
           <div class="stop-copy">
             <p class="kicker">Statistics</p>
             <h2 class="h2">Your numbers,<br><span class="hl">on a receipt.</span></h2>
@@ -172,11 +177,19 @@
           </div>
         </article>
 
-        <article class="stop stop-centre" id="customise" data-side="centre" data-screen="customize">
+        <article class="stop stop-centre" id="customise" data-side="centre" data-screen="customize" data-carrier="lander">
           <div class="stop-copy">
             <p class="kicker">Customise</p>
             <h2 class="h2">Make it <span class="hl">yours.</span></h2>
             <p class="body">Pick the passport's cover, the globe and the inks, paid for in the miles you earn by travelling.</p>
+            <div class="swatches" role="radiogroup" aria-label="Passport cover" id="coverPick">
+              <button type="button" role="radio" aria-checked="true" data-style="classicPurple" aria-label="Classic Purple" title="Classic Purple"></button>
+              <button type="button" role="radio" aria-checked="false" data-style="book" aria-label="Leather Book" title="Leather Book"></button>
+              <button type="button" role="radio" aria-checked="false" data-style="burgundy" aria-label="Burgundy Passport" title="Burgundy Passport"></button>
+              <button type="button" role="radio" aria-checked="false" data-style="navy" aria-label="Navy Passport" title="Navy Passport"></button>
+              <button type="button" role="radio" aria-checked="false" data-style="swiss" aria-label="Swiss Passport" title="Swiss Passport"></button>
+              <button type="button" role="radio" aria-checked="false" data-style="dubu" aria-label="Dubu Card" title="Dubu Card"></button>
+            </div>
           </div>
         </article>
       </div>
@@ -320,6 +333,7 @@
 
 <script src="globe.js"></script>
 <script src="artifacts.js"></script>
+<script src="vehicles.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

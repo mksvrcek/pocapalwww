@@ -16,8 +16,8 @@
    so borders, ambient occlusion and relief show through, the way
    the app draws painted countries under its effects overlay.
 
-   The mesh can also unroll into a flat Mercator map (`morph`),
-   which is how the globe ends up printed in the passport.
+   The mesh can also unroll into a flat Mercator map (`morph`) and
+   turn into print (`print`).
 
    Exposed as window.PeregrinoGlobe.
    ============================================================= */

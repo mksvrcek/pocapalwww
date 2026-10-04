@@ -11,9 +11,11 @@ peregrino/
   app.js            the journey, the tour and the smaller interactions; tuning constants up top
   globe.js          the app's SceneKit globe, ported to WebGL (window.PeregrinoGlobe)
   artifacts.js/.css the app's print family: stamps, tickets, tags, receipt, polaroids (window.PeregrinoArt)
+  vehicles.js       side views of the vehicles that carry the tour's phone (window.PeregrinoVehicles)
   assets/globe/     textures, height map and country outlines, built by tools/peregrino-globe
   assets/screens/   app screens from peregrinoApp/redesign/prototype/screens (590×1278)
-                    and the lower halves of four of them (*-sheet.webp) for the live-globe screens
+                    and the lower halves of five of them (*-sheet.webp), under the live top panes
+  assets/dubu.webp  the Dubu Card's mascot, from the app's DubuCharacter asset
   assets/photos/    illustrations cropped from the prototype's photo grid
   assets/fonts/     Archivo (OFL), standing in for SF Pro Expanded / Condensed on the artifacts
   assets/phone-frame.webp  the same device frame PocaPal uses
@@ -33,8 +35,8 @@ python3 dev-server.py 5174 peregrino
 
 | Section | What it does |
 |---|---|
-| **The journey** (`#story`) | The big scroll story. The globe rises out of the hero and follows one summer: a drive from Prague to Vienna, a flight to Lisbon, the Camino Português on foot to Santiago, a flight to Stockholm, the train to Oslo, then Reykjavík and home. A country is painted the moment the route crosses into it (one at a time), and its stamp thumps down there. Then a closed passport comes up, the globe settles onto the emblem on its cover, the cover swings open underneath it, and the globe dives into the data page and unrolls into its map. The summer's six stamps land on the next page, the count goes 26 → 32, and the phone comes to sit beside the passport. |
-| **The tour** (`#tour`) | One phone pinned while the blades scroll past, crossing sides (right, left, right, left, right, centre) to sit opposite each one. Each stop changes the screen and brings out what the app prints for it: *Today* stamps Österreich, *Journal* hangs two luggage tags off the phone, *Tickets* runs the printer, *Places* fans out polaroids, *Statistics* feeds a receipt, *Customise* fans the passport covers. |
+| **The journey** (`#story`) | The big scroll story. The globe rises out of the hero with nothing marked and goes round the world from Prague: a drive to Budapest, trains across the Alps to Amsterdam and on to Stockholm and Oslo, flights to Helsinki, Seoul, Tokyo and Hong Kong, a train into China, Hanoi, Bangkok, San Francisco, Reykjavík, a ferry from Dublin to Liverpool, the Camino Português on foot, a bus along the Riviera to Monaco, Athens, Kraków and the train home. A country is painted the moment the route crosses into it, one at a time, and its stamp thumps down there; the count climbs to 32. Then a big open passport comes up behind the globe, the globe settles onto its page and the passport snaps shut on it. The closed booklet, upright like a real one, opens again on the data page, now full; it turns the way the app holds it, six stamps land, it pops out of the page and the phone slides in beside it, both a little tilted. |
+| **The tour** (`#tour`) | One phone pinned while the blades scroll past, carried to the far side of each one by one of the app's vehicles: an airliner tows it across on a line, a push-pull train and a car with a trailer give it a ride, a cargo ship takes it over the waves, and the Mars theme's moon lander winches it into the middle. Each stop changes the screen and brings out what the app prints for it: *Today* stamps Österreich, *Journal* hangs two luggage tags off the phone, *Tickets* fans a hand of printed tickets out from behind the phone (the chips print more, the buttons pencil in, book or tear the front one), *Places* fans out polaroids, *Statistics* feeds a receipt, *Customise* fans out the app's six passports: click one, or a swatch, and the passport in the phone changes to it. |
 | **More** | Bento tiles: Flighty share, Schengen ring, enamel pins, globe layers, Pinpoint, calendar. |
 | CTA, FAQ, footer | Same shape as PocaPal's. The download blade fans a hand of the app's paper (passport, ticket, polaroid, tag) behind the icon, the way PocaPal fans photocards. |
 
@@ -63,58 +65,76 @@ texture, so the two meet without a seam. `EUROPE` in `globe.js` must match the
 build script.
 
 The mesh can also unroll into a flat Mercator map (`morph`) and turn into
-print (`print`): that is how the globe ends up on the passport's data page.
+print (`print`); the page doesn't use either at the moment (the passport's map
+is drawn on its own canvas).
 
 Planes, ships, routes, pins and the traveller are drawn on a 2D canvas over the
 globe (`#over`), placed with `globe.project()`.
 
 ## Tuning the journey
 
-**`LEGS` in `app.js`** is the summer. Ground legs follow the road or rail
-through their `via` points; flights take the great circle. Nothing lists which
-countries a leg adds: `findEvents()` walks each route through the country
-outlines and notes where it crosses into somewhere new (or, for a flight, where
-it lands), so moving a route moves its stamps with it. `STAMP_DATE` dates
-them.
+**`LEGS` in `app.js`** is the trip. Ground legs follow the road, rail or sea
+lane through their `via` points (a city's code there marks a stop on the way);
+flights take the great circle. Nothing lists which countries a leg adds:
+`findEvents()` walks each route through the country outlines and notes where it
+crosses into somewhere new (or, for a flight, where it lands), so moving a
+route moves its stamps with it. `at` places a country by hand where the
+outlines can't, and a city's `a3` names its country where the simplified
+coastline misses it. The stamps are dated a few days apart from 2 June 2026.
 
-**`T` in `app.js`** holds the beats as scroll progress across `#story`:
+**`V` in `app.js`** holds the beats in vh of scrolling. The legs share the
+middle of the run, each weighted by its length (`U` vh per unit; flights by
+the arc, ground legs by the distance, the walk a little slower); everything
+after them is counted from `E0`, the end of the trip:
 
 | key | what it controls |
 |---|---|
-| `heroOut`, `rise` | the headline leaving, the globe coming up |
-| `journey` | the span the legs share (ground legs get more room, flights scale with distance) |
-| `settle` | the camera pulling back to the whole summer |
-| `rise2`, `dock` | the closed passport coming up; the globe settling onto its emblem |
-| `open` | the cover swinging open, on the app's book-opening spring |
-| `fly`, `unroll`, `print` | the globe diving into the data page, unrolling, becoming print |
-| `stamps` | the six stamps landing |
-| `side`, `outro` | the passport moving aside for the phone, the closing line |
+| `heroOut`, `rise`, `home` | the headline leaving, the blank globe coming up, Prague |
+| `settle` | the camera pulling back to the whole world |
+| `bookIn`, `dock` | the big open passport coming up behind the globe; the globe settling onto its page |
+| `shut`, `gulp`, `closed` | the passport snapping shut on it; the closed booklet coming to the middle |
+| `reopen`, `turn` | opening again on the data page, turning to the way the app holds it |
+| `stamps`, `pop` | six stamps landing; the passport popping out of the page |
+| `side`, `outro` | the phone sliding in beside it, the closing line |
 
-The length of the run is the `height` of `.story` in `styles.css` (`900vh`,
-`820vh` on narrow screens). `ZG` is how close the camera comes for the ground
-legs.
+The story's height is set from these (`TOTAL` + 100 vh). `zoomFor()` is how
+close the camera follows each leg.
 
 ## The tour
 
 Each stop is an `<article class="stop">` with `data-side` (`left`, `right` or
-`centre`) and `data-screen`. Between two stops the phone crosses over with a
-little turn, and the screens change half way. `LIVE` in `app.js` is the screens
-that show a live globe in their top pane (where it looks, its routes, its pill),
+`centre`), `data-screen`, and `data-carrier`, the vehicle that brings the phone
+to it (`plane`, `train`, `car`, `ship` or `lander`, drawn in `vehicles.js`).
+`carry()` in `app.js` is the choreography, as a function of how far the scroll
+has got between two stops: the vehicle comes in from behind, the phone shrinks
+a little and hops on (or is hooked, for the plane and the lander), rides
+across, hops off and grows back, and the vehicle goes on its way. The rails,
+the road and the sea are laid in front of their vehicle and taken up behind
+it; wheels roll by the distance covered, and a hanging phone trails the way
+it came. The screens change half way. `LIVE` in `app.js` is the screens that
+show a live globe in their top pane (where it looks, its routes, its pill),
 with the page under it from `SHEETS`; `FULL` is the screens shown whole.
 
-Artifacts sit on the phone's open side, away from the copy, and partly over the
-phone where the gap is narrow. The printer grows out of the Dynamic Island on a
-spring, feeds the ticket out of its slot stub first and turned a quarter, the
-way the app prints it, then shrinks back into the island; the ticket turns back
-and is filed across the phone's edge. `KINDS` holds the tickets the chips
-print; the state buttons pencil it in, book it or tear the stub.
+Artifacts sit on the phone's open side, away from the copy. *Tickets*: the
+printer grows out of the Dynamic Island on a spring, feeds a ticket out of its
+slot stub first and turned a quarter, the way the app prints it, and shrinks
+back; the ticket flies to the front of the hand behind the phone (`HAND`).
+`KINDS` holds the tickets the chips print, each press printing one in turn; the
+state buttons act on the front ticket, and clicking one further back brings it
+forward. *Customise*: `STYLES` is the app's `PassportBackgroundStyle` (cover,
+pages, binding and inks for Classic Purple, Leather Book, Burgundy, Navy, Swiss
+and Dubu). The phone's top pane is the app's Customize screen built live: the
+passport open on its data page and visited page in the chosen style, under it
+the sheet with the chosen one marked Selected. The covers fan out round the
+phone (`FAN`; over its top on a narrow screen), and they and the swatches under
+the copy choose.
 
 ## Reduced motion
 
 Under `prefers-reduced-motion` the journey is a still: the headline, the
-summer's globe drawn once, the closing line, then the open passport with all
-six stamps beside the phone. The tour becomes plain blades of copy (the ticket
-buttons go with the printer they drive).
+globe with the whole trip drawn once, the closing line, then the open passport
+with all six stamps beside the phone. The tour becomes plain blades of copy
+(the ticket buttons and the passport swatches go with the phone they drive).
 
 ## Rebuilding the globe's textures
 

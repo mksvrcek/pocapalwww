@@ -128,40 +128,38 @@ button{font:inherit;color:inherit}
 .stamp-pop{position:absolute;left:0;top:0;width:120px;z-index:8;pointer-events:none;opacity:0;will-change:transform,opacity}
 .stamp-pop .cstamp{filter:drop-shadow(0 1px 0 rgba(255,255,255,.35))}
 
-/* the passport (hero), opened behind the globe. --pw is the page width. */
+/* the passport (hero), a real booklet. Open, its spine runs down the middle: the leaf
+   on the left (data page inside, cover outside) shuts over the right-hand page. A page
+   is --ph by --pw, portrait; its content is laid out landscape as the app shows it
+   (.pg-rot, --pw by --ph) and turned a quarter, so it reads upright once the open
+   book is turned to the app's top-and-bottom spread. */
 .pass{
-  --pw:420px; --ph:calc(var(--pw) * .7);
-  position:absolute;left:50%;top:50%;width:var(--pw);height:calc(var(--ph) * 2);
-  margin:calc(var(--ph) * -1) 0 0 calc(var(--pw) * -.5);
-  perspective:calc(var(--pw) * 4);
-  opacity:0;will-change:transform,opacity;
+  --pw:560px; --ph:calc(var(--pw) * .7); --pad:calc(var(--pw) * .022); --rad:calc(var(--pw) * .045);
+  position:absolute;left:50%;top:50%;width:calc(var(--ph) * 2);height:var(--pw);
+  margin:calc(var(--pw) * -.5) 0 0 calc(var(--ph) * -1);
+  opacity:0;pointer-events:none;will-change:transform,opacity;
 }
-.pass-board{
-  position:absolute;inset:calc(var(--pw) * -.022);border-radius:calc(var(--pw) * .055);
-  background:linear-gradient(180deg,var(--pp-edge-a),var(--pp-edge-b));
-  box-shadow:0 30px 70px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.04);
-  transition:opacity .2s;
-}
-.pass-page{
-  position:absolute;left:0;width:var(--pw);height:var(--ph);overflow:hidden;
+.pass-upper{z-index:6;perspective:calc(var(--pw) * 4)}
+.bk-right{position:absolute;left:var(--ph);top:0;width:var(--ph);height:var(--pw)}
+.bk-leaf{position:absolute;left:0;top:0;width:var(--ph);height:var(--pw);transform-origin:100% 50%;transform-style:preserve-3d;will-change:transform}
+.bk-face{position:absolute;inset:0;-webkit-backface-visibility:hidden;backface-visibility:hidden}
+.bk-face::after{content:"";position:absolute;inset:0;border-radius:inherit;background:#000;opacity:var(--shade,0);pointer-events:none;z-index:5}
+.bk-board{position:absolute;background:linear-gradient(180deg,var(--pp-edge-a),var(--pp-edge-b));box-shadow:0 30px 70px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.04)}
+.bk-right .bk-board{inset:calc(var(--pad) * -1) calc(var(--pad) * -1) calc(var(--pad) * -1) 0;border-radius:0 var(--rad) var(--rad) 0}
+.bk-front .bk-board{inset:calc(var(--pad) * -1) 0 calc(var(--pad) * -1) calc(var(--pad) * -1);border-radius:var(--rad) 0 0 var(--rad)}
+.bk-page{
+  position:absolute;inset:0;overflow:hidden;color:#fff;
   background:
     repeating-linear-gradient(-45deg, rgba(255,255,255,.025) 0 .5px, transparent .5px 8px),
     linear-gradient(135deg,var(--pp-a),var(--pp-b) 55%,var(--pp-c));
-  color:#fff;
 }
-.pass-top{top:0;border-radius:calc(var(--pw) * .04) calc(var(--pw) * .04) 0 0}
-.pass-leaf{
-  position:absolute;left:0;top:var(--ph);width:var(--pw);height:var(--ph);
-  transform-origin:50% 0;transform-style:preserve-3d;will-change:transform;
-}
-.pass-face{position:absolute;inset:0;-webkit-backface-visibility:hidden;backface-visibility:hidden;border-radius:0 0 calc(var(--pw) * .04) calc(var(--pw) * .04)}
-.pass-face.cover{transform:rotateX(180deg);border-radius:calc(var(--pw) * .04)}
-/* a face darkens as it turns, as the app's leaves do */
-.pass-face::before{content:"";position:absolute;inset:0;border-radius:inherit;background:#000;opacity:var(--shade,0);pointer-events:none;z-index:4}
+.bk-right .bk-page{border-radius:0 calc(var(--rad) * .7) calc(var(--rad) * .7) 0}
+.bk-front .bk-page{border-radius:calc(var(--rad) * .7) 0 0 calc(var(--rad) * .7)}
 /* the gutter's shade either side of the spine */
-.pass-top::after,.pass-face.pass-page::after{content:"";position:absolute;left:0;right:0;height:14%;pointer-events:none}
-.pass-top::after{bottom:0;background:linear-gradient(0deg,rgba(0,0,0,.28),transparent)}
-.pass-face.pass-page::after{top:0;background:linear-gradient(180deg,rgba(0,0,0,.28),transparent)}
+.bk-page::before{content:"";position:absolute;top:0;bottom:0;width:13%;pointer-events:none;z-index:2}
+.bk-right .bk-page::before{left:0;background:linear-gradient(90deg,rgba(0,0,0,.3),transparent)}
+.bk-front .bk-page::before{right:0;background:linear-gradient(270deg,rgba(0,0,0,.3),transparent)}
+.pg-rot{position:absolute;left:50%;top:50%;width:var(--pw);height:var(--ph);transform:translate(-50%,-50%) rotate(-90deg)}
 /* data page (PassportView) */
 .dp{padding:calc(var(--pw) * .055) calc(var(--pw) * .06) calc(var(--pw) * .04);display:flex;flex-direction:column}
 .dp p{margin:0}
@@ -188,26 +186,29 @@ button{font:inherit;color:inherit}
 .sp-cell{display:grid;place-items:center;position:relative}
 .sp-cell .stamp-box{width:72%!important;height:auto!important;opacity:0}
 .sp-no{position:absolute;right:calc(var(--pw) * .04);bottom:calc(var(--pw) * .025);font-family:var(--mono);font-size:calc(var(--pw) * .022);opacity:.4}
-/* the cover */
+/* the cover: a vertical booklet, name, emblem, kind and the e-passport chip mark */
+.bk-back{transform:rotateY(180deg)}
+.bk-back.cover{inset:calc(var(--pad) * -1) 0 calc(var(--pad) * -1) calc(var(--pad) * -1);border-radius:var(--rad)}
 .cover{
   background:
-    radial-gradient(120% 90% at 25% 10%, rgba(255,255,255,.09), transparent 55%),
+    radial-gradient(120% 70% at 30% 8%, rgba(255,255,255,.1), transparent 55%),
     repeating-linear-gradient(-45deg, rgba(255,255,255,.025) 0 .5px, transparent .5px 8px),
     linear-gradient(135deg,var(--pp-a),var(--pp-b) 55%,var(--pp-c));
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:calc(var(--pw) * .032);
-  color:rgba(255,255,255,.88);box-shadow:inset 0 0 0 1px rgba(255,255,255,.05);text-align:center;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:calc(var(--pw) * .045);
+  color:rgba(255,255,255,.88);box-shadow:inset 0 0 0 1px rgba(255,255,255,.06), 0 24px 60px rgba(0,0,0,.45);text-align:center;
 }
 .cover p{margin:0}
-/* the emblem the globe settles onto */
-.cover-emblem{display:block;width:calc(var(--pw) * .34);height:calc(var(--pw) * .34)}
-.cover-emblem svg{display:block;width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:.9;opacity:.85}
-.cover-name{font-size:calc(var(--pw) * .058);font-weight:700;letter-spacing:.26em;text-transform:uppercase;padding-left:.26em}
-.cover-kind{font-size:calc(var(--pw) * .03);letter-spacing:.26em;text-transform:uppercase;opacity:.7;padding-left:.26em}
+.cover-name{font-size:calc(var(--pw) * .052);font-weight:700;letter-spacing:.3em;text-transform:uppercase;padding-left:.3em}
+.cover-emblem{display:block;width:calc(var(--ph) * .5);height:calc(var(--ph) * .5)}
+.cover-emblem svg{display:block;width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:.9;opacity:.9}
+.cover-kind{font-size:calc(var(--pw) * .026);letter-spacing:.26em;text-transform:uppercase;opacity:.75;padding-left:.26em}
+.cover-chip{display:block;width:calc(var(--ph) * .16);margin-top:calc(var(--pw) * .03);opacity:.7}
+.cover-chip svg{display:block;width:100%;height:auto;fill:none;stroke:currentColor;stroke-width:1.6}
 
 /* the phone that settles beside the passport */
 .phone-wrap{
   position:absolute;left:50%;top:50%;width:300px;height:612px;margin:-306px 0 0 -150px;
-  z-index:6;opacity:0;pointer-events:none;will-change:transform,opacity;
+  z-index:7;opacity:0;pointer-events:none;will-change:transform,opacity;
 }
 .phone-wrap::before,.device::before{
   content:"";position:absolute;left:var(--body-l);top:var(--body-t);width:var(--body-w);height:var(--body-h);
@@ -262,8 +263,9 @@ button{font:inherit;color:inherit}
    THE TOUR — one phone, crossing sides as the blades go by
    ============================================================ */
 .tour{position:relative;padding:12vh 0 0}
-.tour-stage{position:sticky;top:0;height:100vh;height:100svh;pointer-events:none;z-index:1}
-.tour-rig{position:absolute;left:50%;top:50%;width:300px;height:612px;margin:-306px 0 0 -150px;will-change:transform;transform-style:preserve-3d}
+/* the stage sits over the copy: the phone and its carriers pass in front of the text */
+.tour-stage{position:sticky;top:0;height:100vh;height:100svh;pointer-events:none;z-index:3}
+.tour-rig{position:absolute;left:50%;top:50%;width:300px;height:612px;margin:-306px 0 0 -150px;will-change:transform;transform-origin:50% 50%;z-index:1}
 .tour-phone{position:absolute;inset:0;width:100%;z-index:2}
 .tour-back{position:absolute;inset:0;z-index:1}
 .tour-front{position:absolute;inset:0;z-index:3}
@@ -276,6 +278,41 @@ button{font:inherit;color:inherit}
 .stop-centre{min-height:112vh;align-items:flex-end;justify-content:center;text-align:center;padding-bottom:7vh}
 .stop-centre .stop-copy{width:min(92%,620px)}
 .stop-centre .body{margin-left:auto;margin-right:auto}
+
+/* the carriers: the app's vehicles, behind the phone, take it from stop to stop */
+.carrier{position:absolute;inset:0;overflow:hidden;z-index:0}
+.veh,.cr-cloud{position:absolute;left:0;top:0;transform-origin:0 0;visibility:hidden}
+.veh.is-on,.cr-cloud.is-on,.cr-ground.is-on,.cr-sea.is-on,.cr-line.is-on,.cr-shadow.is-on{visibility:visible}
+.veh svg,.cr-cloud svg{display:block;width:100%;height:100%;overflow:visible}
+.veh-plane{filter:drop-shadow(0 10px 14px rgba(40,30,10,.14))}
+.veh-lander{filter:drop-shadow(0 12px 16px rgba(40,30,10,.16))}
+.veh .flame,.veh .jet{opacity:0}
+.veh .pf{fill:#d6d1c7;opacity:0;transform-box:fill-box;transform-origin:50% 50%;animation:puff 1.6s linear infinite}
+.veh .pf-ship{fill:#cdc7bc;animation:smoke 2.4s linear infinite}
+@keyframes puff{0%{opacity:0;transform:translate(0,0) scale(.5)}14%{opacity:.85}100%{opacity:0;transform:translate(-70px,-12px) scale(2.4)}}
+@keyframes smoke{0%{opacity:0;transform:translate(0,0) scale(.6)}14%{opacity:.8}100%{opacity:0;transform:translate(-110px,-54px) scale(3)}}
+.cr-cloud{width:220px;height:90px;filter:drop-shadow(0 8px 14px rgba(60,50,30,.07))}
+.cr-ground{position:absolute;left:0;right:0;top:0;visibility:hidden}
+/* the railway seen from the side: rail, sleepers, ballast */
+.cr-rails{height:20px;background:
+  linear-gradient(#6a7078,#4b5057) 0 0/100% 4px no-repeat,
+  repeating-linear-gradient(90deg,#7b6552 0 14px,transparent 14px 34px) 0 4px/100% 6px no-repeat,
+  linear-gradient(#d6cdbd,#c4baa8) 0 8px/100% 12px no-repeat}
+/* the road: asphalt, a kerb, the centre line */
+.cr-road{background:
+  linear-gradient(#9aa0a8,#9aa0a8) 0 0/100% 3px no-repeat,
+  repeating-linear-gradient(90deg,#f4f1ea 0 30px,transparent 30px 64px) 0 calc(50% + 2px)/100% 3px no-repeat,
+  linear-gradient(#545961,#43474e)}
+/* the sea: two swells running against each other */
+.cr-sea{position:absolute;left:0;right:0;top:0;bottom:-90px;visibility:hidden;will-change:transform}
+.cr-sea-back{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 20'%3E%3Cpath d='M0 10 Q20 0 40 10 T80 10 T120 10 T160 10 V20 H0 Z' fill='%2393d6e2'/%3E%3C/svg%3E") 0 0/160px 20px repeat-x,linear-gradient(#93d6e2,#93d6e2) 0 19px/100% 100% no-repeat;animation:swell 3.6s linear infinite}
+.cr-sea-front{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 16'%3E%3Cpath d='M0 8 Q15 0 30 8 T60 8 T90 8 T120 8 V16 H0 Z' fill='%2345b2c7'/%3E%3C/svg%3E") 0 0/120px 16px repeat-x,linear-gradient(#45b2c7,#3a9fb4) 0 15px/100% 100% no-repeat;animation:swell2 2.6s linear infinite}
+@keyframes swell{to{background-position:160px 0,0 19px}}
+@keyframes swell2{to{background-position:-120px 0,0 15px}}
+.cr-line{position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;visibility:hidden}
+.cr-line path{fill:none;stroke:#3d4248;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.cr-line .cr-hook{stroke-width:2.6}
+.cr-shadow{position:absolute;left:0;top:0;width:300px;height:18px;margin:-9px 0 0 -150px;border-radius:50%;background:radial-gradient(closest-side,rgba(20,16,8,.38),rgba(20,16,8,0));opacity:0;visibility:hidden}
 
 /* screens inside the tour phone: a live top pane, then the page under it */
 .scr{position:absolute;inset:0;opacity:0;transition:opacity .35s var(--ease)}
@@ -338,7 +375,17 @@ button{font:inherit;color:inherit}
 .feed-strip{position:absolute;left:0;top:0;width:100%;transform:translateY(-100%)}
 .feed-shade{position:absolute;left:31%;top:6.25%;width:38%;height:2.2%;z-index:6;background:linear-gradient(180deg,rgba(0,0,0,.35),transparent);opacity:0;transition:opacity .2s}
 .printer.is-printing ~ .feed-shade{opacity:1}
-.ticket-filed{position:absolute;left:-52%;top:63%;z-index:4;transform-origin:50% 50%}
+/* the hand of tickets behind the phone: placed in the rig's units by app.js, each
+   turned about a point under the phone (--a) and sized to the room (--s) */
+.art-hand{inset:0}
+.hand-tk{position:absolute;transform:rotate(var(--a,0deg)) scale(var(--s,1)) translateY(var(--lift,0px));
+  transition:transform .75s var(--spring), opacity .5s var(--ease)}
+.hand-in{position:absolute;inset:0}
+.hand-turn{position:absolute;left:50%;top:50%;width:480px;height:200px}
+.art-hand.is-on .hand-tk{pointer-events:auto;cursor:pointer}
+.art-hand.is-on .hand-tk.is-front{cursor:default}
+.art-hand.is-on .hand-tk:not(.is-front):hover{--lift:-18px}
+.hand-fly{z-index:6;pointer-events:none}
 /* Places: polaroids fan out */
 .art-photos{left:-50%;top:9%;width:80%;height:70%}
 .art-photos .pl{position:absolute;--w:150px;transition:transform .9s var(--spring), opacity .5s var(--ease);opacity:0}
@@ -348,14 +395,116 @@ button{font:inherit;color:inherit}
 .art-receipt .rc{clip-path:inset(0 0 100% 0)}
 .art-receipt.is-on .rc{animation:feed9 1.25s steps(9, end) .15s both}
 @keyframes feed9{to{clip-path:inset(0 0 -8% 0)}}
-/* Customise: the covers fan out behind */
-.art-covers{left:50%;top:50%;width:0;height:0}
-.cv{position:absolute;left:0;top:0;width:200px;height:140px;margin:-70px 0 0 -100px;border-radius:14px;
-  box-shadow:0 18px 34px rgba(25,18,10,.22);transition:transform 1s var(--spring), opacity .5s var(--ease);opacity:0;
-  display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;font-weight:700;letter-spacing:.2em;font-size:11px;text-transform:uppercase}
-.cv::before{content:"";width:34px;height:34px;border-radius:50%;border:2px solid currentColor;opacity:.85;
-  background:radial-gradient(ellipse 30% 100% at 50% 50%,transparent 46%,currentColor 47% 52%,transparent 53%),linear-gradient(currentColor,currentColor) center/100% 2px no-repeat}
-.art-covers.is-on .cv{opacity:1}
+/* Customise: the six covers, closed passports, fanned out behind the phone (app.js
+   centres them on the fan's pivot in the rig's units and sets --a, the turn, --d,
+   the push out from the pivot, and --s, the size) */
+.art-covers{inset:0}
+.cv-pp{position:absolute;container-type:inline-size;opacity:0;
+  transform:rotate(var(--a,0deg)) translateY(var(--d,0px)) scale(var(--s,.6)) translateY(var(--lift,0px));
+  transition:transform .9s var(--spring),opacity .45s var(--ease)}
+.art-covers.is-on .cv-pp{opacity:1;pointer-events:auto;cursor:pointer}
+.art-covers.is-on .cv-pp:hover{--lift:-16px}
+.cv-edge{position:absolute;inset:0;border-radius:7cqw;background:linear-gradient(180deg,var(--ed-a),var(--ed-b));box-shadow:0 5cqw 11cqw rgba(30,20,10,.28), 0 1cqw 2cqw rgba(30,20,10,.12)}
+.cv-face{position:absolute;inset:2.4cqw 2.4cqw 3.4cqw 2.4cqw;border-radius:5.6cqw;overflow:hidden;color:var(--ink);text-align:center;
+  background:radial-gradient(120% 70% at 30% 8%,rgba(255,255,255,.1),transparent 55%),
+    repeating-linear-gradient(-45deg,rgba(255,255,255,.03) 0 .4cqw,transparent .4cqw 5cqw),
+    linear-gradient(135deg,var(--cv-a),var(--cv-b) 55%,var(--cv-c));
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6cqw}
+.cv-face p{margin:0}
+.cv-name{font-size:9cqw;font-weight:700;letter-spacing:.28em;text-transform:uppercase;padding-left:.28em}
+.cv-emblem{display:block;width:46cqw;height:46cqw}
+.cv-emblem svg{display:block;width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:.9;opacity:.9}
+.cv-kind{font-size:4.4cqw;letter-spacing:.22em;text-transform:uppercase;opacity:.75;padding-left:.22em}
+.cv-chip{display:block;width:15cqw;opacity:.7}
+.cv-chip svg{display:block;width:100%;height:auto;fill:none;stroke:currentColor;stroke-width:1.6}
+.cv-tick{position:absolute;right:-5cqw;top:-5cqw;width:19cqw;height:19cqw;border-radius:50%;background:#28a35a;
+  box-shadow:0 2cqw 5cqw rgba(0,0,0,.22), 0 0 0 1.6cqw #f3f0e9;transform:scale(0);transition:transform .45s var(--spring)}
+.cv-tick::before{content:"";position:absolute;left:36%;top:22%;width:24%;height:44%;border-right:2.8cqw solid #fff;border-bottom:2.8cqw solid #fff;transform:rotate(45deg)}
+.cv-pp.is-chosen .cv-tick{transform:scale(1)}
+/* the Leather Book: cream paper, a gold rule round it */
+.cv-pp[data-style="book"] .cv-face{background:#f5efe2;box-shadow:inset 0 0 0 4cqw #f5efe2, inset 0 0 0 4.6cqw rgba(199,168,102,.7), inset 0 0 0 6cqw #f5efe2, inset 0 0 0 6.4cqw rgba(199,168,102,.45)}
+/* Swiss: red, with the topography the app draws */
+.cv-pp[data-style="swiss"] .cv-face{background:radial-gradient(120% 70% at 30% 8%,rgba(255,255,255,.1),transparent 55%),var(--topo) center/cover no-repeat,linear-gradient(135deg,var(--cv-a),var(--cv-b) 55%,var(--cv-c))}
+/* Dubu: a pink card with the mascot leaning in from the bottom right */
+.cv-pp[data-style="dubu"] .cv-face{justify-content:flex-start;padding-top:12cqw;background:radial-gradient(90% 60% at 40% 30%,rgba(255,255,255,.1),transparent 60%),var(--cv-a)}
+.cv-pp[data-style="dubu"] .cv-emblem,.cv-pp[data-style="dubu"] .cv-chip{display:none}
+.cv-dubu{position:absolute;right:-14cqw;bottom:-30cqw;width:84cqw;pointer-events:none}
+
+/* the passport in the phone, open on the data page, in the chosen style (sizes in
+   the screen's own width, measured off the app's Customize screen) */
+.pane-desk{background:linear-gradient(180deg,#e6e3dc,#e2ded5 30%);border-radius:0 0 7cqw 7cqw}
+.pane-status-dark{color:#000}
+.pane-status-dark svg{fill:#000}
+.pane-status-dark svg [stroke]{stroke:#000}
+.pp{position:absolute;left:23.7cqw;top:19cqw;width:52.9cqw;height:70.8cqw;box-sizing:border-box;padding:.8cqw .9cqw 1.4cqw;border-radius:2.6cqw;
+  display:flex;flex-direction:column;background:linear-gradient(180deg,var(--ed-a),var(--ed-b));box-shadow:0 2.6cqw 5cqw rgba(50,40,25,.3)}
+.pp p{margin:0}
+.pp-data,.pp-visa{position:relative;overflow:hidden;box-sizing:border-box}
+.pp-data{height:34.4cqw;flex:none;border-radius:1.9cqw 1.9cqw .5cqw .5cqw;padding:2.5cqw 3.1cqw 1.5cqw;display:flex;flex-direction:column;color:var(--ink);
+  background:repeating-linear-gradient(-45deg,rgba(255,255,255,.03) 0 .12cqw,transparent .12cqw 1.4cqw),linear-gradient(135deg,var(--cv-a),var(--cv-b) 55%,var(--cv-c))}
+.pp-visa{flex:1;margin-top:.4cqw;border-radius:.5cqw .5cqw 1.9cqw 1.9cqw;padding:2.3cqw 0 1.8cqw 2.6cqw;display:flex;color:var(--pink);background:var(--pg)}
+.pp-head{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:1.2cqw;border-bottom:.15cqw solid rgba(255,255,255,.14);border-bottom-color:color-mix(in srgb,var(--ink) 16%,transparent)}
+.pp-title{font-size:2.4cqw;font-weight:700;letter-spacing:.12em;text-transform:uppercase;line-height:1.1;white-space:nowrap}
+.pp-sub{font-size:1.3cqw;letter-spacing:.12em;text-transform:uppercase;opacity:.6;margin-top:.3cqw!important;white-space:nowrap}
+.pp-btn{width:4.4cqw;height:4.4cqw;border-radius:1.1cqw;background:rgba(255,255,255,.16);background:color-mix(in srgb,var(--ink) 16%,transparent);display:grid;place-items:center;flex:none}
+.pp-btn svg{width:62%;height:62%;fill:none;stroke:var(--ink);stroke-width:1.7}
+.pp-body{flex:1;display:grid;grid-template-columns:1.05fr 1fr;gap:1.4cqw;padding-top:1.4cqw;min-height:0}
+.pp-k{font-size:1.25cqw;font-weight:700;letter-spacing:.1em;text-transform:uppercase;opacity:.62;white-space:nowrap}
+.pp-big{font-size:4.3cqw;font-weight:700;line-height:1;margin-top:.3cqw!important;white-space:nowrap;font-variant-numeric:tabular-nums}
+.pp-big span{font-size:.62em;opacity:.55;font-weight:600}
+.pp-big em{font-style:normal;font-size:.44em;opacity:.6;margin-left:.3em;font-weight:500}
+.pp-row{display:grid;grid-template-columns:1fr 1fr;margin-top:1.2cqw}
+.pp-v{font-size:2.15cqw;font-weight:700;margin-top:.2cqw!important;white-space:nowrap}
+.pp-v span{opacity:.55;font-weight:500;font-size:.85em}
+.pp-map .pp-k{text-align:center}
+.pane .pp-map canvas{position:static;display:block;width:100%;height:11cqw;margin-top:.9cqw}
+.pp-mrz{font-family:var(--mono);font-size:1.1cqw;line-height:1.45;opacity:.36;white-space:nowrap;overflow:hidden;margin-top:auto!important}
+.scr .pp-dubu{display:none;left:auto;width:auto}
+.pp-flags{flex:1;min-width:0}
+.pp-fl{display:flex;margin-top:.5cqw}
+.pp-flags .pp-k + .pp-fl{margin-top:1cqw}
+.pp-fl + .pp-k{margin-top:1.8cqw}
+.pp-flag{display:block;flex:none;width:2.7cqw;height:2.7cqw;border-radius:50%;margin-right:-.3cqw;box-shadow:0 0 0 .22cqw var(--ring)}
+.pp-side{flex:none;width:6.2cqw;margin:.4cqw 0 .6cqw;border-left:.15cqw solid rgba(255,255,255,.2);border-left-color:color-mix(in srgb,var(--pink) 22%,transparent);
+  display:flex;flex-direction:column;align-items:center;padding-top:3.4cqw;gap:1.6cqw}
+.pp-side p{writing-mode:vertical-rl;text-transform:uppercase;letter-spacing:.16em;font-weight:700;font-size:1.55cqw;white-space:nowrap}
+.pp-side p + p{font-size:1.05cqw;font-weight:500;opacity:.6;letter-spacing:.12em}
+.pp[data-style="classicPurple"] .pp-visa{background:repeating-linear-gradient(-45deg,rgba(255,255,255,.03) 0 .12cqw,transparent .12cqw 1.4cqw),linear-gradient(135deg,var(--cv-a),var(--cv-b) 55%,var(--cv-c))}
+.pp[data-style="book"] .pp-data{background:var(--cv-a);box-shadow:inset 0 0 0 .9cqw var(--cv-a), inset 0 0 0 1.05cqw rgba(199,168,102,.55)}
+.pp[data-style="book"] .pp-visa{background:linear-gradient(90deg,transparent 49.8%,rgba(217,207,189,.5) 50%,transparent 50.2%),var(--pg)}
+.pp[data-style="burgundy"] .pp-visa{background:repeating-linear-gradient(0deg,rgba(90,17,35,.05) 0 .1cqw,transparent .1cqw 1.2cqw),var(--pg)}
+.pp[data-style="navy"] .pp-visa{background:repeating-linear-gradient(90deg,rgba(20,38,74,.05) 0 .1cqw,transparent .1cqw 1.6cqw),var(--pg)}
+.pp[data-style="swiss"] .pp-data{background:var(--topo) center/cover no-repeat,linear-gradient(135deg,var(--cv-a),var(--cv-b) 55%,var(--cv-c))}
+.pp[data-style="dubu"] .pp-data{background:radial-gradient(90% 70% at 35% 30%,rgba(255,255,255,.08),transparent 60%),var(--cv-a)}
+.pp[data-style="dubu"] .pp-map{visibility:hidden}
+.scr .pp[data-style="dubu"] .pp-dubu{display:block;position:absolute;left:auto;right:-2cqw;top:6.5cqw;width:21cqw;height:auto}
+.pp[data-style="dubu"] .pp-visa{background:radial-gradient(circle,rgba(127,43,63,.13) .32cqw,transparent .42cqw) 0 0/2.4cqw 2.4cqw,var(--pg)}
+.pp-pager{position:absolute;left:0;right:0;top:93cqw;display:flex;align-items:center;justify-content:center;gap:2.6cqw;font-size:2.55cqw;font-weight:700;color:rgba(60,60,67,.6);white-space:nowrap}
+.pp-chev{width:6.4cqw;height:6.4cqw;border-radius:50%;background:rgba(255,255,255,.35);display:grid;place-items:center;color:rgba(60,60,67,.3)}
+.pp-chev.is-on{background:#fff;color:#1c1c1e;box-shadow:0 .4cqw 1.2cqw rgba(0,0,0,.08)}
+.pp-chev::before{content:"";width:1.5cqw;height:1.5cqw;border-left:.42cqw solid currentColor;border-top:.42cqw solid currentColor;transform:translateY(25%) rotate(45deg)}
+.pp-chev.is-on::before{transform:translateY(-25%) rotate(225deg)}
+/* the sheet's list of passports, the chosen one scrolled in and marked Selected */
+.cust-list{position:absolute;left:0;right:0;top:80.7%;bottom:0;background:#fff;overflow:hidden}
+.cust-list::after{content:"";position:absolute;left:32.5%;right:32.5%;bottom:1.6cqw;height:1cqw;border-radius:1cqw;background:#111}
+.cust-track{display:flex;gap:4cqw;padding:3.2cqw 0 0 6.8cqw;transition:transform .55s var(--ease)}
+.cust-item{flex:none;width:70cqw;display:flex;align-items:center;gap:4.2cqw}
+.cust-thumb{flex:none;width:10.4cqw;height:13.8cqw;border-radius:1.6cqw;border:.5cqw solid var(--ed-a);box-sizing:border-box;
+  background:linear-gradient(135deg,var(--cv-a),var(--cv-b) 55%,var(--cv-c));box-shadow:0 .6cqw 1.4cqw rgba(0,0,0,.12)}
+.cust-text{flex:1;min-width:0}
+.cust-name{margin:0;font-size:4.3cqw;font-weight:700;line-height:1.15;color:#111}
+.cust-sub{margin:.6cqw 0 0;font-size:3.2cqw;line-height:1.3;color:#8e8e93;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.cust-state{flex:none;font-size:3.3cqw;font-weight:700;color:#8e8e93}
+.cust-item.is-chosen .cust-state{color:#28a35a}
+
+/* the passport swatches under the customise copy */
+.swatches{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:24px}
+.swatches button{position:relative;width:30px;height:42px;padding:0;border:2.5px solid var(--ed-a);border-radius:7px;cursor:pointer;
+  background:linear-gradient(135deg,var(--cv-a),var(--cv-b) 55%,var(--cv-c));box-shadow:0 4px 10px rgba(40,30,10,.14);
+  transition:transform .3s var(--spring), box-shadow .3s var(--ease)}
+.swatches button:hover{transform:translateY(-3px)}
+.swatches button[aria-checked="true"]{box-shadow:0 0 0 3px #f3f0e9, 0 0 0 5px var(--accent), 0 6px 14px rgba(40,30,10,.18)}
+.swatches button:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
 
 /* ---------- chips / segments used by the ticket stop ---------- */
 .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:26px}
@@ -503,14 +652,15 @@ button{font:inherit;color:inherit}
 }
 /* the tour on a phone: the phone sits low, the copy reads above it on a card */
 @media (max-width:760px){
-  .tour-rig{top:auto;bottom:2vh;margin:0 0 0 -150px;transform-origin:50% 100%}
-  .stop,.stop-short{min-height:115vh;align-items:flex-start;padding-top:calc(var(--nav-h) + 3vh)}
+  .tour-rig{top:auto;bottom:2vh;margin:0 0 0 -150px}
+  /* at its anchor (centred on the screen) a stop's card sits just under the nav */
+  .stop,.stop-short{min-height:115vh;min-height:115svh;align-items:flex-start;padding-top:calc(var(--nav-h) + 7.5vh + 12px);padding-top:calc(var(--nav-h) + 7.5svh + 12px)}
   .stop-copy,.stop[data-side] .stop-copy{width:100%;margin:0;background:rgba(243,240,233,.94);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-radius:22px;padding:18px 18px 20px;box-shadow:0 10px 30px rgba(40,30,10,.08)}
   .stop .h2{font-size:clamp(28px,8vw,36px)}
   .stop .body{font-size:15.5px;margin-top:10px}
   .ticks{margin-top:14px;font-size:14px}
   .chips{margin-top:14px}
-  .stop-centre{min-height:120vh;align-items:flex-start}
+  .stop-centre{min-height:120vh;min-height:120svh;align-items:flex-start;padding-top:calc(var(--nav-h) + 10vh + 12px);padding-top:calc(var(--nav-h) + 10svh + 12px)}
 }
 @media (max-width:620px){
   .bento-grid{grid-template-columns:1fr}
@@ -540,8 +690,9 @@ button{font:inherit;color:inherit}
   .globe{position:relative;grid-column:1 / -1;grid-row:2;justify-self:center;width:min(92vw,560px);height:min(52vh,480px)}
   .story-outro{grid-column:1 / -1;grid-row:3;justify-self:center}
   .hero-copy,.story-outro{position:relative;left:auto;top:auto;transform:none;opacity:1!important}
-  .pass{position:relative;left:auto;top:auto;margin:0;grid-column:2;grid-row:4;opacity:1!important;transform:none!important}
-  .pass-board{opacity:1!important}
+  /* the booklet open on the data page, turned the way the app holds it */
+  .pass-frame{position:relative;grid-column:2;grid-row:4;width:var(--pw);height:calc(var(--pw) * 1.4)}
+  .pass-frame .pass{opacity:1!important;transform:rotate(90deg)!important}
   .phone-wrap{position:relative;left:auto;top:auto;margin:0;grid-column:3;grid-row:4;width:264px;height:539px;opacity:1!important;transform:none!important}
   .hint-line{animation:none}
   .tour-stage{position:relative;height:auto;display:none}
@@ -552,10 +703,10 @@ button{font:inherit;color:inherit}
   .js .reveal,.js .cta-icon{opacity:1;transform:none;transition:none}
   .fan-item{transition:none}
   /* the printer they drive is part of the tour's animation */
-  #ticketKinds,#ticketState{display:none}
+  #ticketKinds,#ticketState,#coverPick{display:none}
 }
 @media (prefers-reduced-motion:reduce) and (max-width:860px){
   .story-stage{grid-template-columns:1fr}
   .phone-wrap{grid-column:1;grid-row:5;justify-self:center}
-  .pass{grid-column:1;justify-self:center}
+  .pass-frame{grid-column:1;justify-self:center}
 }

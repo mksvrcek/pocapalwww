@@ -2,17 +2,17 @@
    Peregrino — product page choreography
 
    1. The journey (#story): scroll-scrubbed. The globe (globe.js) rises
-      out of the hero and follows one summer: a drive, flights, the Camino
-      on foot and a train. A country is painted the moment the route
-      crosses into it, one at a time, and its stamp lands there. Then a
-      closed passport comes up, the globe settles onto the emblem on its
-      cover, the cover swings open underneath it the way the app's book
-      opens, and the globe dives into the data page and unrolls into its
-      map. The summer's stamps land on the next page and the phone comes
-      to sit beside it.
+      out of the hero blank and goes round the world: drives, trains, the
+      Camino on foot, a ferry, a bus and flights to Asia and America. A
+      country is painted the moment the route crosses into it, one at a
+      time, and its stamp lands there. Then a big open passport comes up
+      behind the globe and snaps shut on it; the closed booklet opens
+      again on the data page, now full, the stamps land, and the phone
+      slides in beside it.
    2. The tour (#tour): one phone pinned while the blades scroll past,
-      crossing sides to sit opposite each one, bringing out what the app
-      prints for it (artifacts.js).
+      carried by the app's vehicles (vehicles.js) to sit opposite each one,
+      bringing out what the app prints for it (artifacts.js); the last stop
+      lets you dress its passport in the app's six styles.
    3. The small things, the download blade and the FAQ.
 
    Everything in (1) is a pure function of scroll progress, so scrubbing
@@ -46,17 +46,18 @@ const GL = window.PeregrinoGlobe, ART = window.PeregrinoArt;
 
 /* -------------------------------------------------------------
    THE TRAVELLER
-   Twenty-six countries before the summer (Europe 19, Asia 6, North
-   America 1); the summer adds six, which makes the 32 (Europe 25,
-   Asia 6, North America 1) on the app's own Statistics screen.
+   The globe starts blank. A tour from Prague round the world paints the
+   32 countries on the app's own Statistics screen (Europe 25, Asia 6,
+   North America 1) one at a time: each where the route crosses into it,
+   or where it lands. Czechia, the United Kingdom and South Korea are
+   where the traveller has lived, so they are inked amber.
    ------------------------------------------------------------- */
 const INK = {visited: [217, 69, 59], lived: [224, 162, 26], wishlist: [124, 91, 230], planned: [138, 147, 160]};
-const LIVED = ['CZE', 'GBR', 'KOR'];
-const VISITED = ['DEU', 'POL', 'SVK', 'HUN', 'ITA', 'FRA', 'NLD', 'BEL', 'LUX', 'DNK', 'CHE', 'HRV', 'SVN', 'GRC', 'IRL', 'FIN', 'MCO',
-                 'JPN', 'CHN', 'THA', 'VNM', 'HKG', 'USA'];
-const BASE_COUNT = LIVED.length + VISITED.length;        // 26
+const LIVED = new Set(['CZE', 'GBR', 'KOR']);
+/* the 32 the tour ends with, for the app screens further down the page */
+const ALL32 = ['CZE', 'AUT', 'SVK', 'HUN', 'HRV', 'SVN', 'ITA', 'CHE', 'FRA', 'LUX', 'BEL', 'NLD', 'DEU', 'DNK', 'SWE', 'NOR', 'FIN',
+               'KOR', 'JPN', 'HKG', 'CHN', 'VNM', 'THA', 'USA', 'ISL', 'IRL', 'GBR', 'PRT', 'ESP', 'MCO', 'GRC', 'POL'];
 const WISHLIST = ['MAR', 'CAN'];
-const PLANNED = ['ISL', 'NOR'];                          // pencilled in, inked once reached
 
 /* route colours: TravelMode.tintColor, outer mixed 45% to black, inner 35% to white */
 const TINT = {flight: [0, 122, 255], train: [52, 199, 89], bus: [255, 149, 0], drive: [255, 59, 48], ferry: [48, 176, 199], walk: [162, 132, 94]};
@@ -64,23 +65,52 @@ const outer = m => `rgb(${TINT[m].map(v => Math.round(v * .55))})`;
 const inner = m => `rgb(${TINT[m].map(v => Math.round(v * .65 + 255 * .35))})`;
 const AIRLINES = [['#f5f5f5', '#2659b3'], ['#f2f2f2', '#cc2626'], ['#ebebe0', '#008059'], ['#f5f5f5', '#e69900'], ['#334d80', '#334d80'], ['#f5f5f5', '#8c008c']];
 
+/* `a3` where the simplified coastline misses the city, or the place has no outline of its own */
 const CITY = {
-  PRG: {ll: [14.42, 50.08], n: 'Prague'},   VIE: {ll: [16.37, 48.21], n: 'Vienna'},
-  LIS: {ll: [-9.2, 38.76], n: 'Lisbon'},    SCQ: {ll: [-8.54, 42.88], n: 'Santiago'},
-  STO: {ll: [18.07, 59.33], n: 'Stockholm'}, OSL: {ll: [10.75, 59.91], n: 'Oslo'},
-  RKV: {ll: [-21.88, 64.13], n: 'Reykjavík'},
+  PRG: {ll: [14.42, 50.08], n: 'Prague'},       VIE: {ll: [16.37, 48.21], n: 'Vienna'},      BTS: {ll: [17.11, 48.15], n: 'Bratislava'},
+  BUD: {ll: [19.04, 47.50], n: 'Budapest'},     ZAG: {ll: [15.98, 45.81], n: 'Zagreb'},      LJU: {ll: [14.51, 46.06], n: 'Ljubljana'},
+  VCE: {ll: [12.24, 45.48], n: 'Venice'},       ZRH: {ll: [8.54, 47.38], n: 'Zurich'},       LUX: {ll: [6.13, 49.61], n: 'Luxembourg'},
+  BRU: {ll: [4.35, 50.85], n: 'Brussels'},      AMS: {ll: [4.90, 52.37], n: 'Amsterdam'},    HAM: {ll: [9.99, 53.55], n: 'Hamburg'},
+  CPH: {ll: [12.57, 55.68], n: 'Copenhagen', a3: 'DNK'}, STO: {ll: [18.07, 59.33], n: 'Stockholm'}, OSL: {ll: [10.75, 59.91], n: 'Oslo'},
+  HEL: {ll: [24.94, 60.17], n: 'Helsinki'},     SEL: {ll: [126.98, 37.57], n: 'Seoul'},      TYO: {ll: [139.69, 35.69], n: 'Tokyo'},
+  HKG: {ll: [114.17, 22.30], n: 'Hong Kong', a3: 'HKG'}, CAN: {ll: [113.26, 23.13], n: 'Guangzhou'}, HAN: {ll: [105.85, 21.03], n: 'Hanoi'},
+  BKK: {ll: [100.50, 13.75], n: 'Bangkok'},     SFO: {ll: [-122.42, 37.77], n: 'San Francisco'}, RKV: {ll: [-21.88, 64.13], n: 'Reykjavík'},
+  DUB: {ll: [-6.26, 53.35], n: 'Dublin'},       LPL: {ll: [-2.98, 53.41], n: 'Liverpool', a3: 'GBR'}, LIS: {ll: [-9.2, 38.76], n: 'Lisbon'},
+  SCQ: {ll: [-8.54, 42.88], n: 'Santiago'},     NCE: {ll: [7.27, 43.70], n: 'Nice', a3: 'FRA'}, MCM: {ll: [7.42, 43.735], n: 'Monaco', a3: 'MCO'},
+  ATH: {ll: [23.73, 37.98], n: 'Athens'},       KRK: {ll: [19.94, 50.06], n: 'Kraków'},
 };
-/* the summer: ground legs follow their roads and rails through these points */
+/* the tour: ground legs follow their roads, rails and sea lanes through `via` (a city's
+   code marks a stop on the way); flights take the great circle. `at` places a country
+   by hand where an outline can't (China, once out of Hong Kong). */
 const LEGS = [
-  {mode: 'drive', from: 'PRG', to: 'VIE', title: 'Drive', via: [[14.62, 49.96], [15.2, 49.62], [15.59, 49.40], [16.12, 49.27], [16.61, 49.19], [16.66, 48.98], [16.64, 48.80], [16.55, 48.58], [16.45, 48.38]]},
-  {mode: 'flight', from: 'VIE', to: 'LIS', title: 'OS 381', air: 1},
-  {mode: 'walk', from: 'LIS', to: 'SCQ', title: 'Camino Português', via: [[-9.0, 38.9], [-8.68, 39.24], [-8.41, 39.60], [-8.43, 40.21], [-8.45, 40.57], [-8.61, 41.15], [-8.62, 41.53], [-8.58, 41.77], [-8.64, 42.03], [-8.61, 42.28], [-8.65, 42.43], [-8.64, 42.60], [-8.66, 42.74]]},
-  {mode: 'flight', from: 'SCQ', to: 'STO', title: 'SK 1592', air: 2},
+  {mode: 'drive', from: 'PRG', to: 'BUD', title: 'Road trip', via: [[14.62, 49.96], [15.2, 49.62], [15.59, 49.40], [16.12, 49.27], [16.61, 49.19], [16.66, 48.98], [16.55, 48.58], 'VIE', [16.75, 48.13], 'BTS', [17.45, 47.95], [17.63, 47.69], [18.4, 47.62]]},
+  {mode: 'train', from: 'BUD', to: 'VCE', title: 'Train', via: [[18.2, 46.95], [17.25, 46.55], [16.99, 46.45], [16.55, 46.36], [16.25, 46.05], 'ZAG', [15.66, 45.90], [15.17, 46.08], 'LJU', [14.2, 45.85], [13.87, 45.71], [13.6, 45.78], [13.2, 45.78], [12.6, 45.6]]},
+  {mode: 'train', from: 'VCE', to: 'ZRH', title: 'Train', via: [[10.99, 45.44], [9.19, 45.48], [9.08, 45.81], [9.03, 45.84], [8.95, 46.0], [9.02, 46.19], [8.65, 46.6], [8.62, 47.0]]},
+  {mode: 'train', from: 'ZRH', to: 'AMS', title: 'Train', via: [[7.59, 47.55], [7.34, 47.75], [7.75, 48.58], [7.0, 48.9], [6.18, 49.11], [6.17, 49.36], 'LUX', [5.81, 49.68], [4.87, 50.47], 'BRU', [4.42, 51.22], [4.46, 51.53], [4.48, 51.92]]},
+  {mode: 'train', from: 'AMS', to: 'STO', title: 'Night train', via: [[5.39, 52.16], [6.79, 52.27], [7.16, 52.30], [8.04, 52.28], [8.80, 53.08], 'HAM', [9.98, 54.07], [9.43, 54.79], [9.36, 54.83], [9.47, 55.49], [10.39, 55.40], [10.80, 55.31], [11.14, 55.33], 'CPH', [13.0, 55.6], [13.19, 55.70], [13.76, 56.16], [14.56, 56.90], [14.69, 57.65], [15.62, 58.41], [16.19, 58.59], [17.63, 59.20]]},
   {mode: 'train', from: 'STO', to: 'OSL', title: 'Train', via: [[17.3, 59.5], [16.54, 59.61], [15.84, 59.39], [15.21, 59.27], [14.11, 59.31], [13.50, 59.38], [13.32, 59.50], [12.59, 59.65], [12.29, 59.89], [12.00, 60.19], [11.05, 59.96]]},
-  {mode: 'flight', from: 'OSL', to: 'RKV', title: 'FI 319', air: 5},
-  {mode: 'flight', from: 'RKV', to: 'PRG', title: 'FI 532', air: 0, home: true},
+  {mode: 'flight', from: 'OSL', to: 'HEL', title: 'AY 912', air: 4},
+  {mode: 'flight', from: 'HEL', to: 'SEL', title: 'AY 41', air: 4},
+  {mode: 'flight', from: 'SEL', to: 'TYO', title: 'KE 703', air: 0},
+  {mode: 'flight', from: 'TYO', to: 'HKG', title: 'CX 543', air: 2},
+  {mode: 'train', from: 'HKG', to: 'CAN', title: 'Intercity', via: [[114.12, 22.42], [114.08, 22.53], [113.95, 22.75], [113.75, 23.02]], at: {CHN: .3}},
+  {mode: 'flight', from: 'CAN', to: 'HAN', title: 'CZ 3045', air: 0},
+  {mode: 'flight', from: 'HAN', to: 'BKK', title: 'VN 615', air: 3},
+  {mode: 'flight', from: 'BKK', to: 'SFO', title: 'TG 980', air: 5},
+  {mode: 'flight', from: 'SFO', to: 'RKV', title: 'FI 670', air: 0},
+  {mode: 'flight', from: 'RKV', to: 'DUB', title: 'FI 416', air: 0},
+  {mode: 'ferry', from: 'DUB', to: 'LPL', title: 'Ferry', via: [[-6.0, 53.36], [-5.0, 53.42], [-4.0, 53.48], [-3.3, 53.45]]},
+  {mode: 'flight', from: 'LPL', to: 'LIS', title: 'U2 2321', air: 3},
+  {mode: 'walk', from: 'LIS', to: 'SCQ', title: 'Camino Português', via: [[-9.0, 38.9], [-8.68, 39.24], [-8.41, 39.60], [-8.43, 40.21], [-8.45, 40.57], [-8.61, 41.15], [-8.62, 41.53], [-8.58, 41.77], [-8.64, 42.03], [-8.61, 42.28], [-8.65, 42.43], [-8.64, 42.60], [-8.66, 42.74]]},
+  {mode: 'flight', from: 'SCQ', to: 'NCE', title: 'VY 1531', air: 1},
+  {mode: 'bus', from: 'NCE', to: 'MCM', title: 'Bus 100', via: [[7.31, 43.70], [7.33, 43.71], [7.36, 43.73], [7.40, 43.72]]},
+  {mode: 'flight', from: 'MCM', to: 'ATH', title: 'A3 691', air: 0},
+  {mode: 'flight', from: 'ATH', to: 'KRK', title: 'LO 3618', air: 1},
+  {mode: 'train', from: 'KRK', to: 'PRG', title: 'Train', via: [[19.02, 50.26], [18.29, 49.84], [17.25, 49.59], [16.2, 49.95], [15.78, 50.04]], home: true},
 ];
-const STAMP_DATE = {AUT: '04.07.2026', PRT: '06.07.2026', ESP: '24.07.2026', SWE: '02.08.2026', NOR: '06.08.2026', ISL: '09.08.2026'};
+const NAME = {CZE: 'Czechia', VNM: 'Vietnam', HKG: 'Hong Kong', USA: 'the United States', GBR: 'the United Kingdom', NLD: 'the Netherlands'};
+/* the six that land on the stamp page at the end, one from each part of the tour */
+const PAGE_STAMPS = ['AUT', 'KOR', 'JPN', 'USA', 'ISL', 'ESP'];
 
 /* ---------- sphere helpers ---------- */
 const vec = ll => GL.geo(ll[0], ll[1]);
@@ -103,23 +133,29 @@ function rot(p, ax, a) {   // rotate p about the unit axis ax by a (Rodrigues)
   const c = Math.cos(a), s = Math.sin(a), k = cross(ax, p), d = dot(ax, p);
   return [0, 1, 2].map(i => p[i] * c + k[i] * s + ax[i] * d * (1 - c));
 }
-/** A route as dense unit vectors with the distance run so far. */
+/** A route as dense unit vectors with the distance run so far; `marks` is the distance at each control point. */
 function buildPath(points, flight) {
-  const pts = [];
+  const pts = [], marks = [0];
   if (flight) {
     const a = vec(points[0]), b = vec(points[1]), n = Math.max(48, Math.round(angle(a, b) * 160));
     for (let i = 0; i <= n; i++) pts.push(slerp(a, b, i / n));
   } else {
+    const at = [];
     for (let i = 0; i < points.length - 1; i++) {
       const p0 = points[Math.max(i - 1, 0)], p1 = points[i], p2 = points[i + 1], p3 = points[Math.min(i + 2, points.length - 1)];
       const km = angle(vec(p1), vec(p2)) * EARTH_KM, n = Math.max(4, Math.ceil(km / 2));
+      at.push(pts.length);
       for (let k = 0; k < n; k++) pts.push(vec(catmull(p0, p1, p2, p3, k / n)));
     }
+    at.push(pts.length);
     pts.push(vec(points[points.length - 1]));
+    marks.length = 0;
+    marks.push(...at);
   }
   const cum = [0];
   for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + angle(pts[i - 1], pts[i]) * EARTH_KM);
-  return {pts, cum, km: cum[cum.length - 1]};
+  const km = cum[cum.length - 1];
+  return {pts, cum, km, marks: flight ? [0, km] : marks.map(i => cum[i])};
 }
 /** Point at fraction s of the way along. */
 function along(path, s) {
@@ -161,28 +197,16 @@ function countryAt(lon, lat) {
   }
   return null;
 }
-const a2of = a3 => (WORLD && WORLD.find(c => c.a3 === a3) || {}).a2;
-const nameOf = a3 => (WORLD && WORLD.find(c => c.a3 === a3) || {}).n || a3;
+const A2 = {HKG: 'HK', MCO: 'MC'};
+const a2of = a3 => A2[a3] || (WORLD && WORLD.find(c => c.a3 === a3) || {}).a2;
+const nameOf = a3 => NAME[a3] || (WORLD && WORLD.find(c => c.a3 === a3) || {}).n || a3;
+const cityA3 = k => CITY[k].a3 || countryAt(...CITY[k].ll);
 
 /* -------------------------------------------------------------
    1. THE JOURNEY
-   `T` is the beats as scroll progress across #story (0 → 1).
+   Beats are laid out in vh of scrolling (`at(...)`), then turned into
+   progress across #story, whose height is set to fit them.
    ------------------------------------------------------------- */
-const T = {
-  heroOut: [.012, .06], rise: [0, .1], journey: [.1, .7],
-  settle: [.7, .745],       // the camera pulls back to the whole summer
-  rise2: [.725, .79],       // a closed passport comes up behind the globe…
-  dock: [.745, .795],       // …and the globe settles onto its cover's emblem
-  open: [.8, .848],         // the cover swings open underneath it
-  fly: [.848, .876],        // the globe dives into the data page…
-  unroll: [.856, .882],     // …unrolls into its map…
-  print: [.872, .892],      // …and becomes print
-  stamps: [.888, .935],     // the summer's stamps land, one at a time
-  side: [.93, .97],         // the phone comes to sit beside it
-  outro: [.955, .99],
-  START: [6, 14],           // where the globe faces as the page opens
-};
-
 const story = $('#story');
 // each part on its own, so a failure in one never takes the rest of the page with it
 const guard = (name, f) => { try { f(); } catch (e) { console.error(`Peregrino: ${name}`, e); } };
@@ -195,28 +219,54 @@ function initStory() {
   const globe = GL.create($('#globe'), {detail: true});
   const heroCopy = $('#heroCopy'), hud = $('#hud'), leg = $('#leg'), legText = $('#legText'), legGlyph = $('#legGlyph');
   const hudC = $('#hudCountries'), hudW = $('#hudWorld'), hudK = $('#hudKm'), hudShade = $('#hudShade');
-  const pop = $('#stampPop'), phone = $('#phoneWrap'), outro = $('#storyOutro'), nudge = $('#nudge'), pass = $('#pass');
+  const pop = $('#stampPop'), phone = $('#phoneWrap'), outro = $('#storyOutro'), nudge = $('#nudge');
+  const pass = $('#pass'), passUp = $('#passUpper');
   let failed = !globe.ok;
 
-  /* ---- the legs, timed: the ground legs get the room, flights scale with distance ---- */
+  /* ---- the legs and their weights: ground legs by distance, flights by the arc ---- */
   const legs = LEGS.map(l => {
-    const pts = [CITY[l.from].ll, ...(l.via || []), CITY[l.to].ll];
+    const pts = [CITY[l.from].ll, ...(l.via || []).map(q => typeof q === 'string' ? CITY[q].ll : q), CITY[l.to].ll];
     const path = buildPath(pts, l.mode === 'flight');
     const d = angle(vec(CITY[l.from].ll), vec(CITY[l.to].ll));
-    const w = l.mode === 'flight' ? .55 + .7 * Math.sqrt(d) : l.mode === 'walk' ? 1.55 : l.mode === 'train' ? 1.2 : 1.1;
-    return {...l, path, d, w, dwell: l.home ? .3 : .42, events: []};
+    // the named stops on the way, as fractions of the route
+    const stops = [];
+    if (l.via) l.via.forEach((q, i) => { if (typeof q === 'string') stops.push({ll: CITY[q].ll, s: path.marks[i + 1] / path.km}); });
+    const w = l.mode === 'flight' ? .55 + .55 * Math.sqrt(d)
+      : (.7 + path.km / 700) * (l.mode === 'walk' ? 1.3 : 1);
+    return {...l, path, d, w, stops, dwell: l.mode === 'flight' ? .32 : .26};
   });
-  const homeW = .55;
-  const total = homeW + legs.reduce((s, l) => s + l.w + l.dwell, 0);
-  let acc = homeW;
-  for (const l of legs) {
-    l.t0 = lerp(T.journey[0], T.journey[1], acc / total); acc += l.w;
-    l.t1 = lerp(T.journey[0], T.journey[1], acc / total); acc += l.dwell;
-    l.t2 = lerp(T.journey[0], T.journey[1], acc / total);
-  }
-  const homeT = [T.journey[0], legs[0].t0];
+
+  /* ---- the beats, in vh of scrolling ---- */
+  const U = 16;                            // vh per unit of leg weight
+  const HERO = 70, HOME = 34;              // the rise out of the hero; Prague, home
+  let acc = HERO + HOME;
+  for (const l of legs) { l.v0 = acc; acc += l.w * U; l.v1 = acc; acc += l.dwell * U; l.v2 = acc; }
+  const E0 = acc;                           // the tour is over
+  const E = (a, b) => [E0 + a, E0 + b];
+  const V = {
+    heroOut: [6, 46], rise: [0, HERO], home: [HERO, HERO + HOME],
+    settle: E(0, 44),       // the camera pulls back to the whole world
+    bookIn: E(16, 76),      // a big open passport comes up behind the globe…
+    dock: E(46, 86),        // …the globe settles onto its right-hand page…
+    shut: E(88, 130),       // …and the passport snaps shut on it
+    gulp: E(128, 146),
+    closed: E(138, 176),    // the closed passport, a vertical booklet, comes to the middle
+    reopen: E(182, 224),    // it opens again…
+    turn: E(214, 256),      // …and turns a quarter to the data page, as the app holds it
+    stamps: E(256, 300),    // six stamps land
+    pop: E(300, 324),       // it pops out of the page…
+    side: E(312, 360),      // …and the phone slides in beside it
+    outro: E(336, 372),
+  };
+  const TOTAL = E0 + 392;
+  if (!RM) story.style.height = TOTAL + 100 + 'vh';
+  const T = {};
+  for (const [k, [a, b]] of Object.entries(V)) T[k] = [a / TOTAL, b / TOTAL];
+  for (const l of legs) { l.t0 = l.v0 / TOTAL; l.t1 = l.v1 / TOTAL; l.t2 = l.v2 / TOTAL; }
+  const vp = x => x / TOTAL;               // a stretch of vh as progress
+  const START = [8, 18];                   // where the blank globe faces as the page opens
   const legEase = l => l.mode === 'flight' ? ease : smooth;
-  /* scroll position at which a leg's vehicle has gone fraction s of the way */
+  /* progress at which a leg's traveller has gone fraction s of the way */
   function pAt(l, s) {
     const e = legEase(l);
     let a = 0, b = 1;
@@ -224,145 +274,199 @@ function initStory() {
     return lerp(l.t0, l.t1, (a + b) / 2);
   }
 
-  /* ---- where each new country starts: the border crossing, or the arrival ---- */
-  const events = [];            // {a3, p, ll, leg}
+  /* ---- where each country is painted: the border crossing, or the arrival ---- */
+  const events = [];            // {a3, p, ll, lived, date}
   function findEvents() {
-    const seen = new Set([...LIVED, ...VISITED]);
+    events.length = 0;
+    const seen = new Set();
+    const add = (a3, p, ll) => { if (!a3 || seen.has(a3)) return; seen.add(a3); events.push({a3, p, ll, lived: LIVED.has(a3)}); };
+    add('CZE', T.home[0] + vp(8), CITY.PRG.ll);
     for (const l of legs) {
-      if (l.mode === 'flight') {
-        const ll = CITY[l.to].ll, a3 = countryAt(ll[0], ll[1]);
-        if (a3 && !seen.has(a3)) { seen.add(a3); events.push({a3, p: l.t1, ll, leg: l}); }
-        continue;
-      }
-      let prev = countryAt(...CITY[l.from].ll);
-      for (let i = 0; i < l.path.pts.length; i += 2) {
-        const ll = toLL(l.path.pts[i]), a3 = countryAt(ll[0], ll[1]);
-        if (a3 && a3 !== prev) {
-          if (!seen.has(a3)) { seen.add(a3); events.push({a3, p: pAt(l, l.path.cum[i] / l.path.km), ll, leg: l}); }
-          prev = a3;
+      if (l.mode !== 'flight') {
+        let prev = cityA3(l.from);
+        for (let i = 0; i < l.path.pts.length; i += 2) {
+          const ll = toLL(l.path.pts[i]), a3 = countryAt(ll[0], ll[1]);
+          if (a3 && a3 !== prev) {
+            if (!(l.at && a3 in l.at)) add(a3, pAt(l, l.path.cum[i] / l.path.km), ll);
+            prev = a3;
+          }
         }
+        for (const [a3, s] of Object.entries(l.at || {})) add(a3, pAt(l, s), toLL(along(l.path, s).v));
       }
+      add(cityA3(l.to), l.t1, CITY[l.to].ll);
     }
+    events.sort((a, b) => a.p - b.p);
+    // a date for each stamp: the tour runs from early June, a few days a country
+    const d0 = Date.UTC(2026, 5, 2);
+    events.forEach((e, i) => {
+      const d = new Date(d0 + Math.round(i * 2.6) * 864e5);
+      e.date = `${String(d.getUTCDate()).padStart(2, '0')}.${String(d.getUTCMonth() + 1).padStart(2, '0')}.${d.getUTCFullYear()}`;
+    });
   }
 
   /* ---- sizes ---- */
-  let vw = 0, vh = 0, R0 = 0, R1 = 0, dpr = 1, ZG = 8, PW = 420, phoneH = 612, FL = null;
+  let vw = 0, vh = 0, R0 = 0, cy0 = 0, R1 = 0, dpr = 1, PW = 600, phoneH = 612, FL = null, BIG = null;
   function measure() {
     vw = stage.clientWidth; vh = stage.clientHeight;
     dpr = Math.min(2, window.devicePixelRatio || 1);
     if (RM) {
-      // the still: the passport at a fixed size in the page's own flow
+      // the still: the open passport at a fixed size in the page's own flow
       PW = Math.round(Math.min(400, vw * .84));
-      pass.style.setProperty('--pw', PW + 'px');
-      drawMap(mapCanvas && !!mapCanvas.dataset.summer);
+      for (const b of [pass, passUp, passFrame]) b.style.setProperty('--pw', PW + 'px');
+      drawMap(!!mapCanvas.dataset.summer);
       drawStill();
       return;
     }
     for (const c of [sky, over]) { c.width = Math.round(vw * dpr); c.height = Math.round(vh * dpr); }
     globe.resize();
+    // the blank globe sits under the headline, however wide the screen
     R0 = Math.max(vw, vh) * .62;
+    const heroBottom = heroCopy.offsetTop + heroCopy.offsetHeight;
+    cy0 = Math.max(vh + R0 * .6, heroBottom + 34 + R0);
     R1 = Math.min(vw * (vw < 700 ? .42 : .34), vh * .36);
-    ZG = vw < 700 ? 8.5 : 8;
-    // the passport: as large as it can be under the closing line
+    // the passport is laid out at its largest (open, behind the globe) and scaled down from there
+    PW = Math.round(Math.min(vh * .8, vw * .92 / 1.4));
+    for (const b of [pass, passUp]) b.style.setProperty('--pw', PW + 'px');
+    const PH = PW * .7;
+    BIG = {
+      PH,
+      dockR: PH * .36,
+      closedS: Math.min(vh * .62, vw * .7 * 1.43) / PW,           // the closed booklet, about two thirds of the height
+      openS: Math.min(vh * .72 / PW, vw * .9 / (PW * 1.4)),       // the open spread, book-wise
+      appS: Math.min(vh * .82 / (PW * 1.4), vw * .86 / PW),       // turned to the data page
+    };
+    // the end: the closing line on top, the passport and the phone under it, overlapping at a corner
     const outroBottom = outro.offsetTop + outro.offsetHeight;
-    const room = vh - outroBottom - 28;
-    PW = Math.round(Math.min(440, vw * (vw < 700 ? .8 : .34), room / 1.4, (vh - 120) / 1.4));
-    pass.style.setProperty('--pw', PW + 'px');
-    const phoneW = phone.offsetWidth; phoneH = phone.offsetHeight;
-    const bookH = PW * 1.4;
-    const cy = outroBottom + 14 + room / 2 - vh / 2;
+    const room = vh - outroBottom - 26;
+    phoneH = phone.offsetHeight;
+    const phoneW = phone.offsetWidth;
     if (vw >= 700) {
-      const s = Math.min(1, bookH / phoneH * 1.02), gap = Math.max(36, vw * .04);
-      const width = PW + gap + phoneW * s;
-      FL = {passX: -width / 2 + PW / 2, passY: cy, phoneX: width / 2 - phoneW * s / 2, phoneY: cy, phoneS: s};
+      // the phone a little lower and to the right, so only its corner lies over the passport's
+      const Hp = Math.min(room * .82, 540), Wp = Hp / 1.4;
+      const ps = Math.min(1, Hp * .96 / phoneH), Wph = phoneW * ps;
+      const groupW = Wp + Wph * .86;
+      const cy = outroBottom + 12 + room / 2 - vh / 2;
+      FL = {passX: -groupW / 2 + Wp / 2, passY: cy - room * .05, passS: Hp / (PW * 1.4), passR: -5,
+            phoneX: groupW / 2 - Wph / 2, phoneY: cy + room * .1, phoneS: ps, phoneR: 7};
     } else {
-      const s = Math.min(.5, bookH * .62 / phoneH);
-      FL = {passX: -vw * .08, passY: cy - 10, phoneX: vw * .3, phoneY: cy + bookH * .18, phoneS: s};
+      const Hp = Math.min(room * .76, vw * .72 * 1.4);
+      const ps = Math.min(.5, Hp * .6 / phoneH);
+      const cy = outroBottom + 12 + room / 2 - vh / 2;
+      FL = {passX: -vw * .07, passY: cy - Hp * .06, passS: Hp / (PW * 1.4), passR: -4,
+            phoneX: vw * .28, phoneY: cy + Hp * .22, phoneS: ps, phoneR: 7};
     }
-    drawMap(mapCanvas && !!mapCanvas.dataset.summer);
-    measureEmblem();
+    drawMap(!!mapCanvas.dataset.summer);
     dirty = true;
   }
-  /* where the cover's emblem sits on the closed book (its circle is 22 of the 48 units across) */
-  let EMB = {x: 0, y: 0, r: 60};
-  function measureEmblem() {
-    const e = $('#coverEmblem');
-    if (e && e.offsetWidth) EMB = {x: e.offsetLeft + e.offsetWidth / 2, y: e.offsetTop + e.offsetHeight / 2, r: e.offsetWidth * 22 / 48};
-  }
-  /* with reduced motion, the globe is drawn once, the whole summer on it */
+  /* with reduced motion, the globe is drawn once, the whole tour on it */
   let stillReady = false;
   function drawStill() {
     if (!stillReady || !globe.data || !WORLD) return;
     paintAt(globe, 1, true);
     globe.resize();
-    globe.draw({cx: globe.w / 2, cy: globe.h / 2, R: Math.min(globe.w, globe.h) * .4, lon: 4, lat: 47, alpha: 1});
+    globe.draw({cx: globe.w / 2, cy: globe.h / 2, R: Math.min(globe.w, globe.h) * .4, lon: 30, lat: 42, alpha: 1});
   }
 
-  /* ---- the passport: PassportView on top, a stamp page below, the cover ---- */
+  /* ---- the passport, as a booklet: open, its spine runs down the middle. The leaf
+         on the left carries the data page inside and the cover outside; it shuts over
+         the right-hand page, the stamps. Each page is laid out the way the app shows it
+         (landscape, `.pg-rot`) and turned a quarter, so it reads upright once the open
+         book is turned to the app's top-and-bottom spread. ---- */
   const stampCells = [];
   const globeSvg = '<svg viewBox="8 8 48 48" aria-hidden="true"><circle cx="32" cy="32" r="22"/><ellipse cx="32" cy="32" rx="9.5" ry="22"/><path d="M10 32h44M13.5 21h37M13.5 43h37"/></svg>';
+  const chipSvg = '<svg viewBox="0 0 40 26" aria-hidden="true"><rect x="1.5" y="1.5" width="37" height="23" rx="4"/><circle cx="20" cy="13" r="5.5"/><path d="M1.5 13h13M25.5 13h13"/></svg>';
   pass.innerHTML = `
-    <div class="pass-board"></div>
-    <div class="pass-page pass-top dp">
-      <div class="dp-head"><div><p class="dp-title">Peregrino Passport</p><p class="dp-sub">Passport · Pas · 여권</p></div><span class="dp-btn">${ART.glyph('globe', '#fff', 14)}</span></div>
-      <div class="dp-body">
-        <div>
-          <p class="dp-k">Countries &amp; territories</p>
-          <p class="dp-big"><b id="dpCount">${BASE_COUNT}</b><span> / 248</span><em id="dpPct">(${Math.round(BASE_COUNT / 248 * 100)}%)</em></p>
-          <div class="dp-row"><div><p class="dp-k">Continents</p><p class="dp-v">3<span> / 7</span></p></div><div><p class="dp-k">Total trips</p><p class="dp-v" id="dpTrips">15</p></div></div>
-          <div class="dp-row"><div><p class="dp-k">Top continent</p><p class="dp-v">Europe</p></div><div><p class="dp-k">Member since</p><p class="dp-v">Apr 2026</p></div></div>
-        </div>
-        <div class="dp-map"><p class="dp-k">Map · Mapa · 지도</p><canvas id="dpMap"></canvas></div>
-      </div>
-      <p class="mrz">P&lt;PGNTRAVELER&lt;&lt;PEREGRINO&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;<br>ISSUED01OCT26&lt;&lt;&lt;32V&lt;&lt;&lt;248T&lt;&lt;&lt;EU&lt;AS&lt;NA&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</p>
-    </div>
-    <div class="pass-leaf" id="passLeaf">
-      <div class="pass-face pass-page sp"><p class="sp-head">Entries · Vstupy · 입국</p><div class="sp-grid" id="spGrid"></div><span class="sp-no">4</span></div>
-      <div class="pass-face cover"><p class="cover-name">Peregrino</p><span class="cover-emblem" id="coverEmblem">${globeSvg}</span><p class="cover-kind">Passport · Pas · 여권</p></div>
+    <div class="bk-right">
+      <div class="bk-board"></div>
+      <div class="bk-page"><div class="pg-rot sp"><p class="sp-head">Entries · Vstupy · 입국</p><div class="sp-grid" id="spGrid"></div><span class="sp-no">3</span></div></div>
     </div>`;
-  const dpCount = $('#dpCount'), dpPct = $('#dpPct'), dpTrips = $('#dpTrips'), mapCanvas = $('#dpMap');
-  const passLeaf = $('#passLeaf'), passBoard = pass.querySelector('.pass-board');
+  passUp.innerHTML = `
+    <div class="bk-leaf" id="passLeaf">
+      <div class="bk-face bk-front">
+        <div class="bk-board"></div>
+        <div class="bk-page"><div class="pg-rot dp">
+          <div class="dp-head"><div><p class="dp-title">Peregrino Passport</p><p class="dp-sub">Passport · Pas · 여권</p></div><span class="dp-btn">${ART.glyph('globe', '#fff', 14)}</span></div>
+          <div class="dp-body">
+            <div>
+              <p class="dp-k">Countries &amp; territories</p>
+              <p class="dp-big"><b id="dpCount">0</b><span> / 248</span><em id="dpPct">(0%)</em></p>
+              <div class="dp-row"><div><p class="dp-k">Continents</p><p class="dp-v"><b id="dpCont">0</b><span> / 7</span></p></div><div><p class="dp-k">Total trips</p><p class="dp-v" id="dpTrips">0</p></div></div>
+              <div class="dp-row"><div><p class="dp-k">Top continent</p><p class="dp-v" id="dpTop">—</p></div><div><p class="dp-k">Member since</p><p class="dp-v">Apr 2026</p></div></div>
+            </div>
+            <div class="dp-map"><p class="dp-k">Map · Mapa · 지도</p><canvas id="dpMap"></canvas></div>
+          </div>
+          <p class="mrz">P&lt;PGNTRAVELER&lt;&lt;PEREGRINO&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;<br>ISSUED01OCT26&lt;&lt;&lt;32V&lt;&lt;&lt;248T&lt;&lt;&lt;EU&lt;AS&lt;NA&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</p>
+        </div></div>
+      </div>
+      <div class="bk-face bk-back cover">
+        <p class="cover-name">Peregrino</p>
+        <span class="cover-emblem">${globeSvg}</span>
+        <p class="cover-kind">Passport · Pas · 여권</p>
+        <span class="cover-chip">${chipSvg}</span>
+      </div>
+    </div>`;
+  const dpCount = $('#dpCount'), dpPct = $('#dpPct'), dpTrips = $('#dpTrips'), dpCont = $('#dpCont'), dpTop = $('#dpTop'), mapCanvas = $('#dpMap');
+  const passLeaf = $('#passLeaf');
+  // with reduced motion both halves sit together in the page's flow, in one frame
+  const passFrame = RM ? document.createElement('div') : null;
+  if (passFrame) { passFrame.className = 'pass-frame'; stage.appendChild(passFrame); passFrame.append(pass, passUp); }
   function fillStamps() {
     const grid = $('#spGrid');
     grid.innerHTML = '';
     stampCells.length = 0;
-    for (const e of events) {
+    for (const a3 of PAGE_STAMPS) {
+      const e = events.find(x => x.a3 === a3);
+      if (!e) continue;
       const cell = document.createElement('div');
       cell.className = 'sp-cell';
-      const s = ART.stampEl(a2of(e.a3), 100, {dark: true, date: STAMP_DATE[e.a3]});
+      const s = ART.stampEl(a2of(a3), 100, {dark: true, date: e.date, style: e.lived ? 'lived' : 'inked'});
       cell.appendChild(s);
       grid.appendChild(cell);
       stampCells.push(s);
     }
   }
+  /* the data page: blank as issued, then everything the globe took in once it has been swallowed */
+  let filled = null;
+  function fillPage(on) {
+    if (filled === on) return;
+    filled = on;
+    const n = on ? events.length : 0;
+    dpCount.textContent = n;
+    dpPct.textContent = `(${Math.round(n / 248 * 100)}%)`;
+    dpTrips.textContent = on ? 16 : 0;
+    dpCont.textContent = on ? 3 : 0;
+    dpTop.textContent = on ? 'Europe' : '—';
+    drawMap(on);
+  }
   /* the data page's map: Mercator, visited in white, the rest traced faintly */
   const MERC = {top: 80, bottom: -58};
   const merc = lat => Math.log(Math.tan(Math.PI / 4 + clamp(lat, -85, 85) * D2R / 2));
-  function drawMap(withSummer) {
+  function drawMap(withTour) {
     if (!WORLD || !mapCanvas) return;
     const w = mapCanvas.clientWidth;
     if (!w) return;
     const h = Math.round(w / (2 * Math.PI / (merc(MERC.top) - merc(MERC.bottom))));
     mapCanvas.style.height = h + 'px';
-    mapCanvas.width = Math.round(w * dpr); mapCanvas.height = Math.round(h * dpr);
+    const k = Math.min(2, dpr * 1.5);
+    mapCanvas.width = Math.round(w * k); mapCanvas.height = Math.round(h * k);
     const c = mapCanvas.getContext('2d');
-    c.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const on = new Set([...LIVED, ...VISITED, ...(withSummer ? events.map(e => e.a3) : [])]);
+    c.setTransform(k, 0, 0, k, 0, 0);
+    const on = new Set(withTour ? events.map(e => e.a3) : []);
     const top = merc(MERC.top), span = top - merc(MERC.bottom);
     c.lineWidth = .5; c.strokeStyle = 'rgba(255,255,255,.28)'; c.lineJoin = 'round';
-    for (const k of WORLD) {
-      if (k.a3 === 'ATA') continue;
+    for (const K of WORLD) {
+      if (K.a3 === 'ATA') continue;
       c.beginPath();
-      for (const r of k.r) {
+      for (const r of K.r) {
         for (let i = 0; i < r.length; i += 2) {
           const x = (r[i] + 180) / 360 * w, y = (top - merc(r[i + 1])) / span * h;
           i ? c.lineTo(x, y) : c.moveTo(x, y);
         }
         c.closePath();
       }
-      if (on.has(k.a3)) { c.fillStyle = '#fff'; c.fill('evenodd'); } else { c.fillStyle = 'rgba(255,255,255,.07)'; c.fill('evenodd'); c.stroke(); }
+      if (on.has(K.a3)) { c.fillStyle = '#fff'; c.fill('evenodd'); } else { c.fillStyle = 'rgba(255,255,255,.07)'; c.fill('evenodd'); c.stroke(); }
     }
-    mapCanvas.dataset.summer = withSummer ? '1' : '';
+    mapCanvas.dataset.summer = withTour ? '1' : '';
   }
 
   /* ---- stars on a sphere round the globe, so they wheel as it turns (the app's starfield) ---- */
@@ -398,11 +502,11 @@ function initStory() {
   {
     let s = 21;
     const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
-    for (let i = 0; i < 6; i++) {
-      const p = vec([rnd() * 140 - 50, rnd() * 50 + 15]), q = vec([rnd() * 360 - 180, rnd() * 120 - 60]);
+    for (let i = 0; i < 8; i++) {
+      const p = vec([rnd() * 300 - 150, rnd() * 50 + 10]), q = vec([rnd() * 360 - 180, rnd() * 120 - 60]);
       FLEET.push({kind: 'plane', p, ax: norm3(cross(p, q)), w: .028 + rnd() * .02, ph: rnd() * Math.PI * 2, c: AIRLINES[i % AIRLINES.length]});
     }
-    for (const [lon, lat, hd] of [[-30, 45, 40], [-20, 30, -30], [4, 55.5, 10], [18, 34.5, 80], [-45, 25, 60], [150, 30, 20]]) {
+    for (const [lon, lat, hd] of [[-30, 45, 40], [-20, 30, -30], [4, 55.5, 10], [18, 34.5, 80], [-45, 25, 60], [150, 30, 20], [-150, 25, -10], [88, 12, 30]]) {
       const p = vec([lon, lat]), t = vec([lon + Math.cos(hd * D2R) * 4, lat + Math.sin(hd * D2R) * 4]);
       FLEET.push({kind: 'ship', p, ax: norm3(cross(p, t)), ph: rnd() * 6});
     }
@@ -422,8 +526,9 @@ function initStory() {
   /* routes are decals on the surface, a dark ribbon under a light one (GlobeArcs) */
   function ribbon(path, s1, view, mode, R) {
     const last = Math.max(1, Math.floor(clamp(s1) * (path.pts.length - 1)));
+    const step = Math.max(1, Math.floor(last / 400));
     const pts = [];
-    for (let i = 0; i <= last; i++) pts.push(proj(path.pts[i], .001, view));
+    for (let i = 0; i <= last; i += step) pts.push(proj(path.pts[i], .001, view));
     pts.push(proj(along(path, s1).v, .001, view));
     const ow = clamp(R * .0085, 2.4, 6.5);
     strokeRun(pts, ow, outer(mode));
@@ -478,7 +583,7 @@ function initStory() {
   }
   /* the traveller on the ground: the mode's symbol on a white disc */
   const glyphImg = {};
-  for (const m of ['drive', 'walk', 'train', 'flight']) {
+  for (const m of ['drive', 'walk', 'train', 'flight', 'ferry', 'bus']) {
     const i = new Image();
     i.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(ART.glyph(m, `rgb(${TINT[m].map(v => Math.round(v * .78))})`, 48).replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" '));
     glyphImg[m] = i;
@@ -491,10 +596,10 @@ function initStory() {
     ox.restore();
     ox.strokeStyle = outer(mode); ox.lineWidth = 2; ox.beginPath(); ox.arc(x, y, r, 0, Math.PI * 2); ox.stroke();
     const img = glyphImg[mode];
-    if (img && img.complete) ox.drawImage(img, x - r * .62, y - r * .62, r * 1.24, r * 1.24);
+    if (img && img.complete && img.naturalWidth) ox.drawImage(img, x - r * .62, y - r * .62, r * 1.24, r * 1.24);
   }
 
-  /* ---- the state of the summer at p ---- */
+  /* ---- the state of the tour at p ---- */
   function journeyAt(p) {
     let cur = -1;
     for (let i = 0; i < legs.length; i++) if (p >= legs[i].t0) cur = i;
@@ -510,8 +615,11 @@ function initStory() {
     }
     return out;
   }
-  /* the camera follows the traveller: close in on the ground, further out in the air */
-  const zoomFor = (l, s) => l.mode === 'flight' ? 1.45 * (1 - .3 * Math.sin(Math.PI * s) * Math.min(1, l.d / .45)) : ZG;
+  /* the camera follows the traveller: close in on the ground (closer on a short hop),
+     further out in the air, furthest out across an ocean */
+  const zoomFor = (l, s) => l.mode === 'flight'
+    ? 1.45 * (1 - .32 * Math.sin(Math.PI * s) * Math.min(1, l.d / .45))
+    : clamp(8.6 * Math.sqrt(450 / Math.max(l.path.km, 1)), 4.8, 8.6) * (vw < 700 ? 1.06 : 1);
   const logLerp = (a, b, t) => Math.exp(lerp(Math.log(a), Math.log(b), t));
   function cameraAt(p, J) {
     if (J.cur < 0) return {v: vec(CITY.PRG.ll), Z: 1.9};
@@ -524,17 +632,10 @@ function initStory() {
     return {v: vec(CITY[l.to].ll), Z: zoomFor(l, 1)};
   }
 
-  /* ---- painting: the visited, the pencilled plans, and the summer as it happens ---- */
+  /* ---- painting: nothing at first, then each country as the tour reaches it ---- */
+  const PAINT = vp(8);
   function paintAt(g, p, all) {
-    for (const a of LIVED) g.paint(a, INK.lived, 1);
-    for (const a of VISITED) g.paint(a, INK.visited, 1);
-    for (const a of WISHLIST) g.hatch(a, INK.wishlist, 1);
-    for (const a of PLANNED) g.hatch(a, INK.planned, 1);
-    for (const e of events) {
-      const k = all ? 1 : smooth(seg(p, e.p, e.p + .0065));
-      g.paint(e.a3, INK.visited, k);
-      if (PLANNED.includes(e.a3)) g.hatch(e.a3, INK.planned, 1 - k);
-    }
+    for (const e of events) g.paint(e.a3, e.lived ? INK.lived : INK.visited, all ? 1 : smooth(seg(p, e.p, e.p + PAINT)));
   }
 
   /* ---- progress ---- */
@@ -544,13 +645,14 @@ function initStory() {
     const dt = Math.min(64, now - last); last = now;
     const np = progress();
     if (np !== p) { p = np; dirty = true; }
-    if (!RM && p < T.journey[0]) spinT += dt * .0035 * (1 - seg(p, .02, T.journey[0]));
+    if (!RM && p < T.home[0]) spinT += dt * .0035 * (1 - seg(p, vp(10), T.home[0]));
     // the fleet keeps flying while the globe is up
-    if (p < T.dock[0] + .025) dirty = true;
+    if (p < T.shut[1]) dirty = true;
     if (dirty) { render(now); dirty = false; }
     raf = running ? requestAnimationFrame(frame) : 0;
   }
 
+  const POP = vp(15), FRESH = vp(12);
   function render(now) {
     /* headline */
     const ho = seg(p, T.heroOut[0], T.heroOut[1]);
@@ -559,70 +661,84 @@ function initStory() {
     heroCopy.classList.toggle('is-through', ho > .3);
 
     const J = journeyAt(p);
-    /* camera: the rise, the summer, the pull-back, the flight into the passport */
+    /* camera: the rise, the tour, the pull-back */
     const rise = ease(seg(p, T.rise[0], T.rise[1]));
     const cam = cameraAt(p, J);
     let v = cam.v, Z = cam.Z;
-    if (p < T.journey[0]) {
-      v = slerp(vec([T.START[0] + spinT, T.START[1]]), vec(CITY.PRG.ll), ease(seg(p, .02, T.journey[0])));
+    if (p < T.home[1]) {
+      v = slerp(vec([START[0] + spinT, START[1]]), vec(CITY.PRG.ll), ease(seg(p, vp(10), T.home[0] + vp(10))));
       Z = 1.9;
     }
     let R = R1 * Z, cx = vw / 2, cy = vh * .53;
     if (rise < 1) {
       R = logLerp(R0, R1 * 1.9, rise);
-      cy = lerp(vh + R0 * .6, vh * .53, rise);
+      cy = lerp(cy0, vh * .53, rise);
     }
     const st = ease(seg(p, T.settle[0], T.settle[1]));
     if (st > 0) {
-      v = slerp(v, vec([1, 54]), st);
-      R = logLerp(R, R1 * 1.05, st);
+      // the whole world, turning slowly to show what the tour painted
+      const turnLon = 4 + 60 * seg(p, T.settle[0], T.dock[1]);
+      v = slerp(v, vec([turnLon, 38]), st);
+      R = logLerp(R, R1 * 1.1, st);
+      cy = lerp(cy, vh * .5, st);
     }
     let [lon, lat] = toLL(v);
 
-    /* the passport comes up closed, opens, then moves aside for the phone. The cover
-       swings down on the app's page-turn spring and darkens as it turns (sin × 0.5). */
-    const r2 = ease(seg(p, T.rise2[0], T.rise2[1])), opT = seg(p, T.open[0], T.open[1]), op = ease(opT);
+    /* ---- the passport ---- */
+    const bin = ease(seg(p, T.bookIn[0], T.bookIn[1]));
+    const shutT = seg(p, T.shut[0], T.shut[1]);
+    const gulp = seg(p, T.gulp[0], T.gulp[1]);
+    const cl = ease(seg(p, T.closed[0], T.closed[1]));
+    const reT = seg(p, T.reopen[0], T.reopen[1]), re = ease(reT);
+    const tu = ease(seg(p, T.turn[0], T.turn[1]));
+    const popT = seg(p, T.pop[0], T.pop[1]);
     const sd = ease(seg(p, T.side[0], T.side[1]));
-    const bookX = lerp(0, FL.passX, sd), bookY = lerp(vh * .7, 0, r2) + lerp(PW * .35, 0, op) + lerp(0, FL.passY, sd), bookS = lerp(.9, 1, r2);
-    pass.style.opacity = Math.min(1, r2 * 2);
-    pass.style.transform = `translate3d(${bookX}px, ${bookY}px, 0) scale(${bookS})`;
-    const turn = 180 * (1 - springOut(opT));
-    passLeaf.style.transform = `rotateX(${turn}deg)`;
-    passLeaf.style.setProperty('--shade', (Math.abs(Math.sin(turn * D2R)) * .5).toFixed(3));
-    passBoard.style.opacity = seg(op, .2, .8);
+    const PH = BIG.PH;
+    // the leaf: open (0°), shut over the right page (180°), open again
+    const shutA = 180 * Math.pow(shutT, 2.2);                       // lifts slowly, then snaps
+    const leafA = reT > 0 ? 180 * (1 - springOut(reT)) : shutA;
+    // the book: scale, where it sits, how far it has turned
+    let bs = lerp(.55, 1, bin), bx = 0, by = lerp(vh * .55, 0, bin), br = 0;
+    bs *= 1 + .05 * Math.sin(Math.PI * gulp);                       // the gulp
+    bs = lerp(bs, BIG.closedS, cl);
+    bx = lerp(bx, -PH / 2 * bs, cl);                                // the closed half to the middle
+    bs = lerp(bs, BIG.openS, re);
+    bx = lerp(bx, 0, re);
+    bs = lerp(bs, BIG.appS, tu);
+    br = lerp(br, 90, tu);
+    bs *= 1 + .1 * Math.sin(Math.PI * popT);                        // the pop
+    bs = lerp(bs, FL.passS, sd);
+    bx = lerp(bx, FL.passX, sd); by = lerp(by, FL.passY, sd); br = lerp(br, 90 + FL.passR, sd);
+    const tilt = Math.sin(Math.PI * popT) * 10;                     // leaning out of the page as it pops
+    const bookT = `translate3d(${bx}px, ${by}px, 0) perspective(${PW * 4}px) rotateX(${tilt}deg) rotate(${br}deg) scale(${bs})`;
+    const bookA = Math.min(1, bin * 1.6);
+    for (const b of [pass, passUp]) { b.style.transform = bookT; b.style.opacity = bookA; }
+    passLeaf.style.transform = `rotateY(${leafA}deg)`;
+    passLeaf.style.setProperty('--shade', (Math.abs(Math.sin(leafA * D2R)) * .5).toFixed(3));
+    // what the pages say: blank as issued, full once the globe has gone in
+    if (WORLD) fillPage(p >= T.gulp[0]);
 
-    /* the globe settles onto the cover's emblem, and stays over the data page as the cover opens */
+    /* the globe settles onto the right-hand page and is swallowed with it */
     const dock = ease(seg(p, T.dock[0], T.dock[1]));
+    let galpha = 1;
     if (dock > 0) {
-      const ex = vw / 2 + bookX + bookS * (EMB.x - PW / 2), ey = vh / 2 + bookY + bookS * (EMB.y - PW * .7);
-      cx = lerp(cx, ex, dock); cy = lerp(cy, ey, dock); R = logLerp(R, EMB.r * bookS, dock);
+      const rx = vw / 2 + bx + PH / 2 * bs, ry = vh / 2 + by;
+      cx = lerp(cx, rx, dock); cy = lerp(cy, ry, dock); R = logLerp(R, BIG.dockR * bs, dock);
+      // squashed as the leaf comes down on it, gone once it has shut
+      R *= 1 - .18 * seg(shutA, 120, 180);
+      galpha = 1 - seg(shutA, 150, 178);
     }
-
-    /* the globe flies to the data page, unrolls and turns into print */
-    const fly = ease(seg(p, T.fly[0], T.fly[1])), unroll = ease(seg(p, T.unroll[0], T.unroll[1])), printK = smooth(seg(p, T.print[0], T.print[1]));
-    let flat = {x: 0, y: 0, w: 1, h: 1};
-    if (fly > 0) {
-      const m = mapCanvas.getBoundingClientRect(), s = stage.getBoundingClientRect();
-      flat = {x: m.left - s.left, y: m.top - s.top, w: m.width, h: m.height};
-      cx = lerp(cx, flat.x + flat.w / 2, fly);
-      cy = lerp(cy, flat.y + flat.h / 2, fly);
-      R = logLerp(R, flat.h * .62, fly);
-      // turn to the map's own middle on the way, so it unrolls the right way round
-      [lon, lat] = toLL(slerp(v, vec([0, 20]), fly));
-    }
-    const landed = seg(p, T.print[1], T.print[1] + .008);
-    if (WORLD && (landed > 0) !== !!mapCanvas.dataset.summer) drawMap(landed > 0);
-    const view = {cx, cy, R, lon, lat, alpha: 1 - landed, morph: unroll, flat, print: printK, mercTop: MERC.top, mercBottom: MERC.bottom, atmosphere: 1 - fly};
+    const view = {cx, cy, R, lon, lat, alpha: galpha, atmosphere: 1 - seg(shutA, 60, 140)};
     if (!failed) {
       paintAt(globe, p);
       globe.draw(view);
     }
-    drawSky(GL.viewBasis(lon, lat), 1 - seg(p, T.rise2[0], T.open[1]) * .6);
+    drawSky(GL.viewBasis(lon, lat), 1 - seg(p, T.bookIn[0], T.shut[1]) * .55);
 
     /* overlay: the fleet, the routes, the stops, the traveller */
     ox.setTransform(dpr, 0, 0, dpr, 0, 0);
     ox.clearRect(0, 0, vw, vh);
-    const overA = (1 - seg(p, T.dock[0], T.dock[0] + .025)) * seg(p, T.rise[0] + .03, T.rise[1]);
+    const overA = (1 - seg(p, T.dock[0], T.dock[0] + vp(14))) * seg(p, T.rise[0] + vp(20), T.rise[1]);
     // hidden rather than left blank once there's nothing on it, so a cleared
     // canvas can never linger on screen with its last frame
     const overOn = overA > 0 && !!globe.data;
@@ -654,9 +770,18 @@ function initStory() {
       }
       for (let i = 0; i <= J.cur; i++) ribbon(legs[i].path, i === J.cur ? J.s : 1, view, legs[i].mode, R);
       stopDot(CITY.PRG.ll, view, 'drive', R);
-      for (let i = 0; i <= J.cur; i++) if (i < J.cur || J.phase === 'dwell') stopDot(CITY[legs[i].to].ll, view, legs[i].mode, R);
-      pin(CITY.PRG.ll, view, 'rgb(224,162,26)', seg(p, homeT[0], homeT[0] + .01), R);
-      for (let i = 0; i <= J.cur; i++) if (!legs[i].home) pin(CITY[legs[i].to].ll, view, 'rgb(217,69,59)', seg(p, legs[i].t1, legs[i].t1 + .01), R);
+      for (let i = 0; i <= J.cur; i++) {
+        const l = legs[i], s = i === J.cur ? J.s : 1;
+        for (const sp of l.stops) if (s >= sp.s) stopDot(sp.ll, view, l.mode, R);
+        if (i < J.cur || J.phase === 'dwell') stopDot(CITY[l.to].ll, view, l.mode, R);
+      }
+      pin(CITY.PRG.ll, view, 'rgb(224,162,26)', seg(p, T.home[0], T.home[0] + vp(6)), R);
+      for (let i = 0; i <= J.cur; i++) {
+        const l = legs[i];
+        if (l.home) continue;
+        const a3 = cityA3(l.to);
+        pin(CITY[l.to].ll, view, LIVED.has(a3) ? 'rgb(224,162,26)' : 'rgb(217,69,59)', seg(p, l.t1, l.t1 + vp(6)), R);
+      }
       if (J.cur >= 0 && J.phase === 'move') {
         const l = legs[J.cur], at = along(l.path, J.s), ahead = along(l.path, Math.min(1, J.s + .01));
         if (l.mode === 'flight') {
@@ -677,69 +802,62 @@ function initStory() {
     }
 
     /* instruments */
-    const hudOn = seg(p, T.journey[0] - .015, T.journey[0] + .01) * (1 - seg(p, T.settle[0], T.settle[0] + .02));
+    const hudOn = seg(p, T.home[0] - vp(10), T.home[0] + vp(6)) * (1 - seg(p, T.settle[0], T.settle[0] + vp(14)));
     hud.style.opacity = hudOn;
     hudShade.style.opacity = hudOn;
     leg.style.opacity = hudOn;
-    let count = BASE_COUNT;
-    for (const e of events) if (p >= e.p + .003) count++;
+    let count = 0;
+    for (const e of events) if (p >= e.p + vp(2)) count++;
     hudC.textContent = count;
     hudW.textContent = Math.round(count / 248 * 100) + '%';
     hudK.textContent = fmt(J.km);
     let text, mode = 'drive';
-    if (J.cur < 0) text = 'Prague · home';
+    const fresh = events.filter(e => p >= e.p && p < e.p + FRESH).pop();
+    if (fresh) {
+      text = fresh.a3 === 'CZE' ? 'Prague · home' : `${nameOf(fresh.a3)} · ${fresh.lived ? 'lived here' : 'new country'}`;
+      if (J.cur >= 0) mode = legs[J.cur].mode;
+    } else if (J.cur < 0) text = 'Prague · home';
     else {
       const l = legs[J.cur]; mode = l.mode;
-      const fresh = events.filter(e => p >= e.p && p < e.p + .03).pop();
-      if (fresh) text = `${nameOf(fresh.a3)} · new country`;
-      else if (J.phase === 'move') text = `${l.title} · ${CITY[l.from].n} → ${CITY[l.to].n}`;
+      if (J.phase === 'move') text = `${l.title} · ${CITY[l.from].n} → ${CITY[l.to].n}`;
       else text = l.home ? 'Prague · home again' : CITY[l.to].n;
     }
     if (legText.textContent !== text) legText.textContent = text;
     if (legGlyph.dataset.m !== mode) { legGlyph.dataset.m = mode; legGlyph.innerHTML = ART.glyph(mode, `rgb(${TINT[mode].map(x => Math.round(x * .78))})`, 14); }
 
     /* the stamp that lands with each new country (StampThump: 2.2× → 0.92 → 1) */
-    const ev = events.filter(e => p >= e.p - .001).pop();
-    if (ev && p < ev.p + .034 && globe.data && p < T.settle[0]) {
-      const tau = seg(p, ev.p, ev.p + .034);
+    const ev = events.filter(e => p >= e.p - vp(.5)).pop();
+    if (ev && p < ev.p + POP && globe.data && p < T.settle[0]) {
+      const tau = seg(p, ev.p, ev.p + POP);
       if (pop.dataset.a3 !== ev.a3) {
         pop.dataset.a3 = ev.a3;
         pop.innerHTML = '';
-        pop.appendChild(ART.stampEl(a2of(ev.a3), 120, {date: STAMP_DATE[ev.a3]}));
+        pop.appendChild(ART.stampEl(a2of(ev.a3), 120, {date: ev.date, style: ev.lived ? 'lived' : 'inked'}));
       }
       const q = globe.project(ev.ll[0], ev.ll[1], 0, view);
       const size = clamp(Math.min(vw, vh) * .17, 92, 150);
       pop.style.width = size + 'px';
       pop.firstChild.style.width = size + 'px'; pop.firstChild.style.height = size * 1.15 + 'px';
-      const k = seg(tau, 0, .2);
+      const k = seg(tau, 0, .3);
       const sc = k < .6 ? lerp(2.2, .92, easeIn(k / .6)) : lerp(.92, 1, easeOut((k - .6) / .4));
-      const x = clamp(q.x + size * .15, 12, vw - size - 12), y = clamp(q.y - size * 1.25, 90, vh - size * 1.2 - 70);
-      pop.style.opacity = Math.min(1, k * 5) * (1 - seg(tau, .8, 1));
+      const x = clamp((q.vis ? q.x : vw / 2) + size * .15, 12, vw - size - 12), y = clamp((q.vis ? q.y : vh / 2) - size * 1.25, 90, vh - size * 1.2 - 70);
+      pop.style.opacity = Math.min(1, k * 5) * (1 - seg(tau, .78, 1));
       pop.style.transform = `translate(${x}px, ${y}px) rotate(${lerp(-4, 0, k)}deg) scale(${sc})`;
     } else pop.style.opacity = 0;
 
-    /* the summer's stamps land in the passport, and the count goes up with them */
-    let landedN = 0;
+    /* six of the tour's stamps land on the stamp page */
     const n = stampCells.length;
     stampCells.forEach((el, i) => {
       const a = lerp(T.stamps[0], T.stamps[1], i / Math.max(1, n)), b = a + (T.stamps[1] - T.stamps[0]) / Math.max(1, n) * .8;
       const k = seg(p, a, b);
-      if (k > .5) landedN++;
       const sc = k < .5 ? lerp(2.2, .92, easeIn(k / .5)) : lerp(.92, 1, easeOut((k - .5) / .5));
       el.style.opacity = Math.min(1, k * 4);
       el.style.transform = `rotate(calc(var(--tilt) + ${lerp(-4, 0, k)}deg)) scale(${k > 0 ? sc : 2.2})`;
     });
-    const c = BASE_COUNT + landedN;
-    if (dpCount.textContent !== String(c)) {
-      dpCount.textContent = c;
-      dpPct.textContent = `(${Math.round(c / 248 * 100)}%)`;
-    }
-    dpTrips.textContent = n && landedN >= n ? 16 : 15;
 
-    /* the phone comes to sit beside it */
-    const ph = ease(seg(p, T.side[0], T.side[1]));
-    phone.style.opacity = Math.min(1, ph * 2);
-    phone.style.transform = `translate3d(${lerp(vw * .5, FL.phoneX, ph)}px, ${lerp(vh * .2, FL.phoneY, ph)}px, 0) rotate(${lerp(8, 0, ph)}deg) scale(${FL.phoneS})`;
+    /* the phone slides in beside it, both a little askew, overlapping at a corner */
+    phone.style.opacity = Math.min(1, sd * 2);
+    phone.style.transform = `translate3d(${lerp(vw * .55, FL.phoneX, sd)}px, ${lerp(vh * .12, FL.phoneY, sd)}px, 0) rotate(${lerp(18, FL.phoneR, sd)}deg) scale(${FL.phoneS})`;
     const oo = seg(p, T.outro[0], T.outro[1]);
     outro.style.opacity = oo;
     outro.style.transform = `translate(-50%, ${(1 - easeOut(oo)) * 24}px)`;
@@ -750,14 +868,15 @@ function initStory() {
   addEventListener('scroll', () => {
     nudge.classList.remove('is-on');
     clearTimeout(nudgeTimer);
-    nudgeTimer = setTimeout(() => { if (p > .03 && p < .9) nudge.classList.add('is-on'); }, 900);
+    nudgeTimer = setTimeout(() => { if (p > .02 && p < T.side[0]) nudge.classList.add('is-on'); }, 900);
   }, {passive: true});
 
   const worldReady = Promise.all([GL.countries(), ART.ready]).then(([list]) => {
     prepWorld(list);
     findEvents();
     fillStamps();
-    drawMap(false);
+    filled = null;
+    fillPage(RM);
     dirty = true;
   });
   worldReady.catch(() => {});
@@ -765,16 +884,12 @@ function initStory() {
   globe.onrestore = () => { dirty = true; };
   addEventListener('resize', measure);
   measure();
-  // the cover's lines move once the type has loaded
-  if (document.fonts) document.fonts.ready.then(() => { measureEmblem(); dirty = true; });
+  if (document.fonts) document.fonts.ready.then(() => { measure(); });
   if (RM) {
-    // a still: the summer's globe, and under it the open passport with every stamp in
-    // it beside the phone
+    // a still: the tour's globe, and under it the open passport with its stamps beside the phone
     stillReady = true;
     worldReady.then(() => {
       stampCells.forEach(el => { el.style.opacity = 1; el.style.transform = 'rotate(var(--tilt))'; });
-      const c = BASE_COUNT + events.length;
-      dpCount.textContent = c; dpPct.textContent = `(${Math.round(c / 248 * 100)}%)`; dpTrips.textContent = 16;
       drawMap(true);
     }).catch(() => {});
     Promise.all([globe.ready, worldReady]).then(drawStill).catch(() => {});
@@ -805,7 +920,7 @@ function initTour() {
     stats:   {lon: 42, lat: 24, r: .41, pill: '32 countries · 13%'},
   };
   const SHEETS = {today: 'today-sheet.webp', journal: 'journal-sheet.webp', tickets: 'tickets-sheet.webp', stats: 'stats-sheet.webp'};
-  const FULL = {place: 'place.jpg', customize: 'customize.jpg'};
+  const FULL = {place: 'place.jpg'};
   const layers = {};
   const live = document.createElement('div');
   live.className = 'scr scr-live';
@@ -840,9 +955,10 @@ function initTour() {
     live.querySelector('.pane').style.background = `#000 url(${c.toDataURL()}) 0 0 / 110px 110px`;
   }
 
-  /* ---- the printer: slides down under the island and feeds the ticket out of
-         its slot short edge first, stub leading; torn off, the ticket turns a
-         quarter back and is filed beside the phone ---- */
+  /* ---- the tickets: a hand of them, stood on end and fanned out from behind the
+         phone, newest at the front. The printer slides down out of the Dynamic
+         Island and feeds a new one out of its slot, short edge first, stub
+         leading; torn off, it flies to the front of the hand ---- */
   const KINDS = {
     flight:  {mode: 'flight', ref: 'KL 1356', from: {code: 'PRG', sub: 'Prague · Václav Havel'}, to: {code: 'AMS', sub: 'Amsterdam · Schiphol'}, fields: [['DATE', '17 OCT 2026'], ['BOARDS', '06:35'], ['SEAT', '14A']], day: '17', month: 'OCT', line: '07:05', footer: 'IN 16 DAYS', seed: 'kl1356'},
     train:   {mode: 'train', ref: 'RJ 75', from: {name: 'Praha', sub: 'Praha hlavní nádraží'}, to: {name: 'Wien', sub: 'Wien Hauptbahnhof'}, fields: [['DATE', '24 OCT 2026'], ['DEPARTS', '08:12'], ['SEAT', '41']], day: '24', month: 'OCT', line: '08:12', footer: 'IN 23 DAYS', seed: 'rj75'},
@@ -850,32 +966,92 @@ function initTour() {
     walk:    {mode: 'walk', from: {name: 'Porto', sub: 'Sé Cathedral'}, to: {name: 'Santiago', sub: 'Praza do Obradoiro'}, fields: [['DATE', '12 JUL 2027'], ['DISTANCE', '260 KM'], ['STARTS', '06:30']], day: '12', month: 'JUL', line: '06:30', footer: 'NEXT JULY', seed: 'camino'},
     concert: {mode: 'concert', kindLabel: 'CONCERT', ref: 'ROYAL ARENA', title: 'Le Sserafim', sub: 'Easy Crazy Hot · Copenhagen', fields: [['DATE', '18 OCT 2026'], ['DOORS', '18:30']], day: '18', month: 'OCT', line: '2026', footer: 'IN 17 DAYS', seed: 'pureflow'},
   };
+  // the hand, in the rig's units: tickets HT tall, each turned about a point hidden
+  // behind the phone's lower left corner, the newest leaning furthest out; REACH is
+  // how far left of the phone the front one comes
+  const HAND = {ht: 360, px: 20, py: 600, r: 10, slots: [-24, -14, -4, 6], reach: 200};
+  HAND.wt = HAND.ht * 200 / 480;
   const wait = ms => new Promise(r => setTimeout(r, RM ? 0 : ms));
+  const stateBtns = $$('#ticketState button');
+  const showState = st => stateBtns.forEach(x => x.setAttribute('aria-checked', String(x.dataset.state === st)));
   const printer = {
-    kind: 'flight', state: 'booked', busy: false, filed: null, root: null, queued: false,
-    mount(root) {
-      this.root = root;
+    kind: 'flight', state: 'booked', busy: false, queue: [], printed: false, root: null, hand: null, deck: [], fs: 1,
+    mount(root, hand) {
+      this.root = root; this.hand = hand;
       root.innerHTML = `<div class="printer"><span class="printer-slot"></span><span class="printer-led"></span></div><span class="feed-shade"></span><div class="feed"></div>`;
       this.el = root.querySelector('.printer'); this.feed = root.querySelector('.feed');
+      // already in the hand: one been and gone, one pencilled in, one booked
+      for (const [k, st] of [['train', 'used'], ['walk', 'planned'], ['concert', 'booked']]) this.deck.push(this.card(k, st));
+      this.lay();
     },
-    make() { return ART.ticket({...KINDS[this.kind], state: this.state}); },
-    async print() {
+    // a ticket stood on end in a box HT tall: main part up, stub down
+    stood(kind, state) {
+      const box = document.createElement('div'), turn = document.createElement('div');
+      box.className = 'hand-in'; turn.className = 'hand-turn';
+      turn.style.transform = `translate(-50%, -50%) rotate(90deg) scale(${HAND.ht / 480})`;
+      turn.appendChild(ART.ticket({...KINDS[kind], state}));
+      box.appendChild(turn);
+      return box;
+    },
+    card(kind, state) {
+      const c = document.createElement('div');
+      c.className = 'hand-tk';
+      c.dataset.kind = kind; c.dataset.state = state;
+      this.place(c);
+      c.appendChild(this.stood(kind, state));
+      // a ticket further back comes to the front
+      c.addEventListener('click', () => {
+        if (this.deck[this.deck.length - 1] === c) return;
+        this.deck.splice(this.deck.indexOf(c), 1);
+        this.deck.push(c);
+        this.lay();
+        this.state = c.dataset.state; showState(this.state);
+      });
+      this.hand.appendChild(c);
+      return c;
+    },
+    place(c) {
+      c.style.left = HAND.px - HAND.wt / 2 + 'px'; c.style.top = HAND.py - HAND.r - HAND.ht + 'px';
+      c.style.width = HAND.wt + 'px'; c.style.height = HAND.ht + 'px';
+      c.style.transformOrigin = `50% ${HAND.ht + HAND.r}px`;
+    },
+    // deal the hand: the newest in the front slot, the rest fanned in behind it
+    lay() {
+      const S = HAND.slots;
+      while (this.deck.length > S.length) {
+        // one too many: the oldest slips out of the back of the hand
+        const old = this.deck.shift();
+        old.style.opacity = '0';
+        old.style.setProperty('--a', S[S.length - 1] + 10 + 'deg');
+        setTimeout(() => old.remove(), 700);
+      }
+      const n = this.deck.length;
+      this.deck.forEach((c, i) => {
+        const j = n - 1 - i;               // 0 for the newest
+        c.style.setProperty('--a', S[j] + 'deg');
+        c.style.setProperty('--s', this.fs);
+        c.style.zIndex = 10 - j;
+        c.classList.toggle('is-front', j === 0);
+      });
+    },
+    front() { return this.deck[this.deck.length - 1]; },
+    // each press prints one, in turn; a few can wait their turn
+    async print(kind = this.kind) {
       if (!this.root) return;
-      if (this.busy) { this.queued = true; return; }
+      this.printed = true;
+      if (this.busy) { if (this.queue.length < 3) this.queue.push(kind); return; }
       this.busy = true;
-      try { await this.run(); }
+      try { await this.run(kind); }
       catch (e) { /* a print that goes wrong leaves the printer free for the next */ }
       finally {
         this.el.classList.remove('is-printing', 'is-down');
         this.busy = false;
-        if (this.queued) { this.queued = false; this.print(); }
+        if (this.queue.length) this.print(this.queue.shift());
       }
     },
-    async run() {
-      if (this.filed) {
-        const old = this.filed; this.filed = null;
-        old.animate([{opacity: 1}, {opacity: 0, transform: getComputedStyle(old).transform + ' translateY(40px)'}], {duration: 320, easing: 'ease-in', fill: 'forwards'}).finished.then(() => old.remove());
-      }
+    async run(kind) {
+      // a new ticket is pencilled in or booked, never already used
+      const st = this.state === 'planned' ? 'planned' : 'booked';
       this.el.classList.add('is-down');
       await wait(480);
       // the strip: the ticket turned a quarter clockwise, stub first out of the slot
@@ -883,7 +1059,7 @@ function initTour() {
       const strip = document.createElement('div');
       strip.className = 'feed-strip';
       strip.style.height = 480 * k + 'px';
-      const t = this.make();
+      const t = ART.ticket({...KINDS[kind], state: st});
       t.style.position = 'absolute'; t.style.left = '0'; t.style.top = '0';
       t.style.transformOrigin = '0 0';
       t.style.transform = `translate(${200 * k}px, 0) rotate(90deg) scale(${k})`;
@@ -897,37 +1073,53 @@ function initTour() {
         await wait(125);
       }
       this.el.classList.remove('is-printing');
-      await wait(280);
-      // torn off: it turns back a quarter and is filed beside the phone
-      const sr = strip.getBoundingClientRect();
-      const filed = document.createElement('div');
-      filed.className = 'ticket-filed';
-      filed.appendChild(ART.frame(this.make(), 480, 200, 300));
-      this.root.appendChild(filed);
-      const fr = filed.getBoundingClientRect();
-      const kr = fr.width / 300;     // the rig's own scale
-      const dx = ((sr.left + sr.width / 2) - (fr.left + fr.width / 2)) / kr, dy = ((sr.top + sr.height / 2) - (fr.top + fr.height / 2)) / kr;
-      const s0 = sr.height / fr.width;
+      await wait(260);
+      // torn off: it flies out over the phone to the front of the hand, and the
+      // others shuffle back to make room
+      const sr = strip.getBoundingClientRect(), rr = this.root.getBoundingClientRect();
+      const kr = rr.width / PW || 1;     // the rig's own scale
+      const card = this.card(kind, st);
+      card.style.visibility = 'hidden';
+      this.deck.push(card);
+      this.lay();
+      this.state = st; showState(st);
+      const fly = document.createElement('div');
+      fly.className = 'hand-tk hand-fly';
+      this.place(fly);
+      fly.appendChild(this.stood(kind, st));
+      this.root.appendChild(fly);
       strip.remove();
-      filed.style.transform = 'rotate(-2.2deg)';
-      if (!RM) await filed.animate([
-        {transform: `translate(${dx}px, ${dy}px) rotate(90deg) scale(${s0})`},
-        {transform: `translate(${dx * .45}px, ${dy * .5 - 34}px) rotate(32deg) scale(${(s0 + 1) / 2})`, offset: .45},
-        {transform: 'rotate(-2.2deg)'},
-      ], {duration: 780, easing: 'cubic-bezier(.22,.61,.36,1)'}).finished;
-      this.filed = filed;
+      // about the hand's pivot P, translate(t) rotate(a) scale(s) puts the ticket's
+      // centre C0 at P + t + R(a)·s·(C0 − P); solve for t to put it at c
+      const P = [HAND.px, HAND.py], v = [0, -HAND.r - HAND.ht / 2];
+      const at = (a, s) => [s * (v[0] * Math.cos(a * D2R) - v[1] * Math.sin(a * D2R)), s * (v[0] * Math.sin(a * D2R) + v[1] * Math.cos(a * D2R))];
+      const tr = (c, a, s) => { const o = at(a, s); return [c[0] - P[0] - o[0], c[1] - P[1] - o[1]]; };
+      const Cs = [(sr.left + sr.width / 2 - rr.left) / kr, (sr.top + sr.height / 2 - rr.top) / kr];
+      const s0 = sr.height / kr / HAND.ht, a1 = HAND.slots[0], s1 = this.fs, o1 = at(a1, s1);
+      const Cf = [P[0] + o1[0], P[1] + o1[1]];
+      // out over the phone's edge on an arc that bows up, then down into the hand
+      const am = a1 - 18, sm = (s0 + s1) / 2, Cm = [(Cs[0] + Cf[0]) / 2 - 40, Math.min(Cs[1], Cf[1]) - 40];
+      const t0 = tr(Cs, 0, s0), tm = tr(Cm, am, sm);
+      if (!RM) await fly.animate([
+        {transform: `translate(${t0[0]}px, ${t0[1]}px) rotate(0deg) scale(${s0})`},
+        {transform: `translate(${tm[0]}px, ${tm[1]}px) rotate(${am}deg) scale(${sm})`, offset: .55},
+        {transform: `translate(0px, 0px) rotate(${a1}deg) scale(${s1})`},
+      ], {duration: 820, easing: 'cubic-bezier(.3,.7,.3,1)'}).finished;
+      fly.remove();
+      card.style.visibility = '';
     },
     restate(s) {
       this.state = s;
-      clearTimeout(this.tearTimer);
-      if (!this.filed) return;
-      const tk = this.filed.querySelector('.tk'), fresh = this.make();
-      if (!tk) return;
-      const swap = () => { if (tk.parentNode) tk.parentNode.replaceChild(fresh, tk); };
-      if (s === 'used' && !RM && !tk.classList.contains('is-used')) {
+      const c = this.front();
+      if (!c || c.dataset.state === s) return;
+      c.dataset.state = s;
+      clearTimeout(c._tear);
+      const tk = c.querySelector('.tk'), fresh = this.stood(c.dataset.kind, s);
+      const swap = () => { const old = c.querySelector('.hand-in'); if (old) c.replaceChild(fresh, old); };
+      if (s === 'used' && !RM && tk && !tk.classList.contains('is-used')) {
         // the stub tears away along the perforation and what is left slides to centre
         tk.classList.add('is-used');
-        this.tearTimer = setTimeout(swap, 650);
+        c._tear = setTimeout(swap, 650);
       } else swap();
     },
   };
@@ -936,10 +1128,192 @@ function initTour() {
     printer.kind = b.dataset.kind;
     printer.print();
   }));
-  $$('#ticketState button').forEach(b => b.addEventListener('click', () => {
-    $$('#ticketState button').forEach(x => x.setAttribute('aria-checked', String(x === b)));
+  stateBtns.forEach(b => b.addEventListener('click', () => {
+    showState(b.dataset.state);
     printer.restate(b.dataset.state);
   }));
+
+  /* ---- Customise: the app's six passport styles (PassportBackgroundStyle). The
+         phone shows the passport open in the chosen one, as the app's Customize
+         screen does; the covers fanned out behind the phone choose it, and so do
+         the swatches under the copy ---- */
+  const STYLES = [
+    {id: 'classicPurple', name: 'Classic Purple', sub: 'Original deep-purple stamp.', cost: 0, cover: ['#1F1A47', '#2E1F59', '#24194D'], pages: '', edge: ['#0F0A29', '#1A1238'], ink: '#FFFFFF', pink: '#FFFFFF', ring: '#241A4D'},
+    {id: 'book', name: 'Leather Book', sub: 'Beige paper inside a brown leather binding.', cost: 50, cover: ['#F5EFE2', '#F5EFE2', '#EEE6D4'], pages: '#F5EFE2', edge: ['#3B2316', '#5A3622'], ink: '#3B2316', pink: '#3B2316', ring: '#3B2316'},
+    {id: 'burgundy', name: 'Burgundy Passport', sub: 'European wine-red cover, gold accents.', cost: 50, cover: ['#5A1124', '#6E1A2D', '#5A1124'], pages: '#C9A990', edge: ['#3E0A17', '#4C0E1C'], ink: '#F1E2B4', pink: '#3E111D', ring: '#5A1123'},
+    {id: 'navy', name: 'Navy Passport', sub: 'Korean deep-navy cover, silver accents.', cost: 50, cover: ['#14254A', '#1E3055', '#14254A'], pages: '#A6B2C5', edge: ['#08152F', '#0E1E3A'], ink: '#E3E2D5', pink: '#0B1321', ring: '#14264A'},
+    {id: 'swiss', name: 'Swiss Passport', sub: 'Swiss red by day, glowing topography by night.', cost: 50, cover: ['#C63C46', '#D54650', '#C63C46'], pages: '#D8A8A8', edge: ['#8F2832', '#A4323C'], ink: '#FFFFFF', pink: '#67121B', ring: '#841723'},
+    {id: 'dubu', name: 'Dubu Card', sub: 'Dubu peeking out from a soft pink card.', cost: 50, cover: ['#D4637A', '#DA6E84', '#D4637A'], pages: '#D6A9B2', edge: ['#AA465B', '#BD5067'], ink: '#FFFFFF', pink: '#7F2B3F', ring: '#D4637A'},
+  ];
+  const styleVars = st => `--cv-a:${st.cover[0]};--cv-b:${st.cover[1]};--cv-c:${st.cover[2]};--pg:${st.pages || st.cover[1]};--ed-a:${st.edge[0]};--ed-b:${st.edge[1]};--ink:${st.ink};--pink:${st.pink};--ring:${st.ring}`;
+  // round flags for the visited page, simplified to read at a few pixels across
+  const FLAGS = (() => {
+    const h = (...c) => c.map((f, i) => `<rect y="${(24 / c.length * i).toFixed(2)}" width="24" height="${(24 / c.length + .3).toFixed(2)}" fill="${f}"/>`).join('');
+    const v = (...c) => c.map((f, i) => `<rect x="${(24 / c.length * i).toFixed(2)}" width="${(24 / c.length + .3).toFixed(2)}" height="24" fill="${f}"/>`).join('');
+    const nordic = (bg, a, b) => `<rect width="24" height="24" fill="${bg}"/><path d="M6 0h6v24H6zM0 9h24v6H0z" fill="${a}"/>${b ? `<path d="M7.5 0h3v24h-3zM0 10.5h24v3H0z" fill="${b}"/>` : ''}`;
+    const star = (x, y, r, f) => {
+      let d = '';
+      for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, q = i % 2 ? r * .4 : r; d += (i ? 'L' : 'M') + (x + Math.cos(a) * q).toFixed(2) + ' ' + (y + Math.sin(a) * q).toFixed(2); }
+      return `<path d="${d}Z" fill="${f}"/>`;
+    };
+    return {
+      CZE: `${h('#fff', '#d7141a')}<path d="M0 0L12 12L0 24Z" fill="#11457e"/>`,
+      AUT: h('#ed2939', '#fff', '#ed2939'), SVK: h('#fff', '#0b4ea2', '#ee1c25'), HUN: h('#ce2939', '#fff', '#477050'),
+      HRV: h('#ff0000', '#fff', '#171796'), SVN: h('#fff', '#005ce5', '#ed1c24'), ITA: v('#009246', '#fff', '#ce2b37'),
+      CHE: '<rect width="24" height="24" fill="#d52b1e"/><path d="M10 5h4v14h-4zM5 10h14v4H5z" fill="#fff"/>',
+      FRA: v('#0055a4', '#fff', '#ef4135'), LUX: h('#ed2939', '#fff', '#00a1de'), BEL: v('#000', '#fdda24', '#ef3340'),
+      NLD: h('#ae1c28', '#fff', '#21468b'), DEU: h('#000', '#dd0000', '#ffce00'),
+      DNK: nordic('#c8102e', '#fff'), SWE: nordic('#006aa7', '#fecc00'), NOR: nordic('#ba0c2f', '#fff', '#00205b'),
+      FIN: nordic('#fff', '#002f6c'), ISL: nordic('#02529c', '#fff', '#dc1e35'),
+      KOR: '<rect width="24" height="24" fill="#fff"/><path d="M6 12a6 6 0 0 1 12 0z" fill="#cd2e3a"/><path d="M6 12a6 6 0 0 0 12 0z" fill="#0047a0"/><path d="M3 6l3-2.5M18 3.5l3 2.5M3 18l3 2.5M18 20.5l3-2.5" stroke="#000" stroke-width="1.5"/>',
+      JPN: '<rect width="24" height="24" fill="#fff"/><circle cx="12" cy="12" r="6" fill="#bc002d"/>',
+      HKG: `<rect width="24" height="24" fill="#de2910"/>${star(12, 12, 6.5, '#fff')}`,
+      CHN: `<rect width="24" height="24" fill="#de2910"/>${star(7.5, 7.5, 4.4, '#ffde00')}`,
+      VNM: `<rect width="24" height="24" fill="#da251d"/>${star(12, 12.5, 6.8, '#ffff00')}`,
+      THA: h('#a51931', '#f4f5f8', '#2d2a4a', '#2d2a4a', '#f4f5f8', '#a51931'),
+      USA: `${h(...Array.from({length: 13}, (_, i) => i % 2 ? '#fff' : '#b22234'))}<rect width="11" height="13" fill="#3c3b6e"/>`,
+      IRL: v('#169b62', '#fff', '#ff883e'),
+      GBR: '<rect width="24" height="24" fill="#012169"/><path d="M0 0L24 24M24 0L0 24" stroke="#fff" stroke-width="5"/><path d="M0 0L24 24M24 0L0 24" stroke="#c8102e" stroke-width="1.8"/><path d="M12 0v24M0 12h24" stroke="#fff" stroke-width="7"/><path d="M12 0v24M0 12h24" stroke="#c8102e" stroke-width="4"/>',
+      PRT: '<rect width="24" height="24" fill="#f00"/><rect width="9.6" height="24" fill="#060"/><circle cx="9.6" cy="12" r="4" fill="#ff0"/><circle cx="9.6" cy="12" r="2.5" fill="#f00"/>',
+      ESP: '<rect width="24" height="24" fill="#aa151b"/><rect y="6" width="24" height="12" fill="#f1bf00"/>',
+      MCO: h('#ce1126', '#fff'),
+      GRC: `${h(...Array.from({length: 9}, (_, i) => i % 2 ? '#fff' : '#0d5eaf'))}<rect width="13.3" height="13.3" fill="#0d5eaf"/><path d="M5.3 0h2.7v13.3H5.3zM0 5.3h13.3V8H0z" fill="#fff"/>`,
+      POL: h('#fff', '#dc143c'),
+    };
+  })();
+  const flagSvg = a3 => `<svg class="pp-flag" viewBox="0 0 24 24" aria-hidden="true">${FLAGS[a3] || ''}</svg>`;
+  // contour lines for the Swiss cover: a few nested, wobbling rings
+  const TOPO = (() => {
+    let d = '';
+    const blob = (cx, cy, rx, ry, n, ph) => {
+      for (let k = 1; k <= n; k++) {
+        const f = k / n;
+        let p = '';
+        for (let i = 0; i <= 48; i++) {
+          const a = i / 48 * Math.PI * 2, w = 1 + .16 * Math.sin(a * 3 + ph + k * .7) + .08 * Math.sin(a * 5 - ph * 2 + k);
+          p += (i ? 'L' : 'M') + (cx + Math.cos(a) * rx * f * w).toFixed(1) + ' ' + (cy + Math.sin(a) * ry * f * w).toFixed(1);
+        }
+        d += p + 'Z';
+      }
+    };
+    blob(70, 60, 92, 70, 7, .4); blob(150, 200, 70, 62, 5, 2.1); blob(10, 230, 60, 50, 4, 4);
+    return `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 280' preserveAspectRatio='xMidYMid slice'><path d='${d}' fill='none' stroke='rgba(255,140,155,.5)' stroke-width='.8'/></svg>`)}")`;
+  })();
+  tour.style.setProperty('--topo', TOPO);
+  const COVER_GLOBE = '<svg viewBox="8 8 48 48" aria-hidden="true"><circle cx="32" cy="32" r="22"/><ellipse cx="32" cy="32" rx="9.5" ry="22"/><path d="M10 32h44M13.5 21h37M13.5 43h37"/></svg>';
+  const COVER_CHIP = '<svg viewBox="0 0 40 26" aria-hidden="true"><rect x="1.5" y="1.5" width="37" height="23" rx="4"/><circle cx="20" cy="13" r="5.5"/><path d="M1.5 13h13M25.5 13h13"/></svg>';
+  // the covers' fan, in the rig's units: each cover turned about a point and pushed
+  // out from it by D. On a wide screen the point is far below the phone and the
+  // covers stand three either side of it; on a phone, where there is no room
+  // beside it, the point is inside the phone and they fan out over its top
+  const FAN = {w: 150, h: 214,
+    wide: {px: 150, py: 1190, d: 860, slots: [-33, -23, -13, 13, 23, 33]},
+    narrow: {px: 150, py: 420, d: 470, slots: [-30, -18, -6, 6, 18, 30]}};
+  const VISITED_FLAGS = ['CZE', 'AUT', 'SVK', 'HUN', 'HRV', 'SVN', 'ITA', 'CHE', 'FRA', 'LUX', 'BEL', 'NLD', 'DEU', 'DNK', 'SWE', 'NOR',
+                         'FIN', 'KOR', 'JPN', 'HKG', 'CHN', 'VNM', 'THA', 'USA', 'ISL', 'IRL', 'GBR', 'PRT', 'ESP', 'MCO', 'GRC', 'POL'];
+  let chosen = STYLES[0].id;
+  const custom = document.createElement('div');
+  custom.className = 'scr scr-cust';
+  custom.innerHTML = `
+    <div class="pane pane-desk">
+      <div class="pane-status pane-status-dark"><span>9:41</span>${live.querySelector('.pane-status svg').outerHTML}</div>
+      <div class="pp" data-style="${chosen}" style="${styleVars(STYLES[0])}">
+        <div class="pp-data">
+          <div class="pp-head"><div><p class="pp-title">Peregrino Passport</p><p class="pp-sub">Passport · Pas · 여권</p></div><span class="pp-btn">${globeSvgSmall()}</span></div>
+          <div class="pp-body">
+            <div>
+              <p class="pp-k">Countries &amp; territories</p>
+              <p class="pp-big"><b>32</b><span> / 248</span><em>(13%)</em></p>
+              <div class="pp-row"><div><p class="pp-k">Continents</p><p class="pp-v">3<span> / 7</span></p></div><div><p class="pp-k">Total trips</p><p class="pp-v">16</p></div></div>
+              <div class="pp-row"><div><p class="pp-k">Top continent</p><p class="pp-v">Europe</p></div><div><p class="pp-k">Member since</p><p class="pp-v">Apr 2026</p></div></div>
+            </div>
+            <div class="pp-map"><p class="pp-k">Map · Mapa · 지도</p><canvas></canvas></div>
+          </div>
+          <img class="pp-dubu" src="assets/dubu.webp" alt="" loading="lazy">
+          <p class="pp-mrz">P&lt;PGNMICHAEL&lt;&lt;PEREGRINO&lt;&lt;TRAVELER&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;<br>ISSUED01OCT26&lt;&lt;&lt;32V&lt;&lt;&lt;248T&lt;&lt;&lt;150&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</p>
+        </div>
+        <div class="pp-visa">
+          <div class="pp-flags">
+            <p class="pp-k">Visited</p>
+            <div class="pp-fl">${VISITED_FLAGS.slice(0, 16).map(flagSvg).join('')}</div>
+            <div class="pp-fl">${VISITED_FLAGS.slice(16).map(flagSvg).join('')}</div>
+            <p class="pp-k">Residency</p>
+            <div class="pp-fl">${['CZE', 'GBR', 'KOR'].map(flagSvg).join('')}</div>
+          </div>
+          <div class="pp-side"><p>Visa</p><p>Visa · Vizum · 비자</p></div>
+        </div>
+      </div>
+      <div class="pp-pager"><span class="pp-chev"></span><span>Data page · Visited · 1/5</span><span class="pp-chev is-on"></span></div>
+    </div>
+    <img class="scr-sheet" src="assets/screens/customize-sheet.webp" alt="" style="top:50.55%;height:49.45%" loading="lazy">
+    <div class="cust-list"><div class="cust-track">${STYLES.map(st => `
+      <div class="cust-item" data-style="${st.id}">
+        <span class="cust-thumb" style="${styleVars(st)}"></span>
+        <div class="cust-text"><p class="cust-name">${st.name}</p><p class="cust-sub">${st.sub}</p></div>
+        <span class="cust-state">${st.cost ? `${st.cost} mi` : 'Free'}</span>
+      </div>`).join('')}</div></div>`;
+  screen.appendChild(custom);
+  layers.customize = custom;
+  function globeSvgSmall() {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><ellipse cx="12" cy="12" rx="3.6" ry="8.5"/><path d="M3.5 12h17"/></svg>';
+  }
+  const pp = custom.querySelector('.pp'), ppMap = custom.querySelector('.pp-map canvas'), track = custom.querySelector('.cust-track');
+  // the data page's little Mercator map, in the page's own ink
+  function drawPPMap() {
+    if (!WORLD || !ppMap.clientWidth) return false;
+    const st = STYLES.find(s => s.id === chosen), w = ppMap.clientWidth, h = ppMap.clientHeight;
+    const k = Math.min(3, (devicePixelRatio || 1) * 2);
+    ppMap.width = Math.round(w * k); ppMap.height = Math.round(h * k);
+    const c = ppMap.getContext('2d');
+    c.setTransform(k, 0, 0, k, 0, 0);
+    const mc = lat => Math.log(Math.tan(Math.PI / 4 + clamp(lat, -85, 85) * D2R / 2));
+    const top = mc(80), span = top - mc(-58), on = new Set(ALL32);
+    for (const K of WORLD) {
+      if (K.a3 === 'ATA') continue;
+      c.beginPath();
+      for (const r of K.r) {
+        for (let i = 0; i < r.length; i += 2) {
+          const x = (r[i] + 180) / 360 * w, y = (top - mc(r[i + 1])) / span * h;
+          i ? c.lineTo(x, y) : c.moveTo(x, y);
+        }
+        c.closePath();
+      }
+      c.fillStyle = st.ink; c.globalAlpha = on.has(K.a3) ? .95 : .16;
+      c.fill('evenodd');
+    }
+    c.globalAlpha = 1;
+    return true;
+  }
+  function showChosen(animate) {
+    const st = STYLES.find(s => s.id === chosen);
+    const apply = () => { pp.dataset.style = st.id; pp.setAttribute('style', styleVars(st)); drawPPMap(); };
+    if (animate && !RM) {
+      // the passport turns over to its new cover
+      pp.animate([{transform: 'perspective(600px) rotateY(0deg)'}, {transform: 'perspective(600px) rotateY(88deg)'}], {duration: 170, easing: 'ease-in'}).finished
+        .then(() => { apply(); return pp.animate([{transform: 'perspective(600px) rotateY(-88deg)'}, {transform: 'perspective(600px) rotateY(0deg)'}], {duration: 300, easing: 'cubic-bezier(.2,.9,.3,1.15)'}).finished; })
+        .catch(() => apply());
+    } else apply();
+    // the sheet's list scrolls the chosen one in, marked Selected
+    const i = STYLES.indexOf(st);
+    [...track.children].forEach((it, j) => {
+      it.classList.toggle('is-chosen', j === i);
+      it.querySelector('.cust-state').textContent = j === i ? 'Selected' : STYLES[j].cost ? `${STYLES[j].cost} mi` : 'Free';
+    });
+    track.style.transform = `translateX(${-i * 74}cqw)`;
+    // the covers and the swatches
+    if (arts.customize) [...arts.customize.children].forEach(c => c.classList.toggle('is-chosen', c.dataset.style === chosen));
+    $$('#coverPick button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.style === chosen)));
+  }
+  function choose(id) {
+    if (id === chosen || !STYLES.some(s => s.id === id)) return;
+    chosen = id;
+    showChosen(true);
+  }
+  $$('#coverPick button').forEach(b => {
+    const st = STYLES.find(s => s.id === b.dataset.style);
+    if (st) b.style.cssText = styleVars(st);
+    b.addEventListener('click', () => choose(b.dataset.style));
+  });
 
   /* ---- what each stop brings out ---- */
   const arts = {};
@@ -961,10 +1335,11 @@ function initTour() {
         f.style.transformOrigin = '0 0';
         h.appendChild(f);
       });
-    // Tickets: the printer
+    // Tickets: the printer in front, the hand of tickets behind
     arts.tickets = el('div', 'art art-tickets', front);
     arts.tickets.style.inset = '0';
-    printer.mount(arts.tickets);
+    arts.hand = el('div', 'art art-hand', back);
+    printer.mount(arts.tickets, arts.hand);
     // Places: polaroids fan out from behind
     arts.place = el('div', 'art art-photos', back);
     [['night.jpg', 'Seoul, late'], ['torii.jpg', 'Kyoto, day 3'], ['beach.jpg', 'Lisbon']].forEach(([img, cap], i) => {
@@ -979,19 +1354,29 @@ function initTour() {
               {t: 'item', l: 'Continents', v: '3 / 7'}, {t: 'item', l: 'Lived in', v: '3'}, {t: 'item', l: 'Trips', v: '16'},
               {t: 'item', l: 'Travelled', v: '23,805 km'}, {t: 'rule'}, {t: 'total', l: 'Days abroad', v: '214'}, {t: 'note', l: 'Thank you for travelling'}],
     }));
-    // Customise: the covers, fanned behind
+    // Customise: the six covers, fanned out behind the phone; a click chooses one
     arts.customize = el('div', 'art art-covers', back);
-    [['Classic', '#1f1a47', '#2e1f59', '#fff'], ['Navy', '#14254a', '#1e3055', '#e3e2d5'], ['Burgundy', '#5a1124', '#6e1a2d', '#f1e2b4'],
-     ['Swiss', '#c63c46', '#d54650', '#fff'], ['Leather', '#3b2316', '#5a3622', '#e8d9bf'], ['Dubu', '#d4637a', '#e07a8f', '#fff']]
-      .forEach(([n, a, b, ink]) => {
-        const c = el('div', 'cv', arts.customize);
-        c.style.background = `repeating-linear-gradient(-45deg, rgba(255,255,255,.03) 0 .5px, transparent .5px 8px), linear-gradient(135deg, ${a}, ${b} 55%, ${a})`;
-        c.style.color = ink;
-        c.textContent = n;
-      });
+    STYLES.forEach((st, i) => {
+      const c = el('div', 'cv-pp', arts.customize);
+      c.dataset.style = st.id;
+      c.setAttribute('style', styleVars(st));
+      c.style.transitionDelay = `${Math.abs(i - 2.5) * 40}ms`;
+      c.innerHTML = `<span class="cv-edge"></span><div class="cv-face"><p class="cv-name">Peregrino</p><span class="cv-emblem">${COVER_GLOBE}</span><p class="cv-kind">Passport · Pas · 여권</p><span class="cv-chip">${COVER_CHIP}</span>${st.id === 'dubu' ? '<img class="cv-dubu" src="assets/dubu.webp" alt="" loading="lazy">' : ''}</div><span class="cv-tick"></span>`;
+      c.addEventListener('click', () => choose(st.id));
+    });
+    showChosen(false);
     layoutArtifacts();
   }
+  const fanTo = (c, on) => { const [a, d, s] = on ? c._on : c._off; c.style.setProperty('--a', a + 'deg'); c.style.setProperty('--d', d + 'px'); c.style.setProperty('--s', s); };
   function layoutArtifacts() {
+    // the hand of tickets fans out into the room between the copy and the phone
+    if (arts.hand && G.rest) {
+      const ti = stops.findIndex(s => s.dataset.screen === 'tickets'), R = G.rest[ti];
+      const c = stops[ti] && stops[ti].querySelector('.stop-copy');
+      const edge = mobile || !c ? 6 : c.getBoundingClientRect().right + 24;
+      printer.fs = clamp((R.x - PW / 2 * R.s - edge) / (HAND.reach * R.s), .45, 1);
+      printer.lay();
+    }
     // the polaroids fan out on the phone's open side: away from the copy on a wide
     // screen, and on a narrow one (copy above) towards the middle of the screen
     if (arts.place) {
@@ -1006,24 +1391,76 @@ function initTour() {
         pl.style.transform = arts.place.classList.contains('is-on') ? pl._on : pl._off;
       });
     }
-    if (arts.customize) [...arts.customize.children].forEach((c, i) => {
-      const side = i % 2 ? 1 : -1, row = Math.floor(i / 2);
-      c._on = `translate(${side * (mobile ? 120 : 236 + row * 24)}px, ${(row - 1) * (mobile ? 96 : 150)}px) rotate(${side * (7 + row * 5)}deg)`;
-      c._off = 'translate(0, 0) rotate(0deg) scale(.6)';
-      c.style.transform = arts.customize.classList.contains('is-on') ? c._on : c._off;
-    });
+    // the covers fan out as far as the screen allows
+    if (arts.customize && G.rest) {
+      const ci = stops.findIndex(s => s.dataset.screen === 'customize'), R = G.rest[ci] || {s: scale};
+      const F = mobile ? FAN.narrow : FAN.wide, out = F.slots[F.slots.length - 1] * D2R;
+      // how far the outermost cover reaches past the pivot: its centre, then its corner
+      const fs = clamp(((vw / 2 - 8) / R.s - F.d * Math.sin(out)) / (FAN.w / 2 * Math.cos(out) + FAN.h / 2 * Math.sin(out)), mobile ? .4 : .5, mobile ? .7 : 1);
+      [...arts.customize.children].forEach((c, i) => {
+        c.style.left = F.px - FAN.w / 2 + 'px'; c.style.top = F.py - FAN.h / 2 + 'px';
+        c.style.width = FAN.w + 'px'; c.style.height = FAN.h + 'px';
+        c._on = [F.slots[i], -F.d, fs]; c._off = [F.slots[i] * .15, -F.d * .45, fs * .7];
+        fanTo(c, arts.customize.classList.contains('is-on'));
+      });
+    }
   }
 
   /* ---- scroll → which stop, and how far between two ---- */
+  const stage = $('.tour-stage'), navEl = $('#nav');
+  const PW = 300, PH = 612;          // the rig's own size
   let vw = 0, vh = 0, X = 300, anchors = [], mobile = false, scale = 1;
+  const G = {};                      // the stage's geometry, from measure()
   const sides = stops.map(s => s.dataset.side === 'left' ? -1 : s.dataset.side === 'right' ? 1 : 0);
+  // what brings the phone to each stop
+  const via = stops.map(s => s.dataset.carrier || '');
   function measure() {
     vw = innerWidth; vh = innerHeight;
     mobile = vw <= 760;      // as the CSS's max-width: 760px
     X = mobile ? Math.min(vw * .14, 60) : Math.min(vw * .245, 330);
     scale = mobile ? Math.min(.62, (vh * .5) / 612) : Math.min(1, (vh * .82) / 612);
     anchors = stops.map(s => { const r = s.getBoundingClientRect(); return r.top + scrollY + r.height / 2 - vh / 2; });
+    // the rig's place in the stage before it is moved, and where it rests at each stop
+    G.H = stage.clientHeight || vh;
+    G.cx0 = rig.offsetLeft + PW / 2; G.cy0 = rig.offsetTop + PH / 2;
+    G.bottom = rig.offsetTop + PH;
+    G.navB = navEl ? navEl.offsetHeight : 48;
+    G.rest = stops.map((s, i) => {
+      if (sides[i] === 0 && !mobile) {
+        // the last stop: the phone sits in the middle, between the nav and the copy under it
+        const c = s.querySelector('.stop-copy');
+        const top = c ? c.getBoundingClientRect().top + scrollY - anchors[i] : G.H * .78;
+        const a = G.navB + Math.max(36, G.H * .08), b = top - Math.max(28, G.H * .05), sc = Math.max(.3, Math.min(scale, (b - a) / PH));
+        return {x: vw / 2, y: (a + b) / 2, s: sc, r: 0};
+      }
+      if (mobile) {
+        // at the foot of the screen, as big as fits under the copy's card
+        const c = s.querySelector('.stop-copy');
+        const under = c ? c.getBoundingClientRect().bottom + scrollY - anchors[i] : G.H * .45;
+        const sc = clamp((G.bottom - under - 14) / PH, .3, scale);
+        return {x: vw / 2 + sides[i] * X, y: G.bottom - PH / 2 * sc, s: sc, r: 0};
+      }
+      return {x: vw / 2 + sides[i] * X, y: G.cy0, s: scale, r: 0};
+    });
+    // in transit the phone rides smaller; the vehicles are sized to it
+    G.ride = scale * (mobile ? .82 : .7);
+    G.air = scale * (mobile ? .86 : .78);
+    G.lift = scale * (mobile ? .8 : .55);      // under the lander, which needs head room
+    G.ground = G.H - Math.max(18, G.H * .035);
+    G.water = G.H - Math.max(30, G.H * .06);
+    G.rope = G.H * (mobile ? .05 : .07);
+    G.cable = Math.max(44, G.H * .065);
+    const fit = PW * G.ride;                   // the phone's width on a deck
+    G.vs = {plane: G.air * 1.12, train: fit * 1.3 / 316, car: fit * 1.3 / 318, ship: fit * 1.5 / 420, lander: G.lift * 1.12};
+    if (cr.rails) {
+      cr.rails.style.top = G.ground - 2 + 'px';
+      cr.road.style.top = G.ground + 'px';
+      cr.road.style.height = G.H - G.ground + 'px';
+      for (const sea of [cr.seaBack, cr.seaFront]) sea.style.top = G.water - (sea === cr.seaBack ? 9 : 1) + 'px';
+      cr.line.setAttribute('viewBox', `0 0 ${vw} ${G.H}`);
+    }
     mini.resize();
+    ppDrawn = false;
     const d = Math.min(2, devicePixelRatio || 1);
     miniOver.width = Math.round(miniOver.clientWidth * d); miniOver.height = Math.round(miniOver.clientHeight * d);
     layoutArtifacts();
@@ -1039,29 +1476,250 @@ function initTour() {
   }
   const keyOf = i => stops[i].dataset.screen;
 
+  /* ---- the carriers: between two stops a vehicle from the app comes for the
+         phone, takes it across and goes on its way ---- */
+  const VEH = window.PeregrinoVehicles, carrier = $('#carrier');
+  const cr = {};
+  if (VEH && carrier) {
+    const add = (cls, html = '') => { const e = document.createElement('div'); e.className = cls; e.innerHTML = html; carrier.appendChild(e); return e; };
+    cr.clouds = [add('cr-cloud', VEH.cloud()), add('cr-cloud', VEH.cloud())];
+    cr.rails = add('cr-ground cr-rails');
+    cr.road = add('cr-ground cr-road');
+    cr.seaBack = add('cr-sea cr-sea-back');
+    for (const k of new Set(via.filter(Boolean))) {
+      const sp = VEH.SPEC[k], e = add(`veh veh-${k}`, VEH[k]());
+      e.style.width = sp.w + 'px'; e.style.height = sp.h + 'px';
+      e._wheels = [...e.querySelectorAll('.wh')].map(g => ({g, c: g.dataset.c.split(' ').map(Number)}));
+      e._flame = e.querySelector('.flame'); e._jets = [...e.querySelectorAll('.jet')];
+      e._body = e.querySelector('.body');
+      cr[k] = e;
+    }
+    cr.seaFront = add('cr-sea cr-sea-front');
+    cr.clouds.push(add('cr-cloud cr-cloud-front', VEH.cloud()));
+    cr.shadow = add('cr-shadow');
+    carrier.insertAdjacentHTML('beforeend', '<svg class="cr-line" aria-hidden="true"><path class="cr-rope"/><path class="cr-hook"/></svg>');
+    cr.line = carrier.querySelector('.cr-line');
+    cr.rope = cr.line.querySelector('.cr-rope'); cr.hook = cr.line.querySelector('.cr-hook');
+  }
+  const put = (el, a, x, y, s, flip, rot = 0) => {
+    el.style.transform = `translate3d(${x}px, ${y}px, 0) rotate(${rot}deg) scale(${flip ? -s : s}, ${s}) translate(${-a[0]}px, ${-a[1]}px)`;
+  };
+  const roll = (el, dist, s) => el._wheels.forEach(({g, c}) => g.setAttribute('transform', `rotate(${(dist / (c[2] || 14) / s / D2R).toFixed(1)} ${c[0]} ${c[1]})`));
+  const flame = (g, k) => { if (!g) return; const o = g.dataset.o; g.setAttribute('transform', `translate(${o}) scale(${(.75 + k * .25).toFixed(3)} ${k.toFixed(3)}) translate(${o.split(' ').map(v => -v).join(' ')})`); g.style.opacity = k > .02 ? 1 : 0; };
+  const mix = (P, Q, t) => ({x: lerp(P.x, Q.x, t), y: lerp(P.y, Q.y, t), s: lerp(P.s, Q.s, t), r: lerp(P.r || 0, Q.r || 0, t)});
+  // a hop from P to Q: up in an arc of height h, turning spin degrees on the way
+  const hop = (P, Q, t, h, spin = 0) => {
+    const e = ease(t), p = mix(P, Q, e);
+    p.y -= h * 4 * t * (1 - t);
+    p.r += spin * e;
+    return p;
+  };
+  // the phone hanging from a point by a line of length L, at angle a (deg, the bottom swung left for a > 0)
+  const hang = (hx, hy, L, s, a) => {
+    const t = a * D2R, h = L + PH / 2 * s;
+    return {x: hx - Math.sin(t) * h, y: hy + Math.cos(t) * h, s, r: a};
+  };
+  // the phone standing on a deck at (x, y), leaning with it by a
+  const stand = (x, y, s, a) => {
+    const t = a * D2R, h = PH / 2 * s;
+    return {x: x + Math.sin(t) * h, y: y - Math.cos(t) * h, s, r: a};
+  };
+  const topOf = p => [p.x + Math.sin(p.r * D2R) * PH / 2 * p.s, p.y - Math.cos(p.r * D2R) * PH / 2 * p.s];
+  // a hanging line: straight when taut, a sag when it hangs loose
+  function line(x0, y0, x1, y1, sag, hook) {
+    const mx = (x0 + x1) / 2, my = (y0 + y1) / 2 + sag;
+    cr.rope.setAttribute('d', `M${x0.toFixed(1)} ${y0.toFixed(1)} Q${mx.toFixed(1)} ${my.toFixed(1)} ${x1.toFixed(1)} ${y1.toFixed(1)}`);
+    cr.hook.setAttribute('d', hook ? `M${x1 - 3.5} ${y1 - 1}a3.5 3.5 0 1 0 7 0v-5` : '');
+  }
+  const swayOf = now => Math.sin(now / 640) * 2.2 + Math.sin(now / 1730) * 1.4;
+
+  function carry(kind, u, A, B, now) {
+    const d = B.x >= A.x ? 1 : -1, flip = d < 0;
+    const sp = VEH.SPEC[kind], el = cr[kind];
+    const shrink = (s1, a, b) => ({x: A.x, y: A.y, s: lerp(A.s, s1, ease(seg(u, a, b))), r: 0});
+    const grow = (s1, a, b) => ({x: B.x, y: B.y, s: lerp(s1, B.s, springOut(seg(u, a, b))), r: 0});
+    let P;
+    if (kind === 'plane' || kind === 'lander') {
+      // small enough that the phone, its line and the vehicle all fit under the nav
+      const L = kind === 'plane' ? G.rope : G.cable, k = G.vs[kind] / (kind === 'plane' ? G.air : G.lift);
+      const air = Math.min(kind === 'plane' ? G.air : G.lift, (Math.min(A.y, B.y) - G.navB - 14 - L) / (PH / 2 + sp.hook[1] * k));
+      const s = air * k;
+      const hy0 = A.y - PH / 2 * air - L;           // the hook's height when the phone hangs at its stop
+      const hyB = B.y - PH / 2 * air - L;
+      let hook;
+      if (kind === 'plane') {
+        // in from behind, high; over the phone; across with it, climbing a little; away and up
+        const x0 = d > 0 ? -(sp.w - sp.hook[0]) * s - 30 : vw + (sp.w - sp.hook[0]) * s + 30;
+        const x3 = d > 0 ? vw + sp.hook[0] * s + 30 : -sp.hook[0] * s - 30;
+        hook = v => {
+          if (v < .32) { const a = easeOut(seg(v, .04, .32)); return [lerp(x0, A.x, a), hy0 - G.H * .1 * (1 - a)]; }
+          if (v < .7) { const c = seg(v, .32, .7); return [lerp(A.x, B.x, ease(c)), lerp(hy0, hyB, ease(c)) - G.H * .035 * Math.sin(Math.PI * c)]; }
+          const e = seg(v, .72, .96); return [lerp(B.x, x3, easeIn(e)), hyB - G.H * .3 * easeIn(e)];
+        };
+      } else {
+        // down from above on its engine; up a little with the phone; across; down; away up
+        const y0 = -(sp.h - sp.hook[1]) * s - 40;
+        const lift = G.H * .05;
+        hook = v => {
+          if (v < .3) return [A.x, lerp(y0, hy0, easeOut(seg(v, .02, .3)))];
+          if (v < .42) return [A.x, hy0 - lift * ease(seg(v, .34, .42))];
+          if (v < .62) return [lerp(A.x, B.x, ease(seg(v, .42, .62))), hy0 - lift];
+          if (v < .72) return [B.x, lerp(hy0 - lift, hyB, ease(seg(v, .62, .7)))];
+          return [B.x, lerp(hyB, y0 - G.H * .1, easeIn(seg(v, .76, .96)))];
+        };
+      }
+      const [hx, hy] = hook(u), [hx2, hy2] = hook(Math.min(1, u + .006)), [hx1, hy1] = hook(Math.max(0, u - .006));
+      const vx = (hx2 - hx1) / .012, vy = (hy2 - hy1) / .012;
+      const span = Math.max(80, Math.abs(B.x - A.x));
+      const held = kind === 'plane' ? u >= .32 && u < .72 : u >= .34 && u < .7;
+      // the phone trails the way it came, more the faster it goes
+      const hw = kind === 'plane' ? seg(u, .32, .72) : seg(u, .34, .7);
+      const swing = clamp(vx / span * 5, -20, 20) + swayOf(now) * Math.sin(Math.PI * hw);
+      if (u < .32 && kind === 'plane' || u < .34 && kind === 'lander') P = shrink(air, kind === 'plane' ? .18 : .16, kind === 'plane' ? .3 : .28);
+      else if (held) P = hang(hx, hy, L, air, swing);
+      else P = grow(air, .72, .86);
+      // the vehicle
+      if (kind === 'plane') {
+        const pitch = clamp(Math.atan2(vy, Math.abs(vx) + 1) / D2R * .45, -12, 12) * d;
+        put(el, sp.hook, hx, hy, s, flip, pitch);
+      } else {
+        const tilt = clamp(vx / span * 4, -10, 10);
+        put(el, sp.hook, hx, hy, s, false, tilt);
+        // the engine brakes on the way down and lifts it away; the jets hold the hover
+        const fl = u < .3 ? .55 + .45 * seg(u, .1, .28) : u > .74 ? .5 + .5 * seg(u, .74, .82) : 0;
+        const flick = .9 + Math.sin(now / 37) * .06 + Math.sin(now / 23) * .04;
+        flame(el._flame, fl * flick * (u < .03 || u > .97 ? 0 : 1));
+        el._jets.forEach((j, i) => flame(j, (u > .28 && u < .76 ? .8 : 0) * (.85 + Math.sin(now / (29 + i * 7)) * .15)));
+      }
+      // the line: let down to the phone, made fast, let go
+      let end, sag = 0, hooked = false;
+      if (held) { end = topOf(P); }
+      else if (kind === 'plane') {
+        // trailing loose behind the plane, the free end catching the phone's top at .32
+        const k = u < .32 ? ease(seg(u, .2, .32)) : 1 - ease(seg(u, .72, .8));
+        const t = (-d * (u < .32 ? 34 : 46) + swayOf(now) * 2) * D2R;
+        const free = [hx - Math.sin(t) * L * 1.15, hy + Math.cos(t) * L * 1.15], tp = topOf(P);
+        end = [lerp(free[0], tp[0], k), lerp(free[1], tp[1], k)];
+        sag = L * .12; hooked = true;
+      } else {
+        // the winch pays out the cable before and takes it back after
+        const out = u < .34 ? ease(seg(u, .28, .34)) : 1 - ease(seg(u, .7, .76));
+        const tp = topOf(P);
+        end = [hx, hy + (u < .34 ? (tp[1] - hy) : L) * out];
+        hooked = out > .05;
+      }
+      line(hx, hy, end[0], end[1], sag, hooked && !held);
+      cr.line.style.opacity = u < .04 || u > .97 ? 0 : 1;
+      // clouds, for the plane
+      if (kind === 'plane') {
+        const fade = seg(u, .02, .14) * (1 - seg(u, .86, .98));
+        [[.16, .2, 1.05], [.8, .34, .8], [.56, .1, 1.35]].forEach(([fx, fy, k], i) => {
+          const c = cr.clouds[i];
+          c.style.opacity = (i === 2 ? .92 : 1) * fade;
+          c.style.transform = `translate3d(${vw * fx - 110 * k * scale + (u - .5) * -d * 60 * (i + 1)}px, ${G.H * fy}px, 0) scale(${k * Math.max(.6, scale)})`;
+        });
+      }
+      return P;
+    }
+
+    // the ground vehicles: in from behind, the phone hops on, across, it hops off, away
+    const s = G.vs[kind], deck = sp.deck, w = sp.w;
+    const x0 = d > 0 ? -(w - deck[0]) * s - 30 : vw + (w - deck[0]) * s + 30;
+    const x3 = d > 0 ? vw + deck[0] * s + 30 : -deck[0] * s - 30;
+    const sine = t => (1 - Math.cos(Math.PI * t)) / 2;
+    const xAt = v => v < .4 ? lerp(x0, A.x, easeOut(seg(v, .04, .3))) : v < .74 ? lerp(A.x, B.x, sine(seg(v, .4, .66))) : lerp(B.x, x3, easeIn(seg(v, .74, .96)));
+    const ax = xAt(u), dl = .01;
+    const vx = (xAt(Math.min(1, u + dl)) - xAt(Math.max(0, u - dl))) / (2 * dl);
+    const acc = (xAt(Math.min(1, u + dl)) - 2 * ax + xAt(Math.max(0, u - dl))) / (dl * dl);
+    const span = Math.max(80, Math.abs(B.x - A.x));
+    const accN = clamp(acc / (span * 73), -1, 1);       // ±1 at the ride's start and end
+    const moving = Math.min(1, Math.abs(vx) / Math.max(200, vw));
+    let ay, rot = 0;
+    if (kind === 'ship') {
+      // it rides the swell
+      ay = G.water - (sp.water - deck[1]) * s + Math.sin(now / 690) * 3.2 * scale;
+      rot = Math.sin(now / 910) * 1.4 + Math.sin(now / 430) * .4;
+    } else {
+      ay = G.ground - (sp.ground - deck[1]) * s;
+      // rail joints for the train, the suspension for the car
+      ay += kind === 'train' ? Math.sin(now / 47) * .7 * moving : Math.sin(now / 105) * 1.6 * moving;
+      // nose up as it pulls away, down as it brakes
+      rot = -accN * (kind === 'car' ? 2.4 : .8);
+    }
+    put(el, deck, ax, ay, s, flip, rot);
+    if (el._wheels.length) roll(el, d * (ax - x0), s);
+    if (el._body) el._body.setAttribute('transform', `translate(0 ${(Math.sin(now / 83) * 1.6 * moving).toFixed(2)})`);
+    // where the phone stands on board: it turns with the deck, and rocks back as it pulls away
+    const D = stand(ax, ay, G.ride, rot - accN * (kind === 'ship' ? 2 : 5));
+    const jump = G.H * (mobile ? .07 : .1);
+    if (u < .27) P = {...A, r: 0};
+    else if (u < .4) P = hop(A, D, seg(u, .27, .4), jump, kind === 'car' ? 360 * d : 0);
+    else if (u < .66) P = D;
+    else if (u < .78) P = hop(D, B, seg(u, .66, .78), jump * .8);
+    else P = {...B, r: 0};
+    // a squash on landing
+    const land = u < .5 ? seg(u, .4, .45) : seg(u, .78, .83);
+    P.q = Math.sin(Math.PI * land) * .07;
+    // a shadow on the deck
+    const onDeck = u >= .4 && u < .66 ? 1 : u >= .27 && u < .4 ? seg(u, .34, .4) : u >= .66 && u < .78 ? 1 - seg(u, .66, .72) : 0;
+    cr.shadow.style.opacity = onDeck;
+    cr.shadow.style.transform = `translate3d(${ax}px, ${ay + 2}px, 0) rotate(${rot}deg) scale(${G.ride}, ${Math.max(.4, G.ride)})`;
+    // the line it runs on: laid ahead of it, taken up behind
+    const strip = kind === 'train' ? cr.rails : kind === 'car' ? cr.road : null;
+    if (strip) {
+      const a = ease(seg(u, .0, .2)) * 100, b = ease(seg(u, .82, 1)) * 100;
+      strip.style.clipPath = d > 0 ? `inset(0 ${100 - a}% 0 ${b}%)` : `inset(0 ${b}% 0 ${100 - a}%)`;
+    } else {
+      const k = easeOut(seg(u, .0, .18)) * (1 - easeIn(seg(u, .84, 1)));
+      const dy = (1 - k) * (G.H - G.water + 60);
+      cr.seaBack.style.transform = `translate3d(0, ${dy}px, 0)`;
+      cr.seaFront.style.transform = `translate3d(0, ${dy}px, 0)`;
+    }
+    return P;
+  }
+
   /* tags hang on strings: a damped pendulum, pushed by the phone's travel */
   const swing = [{a: 0, w: 0}, {a: 0, w: 0}];
-  let lastX = null, active = -2, running = false, raf = 0, lastT = performance.now();
+  let lastX = null, active = -2, running = false, raf = 0, lastT = performance.now(), shown = '', ppDrawn = false;
   function frame(now) {
     const dt = Math.min(.05, (now - lastT) / 1000); lastT = now;
     render(dt, now);
     raf = running ? requestAnimationFrame(frame) : 0;
   }
   function render(dt, now) {
-    if (!anchors.length) return;
+    if (!anchors.length || !G.rest) return;
     const S = stateAt();
-    const xa = sides[S.i] * X, xb = sides[S.j] * X;
-    const x = lerp(xa, xb, S.move);
-    const dir = Math.sign(xb - xa), sw = Math.sin(Math.PI * S.move);
-    const centreK = lerp(sides[S.i] === 0 ? 1 : 0, sides[S.j] === 0 ? 1 : 0, S.move);
-    const lift = mobile ? 0 : -vh * .12 * centreK;
-    const sc = scale * lerp(1, .86, centreK);
+    const A = G.rest[S.i], B = G.rest[S.j];
+    const kind = S.j !== S.i && S.u > 0 && S.u < 1 && cr[via[S.j]] ? via[S.j] : '';
+    // the carrier for this crossing, and nothing else
+    if (kind !== shown) {
+      shown = kind;
+      for (const k of ['plane', 'train', 'car', 'ship', 'lander']) if (cr[k]) cr[k].classList.toggle('is-on', k === kind);
+      if (cr.rails) {
+        cr.rails.classList.toggle('is-on', kind === 'train');
+        cr.road.classList.toggle('is-on', kind === 'car');
+        cr.seaBack.classList.toggle('is-on', kind === 'ship');
+        cr.seaFront.classList.toggle('is-on', kind === 'ship');
+        cr.clouds.forEach(c => c.classList.toggle('is-on', kind === 'plane'));
+        cr.line.classList.toggle('is-on', kind === 'plane' || kind === 'lander');
+        cr.shadow.classList.toggle('is-on', kind === 'train' || kind === 'car' || kind === 'ship');
+      }
+    }
+    let P;
+    if (kind) P = carry(kind, S.u, A, B, now);
+    else if (S.j !== S.i) {
+      // no carrier: slide across as before
+      const x = lerp(A.x, B.x, S.move);
+      P = {x, y: lerp(A.y, B.y, S.move), s: lerp(A.s, B.s, S.move), r: Math.sin(Math.PI * S.move) * 2.5 * Math.sign(B.x - A.x)};
+    } else P = {...A};
     const enterY = (1 - easeOut(S.enter)) * vh * .75;
-    rig.style.transform = `translate3d(${x}px, ${lift + enterY}px, 0) rotateY(${-dir * sw * 16}deg) rotateZ(${dir * sw * 2.5}deg) scale(${sc})`;
+    const q = P.q || 0;
+    rig.style.transform = `translate3d(${P.x - G.cx0}px, ${P.y - G.cy0 + enterY}px, 0) rotate(${P.r || 0}deg) scale(${P.s * (1 + q * .6)}, ${P.s * (1 - q)})`;
 
     // screens change over half way between two stops
     const ka = keyOf(S.i), kb = keyOf(S.j), key = S.u < .5 ? ka : kb;
     for (const [k, d] of Object.entries(layers)) d.classList.toggle('is-on', k === key);
+    if (key === 'customize' && !ppDrawn) ppDrawn = drawPPMap();
     const liveOn = !!LIVE[key];
     live.classList.toggle('is-on', liveOn);
     if (liveOn) {
@@ -1071,22 +1729,22 @@ function initTour() {
       if (pill.dataset.t !== t) { pill.dataset.t = t; pill.innerHTML = (key === 'today' ? '<svg viewBox="0 0 24 24"><path d="M20 4 4 11l7 2 2 7Z"/></svg>' : '') + t; }
     }
 
-    // the artifacts: out at a stop, put away while the phone moves
-    const at = S.enter < 1 ? -1 : S.move === 0 ? S.i : S.move === 1 ? S.j : -1;
+    // the artifacts: out at a stop, put away while the phone is in transit
+    const at = S.enter < 1 ? -1 : S.j === S.i ? S.i : S.u <= .16 ? S.i : S.u >= .84 ? S.j : -1;
     if (at !== active) {
       active = at;
       const k = at >= 0 ? keyOf(at) : '';
       for (const [name, a] of Object.entries(arts)) {
-        const on = name === k;
+        const on = name === k || name === 'hand' && k === 'tickets';
         a.classList.toggle('is-on', on);
-        if (name === 'tickets' && on && !printer.filed) printer.print();
+        if (name === 'tickets' && on && !printer.printed) printer.print();
         if (name === 'place') [...a.children].forEach(pl => { pl.style.transform = on ? pl._on : pl._off; });
-        if (name === 'customize') [...a.children].forEach(c => { c.style.transform = on ? c._on : c._off; });
+        if (name === 'customize') [...a.children].forEach(c => fanTo(c, on));
       }
     }
     // the tags swing with the phone's travel
-    const vx = lastX === null ? 0 : (x - lastX) / Math.max(dt, .001);
-    lastX = x;
+    const vx = lastX === null ? 0 : (P.x - lastX) / Math.max(dt, .001);
+    lastX = P.x;
     swing.forEach((s, i) => {
       const acc = -vx * .012 * (1 + i * .3) - s.a * 26 - s.w * 2.6;
       s.w += acc * dt; s.a = clamp(s.a + s.w * dt, -.6, .6);
@@ -1106,9 +1764,8 @@ function initTour() {
     const R = Math.exp(lerp(Math.log(va.r), Math.log(vb.r), t)) * w;
     // the journal's trip page paints only that trip's countries
     const only = LIVE[key].only;
-    for (const a of LIVED) mini.paint(a, INK.lived, only ? 0 : 1);
-    for (const a of [...VISITED, 'AUT', 'PRT', 'ESP', 'SWE', 'NOR', 'ISL', 'NLD', 'DNK'])
-      mini.paint(a, INK.visited, only ? (only.includes(a) ? 1 : 0) : (key === 'today' && a === 'AUT' ? 0 : 1));
+    for (const a of ALL32)
+      mini.paint(a, LIVED.has(a) ? INK.lived : INK.visited, only ? (only.includes(a) ? 1 : 0) : (key === 'today' && a === 'AUT' ? 0 : 1));
     for (const a of WISHLIST) mini.hatch(a, INK.wishlist, only ? 0 : 1);
     mini.hatch('AUT', INK.planned, key === 'today' ? 1 : 0);
     const view = {cx: w / 2, cy: h * .5, R, lon: ll[0], lat: ll[1], alpha: 1};
