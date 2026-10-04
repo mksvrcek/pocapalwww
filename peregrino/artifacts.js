@@ -68,7 +68,9 @@ const ready = (async () => {
   const load = window.PeregrinoGlobe && window.PeregrinoGlobe.countries
     ? window.PeregrinoGlobe.countries()
     : fetch('assets/globe/countries.json').then(r => r.json());
-  const list = await load;
+  // without the outlines the stamps still print, only without a silhouette
+  let list = [];
+  try { list = await load; } catch (e) { /* keep going */ }
   C = {};
   for (const c of list) C[c.a2] = c;
   if (document.fonts) {
@@ -239,8 +241,8 @@ function stamp(a2, o = {}) {
   const sil = silhouettePath(a2, ox, oy, os);
   const silEl = !sil ? `<circle cx="${ox + os / 2}" cy="${oy + os / 2}" r="7" fill="${ink}"/>`
     : style === 'pencil'
-      ? `<path d="${sil}" fill="none" stroke="${ink}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="5 4"/>`
-      : `<path d="${sil}" fill="${ink}"/>`;
+      ? `<path d="${sil}" fill-rule="evenodd" fill="none" stroke="${ink}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="5 4"/>`
+      : `<path d="${sil}" fill-rule="evenodd" fill="${ink}"/>`;
   const date = o.date ? `<text x="${S.d[0]}" y="${S.d[1]}" text-anchor="middle" dominant-baseline="central" fill="${ink}" class="st-date" font-size="${S.ds}">${o.date}</text>` : '';
   // the wear: patches, pin-pricks and streaks, seeded per country and profile
   let mask = '';
@@ -562,19 +564,20 @@ function polaroid(o) {
    ArtifactFrame: lay out at canonical size, scale to a width
    ============================================================= */
 function frame(el, cw, ch, width, cls = '') {
-  const k = width / cw;
-  const f = document.createElement('div');
+  // the scale sits on a wrapper, so the artifact's own transforms (a torn ticket
+  // sliding to centre) still apply inside it
+  const f = document.createElement('div'), inner = document.createElement('div');
   f.className = 'art-frame ' + cls;
-  f.style.width = width + 'px';
-  f.style.height = ch * k + 'px';
-  el.style.transform = `scale(${k})`;
-  el.style.transformOrigin = '0 0';
-  f.appendChild(el);
+  inner.className = 'art-scale';
+  inner.style.width = cw + 'px'; inner.style.height = ch + 'px';
+  inner.style.transformOrigin = '0 0';
+  inner.appendChild(el);
+  f.appendChild(inner);
   f.rescale = (w) => {
-    const kk = w / cw;
-    f.style.width = w + 'px'; f.style.height = ch * kk + 'px';
-    el.style.transform = `scale(${kk})`;
+    f.style.width = w + 'px'; f.style.height = ch * w / cw + 'px';
+    inner.style.transform = `scale(${w / cw})`;
   };
+  f.rescale(width);
   return f;
 }
 

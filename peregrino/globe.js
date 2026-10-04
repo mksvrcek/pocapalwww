@@ -32,7 +32,7 @@ const ROWS = 120, COLS = 240;   // segments: 120 (rows) × 240 (cols), as the ap
 const EUROPE = {lon0: -30, lon1: 50, lat0: 31, lat1: 71};
 
 /* ---------- shared assets (decoded once, used by every globe) ---------- */
-let shared = null;
+let shared = null, loaded = null;
 function loadImage(src) {
   return new Promise((res, rej) => {
     const i = new Image();
@@ -68,6 +68,7 @@ function loadShared(root, hiRes) {
     return {base, ids, height: {w: hw, h: hh, data: h}, countries: list, byA2, byA3, byIndex, mesh: buildMesh(h, hw, hh)};
   });
   shared = {hiRes, ready};
+  ready.then(d => { loaded = d; }, () => {});
   return ready;
 }
 
@@ -277,12 +278,12 @@ void main() {
   vec4 printed = vec4(vec3(1.0), mix(landness * 0.13, 1.0, painted));
   vec4 o = mix(vec4(lit, 1.0), printed, uPrint);
   // Antarctica would smear along the bottom of a flat map: fade it as the globe unrolls
-  float polar = 1.0 - uUnroll * smoothstep(-1.0, -1.1, vLat);
+  float polar = 1.0 - uUnroll * (1.0 - smoothstep(-1.1, -1.0, vLat));
   float a = o.a * uAlpha * polar;
   gl_FragColor = vec4(o.rgb * a, a);
 }`;
 const AVS = `
-attribute vec2 aQ; uniform vec2 uRes;
+attribute vec2 aQ;
 void main(){ gl_Position = vec4(aQ, 0.0, 1.0); }`;
 const AFS = `
 precision mediump float;
@@ -291,7 +292,7 @@ void main(){
   vec2 p = vec2(gl_FragCoord.x, uRes.y - gl_FragCoord.y) / uDpr;
   float r = length(p - uCenter) / uR;
   if (r < 0.985) discard;
-  float g = 0.30 * exp(-(r - 1.0) / 0.085) * smoothstep(1.26, 1.12, r);
+  float g = 0.30 * exp(-(r - 1.0) / 0.085) * (1.0 - smoothstep(1.12, 1.26, r));
   vec3 c = vec3(0.4, 0.65, 1.0) * g * uA;
   gl_FragColor = vec4(c, 0.0);
 }`;
@@ -315,8 +316,9 @@ function program(gl, vs, fs) {
 /**
  * create(canvas, {root, hiRes, detail}) → globe   (detail: also fetch the sharper Europe window)
  *   globe.ready           promise, resolves once textures are up
- *   globe.paint(a3, {color:[r,g,b] 0-255, amount 0-1})
- *   globe.hatch(a3, {color, amount})
+ *   globe.paint(a3, [r,g,b] 0-255, amount 0-1)
+ *   globe.hatch(a3, [r,g,b], amount)
+ *   globe.ok              false without WebGL: then every method is a safe no-op
  *   globe.draw(view)      view: {cx, cy, R, lon, lat, roll, alpha, morph, flat:{x,y,w,h}, print, atmosphere}
  *   globe.project(lon, lat, lift)  → {x, y, z, vis}, for the overlay
  *   globe.data            shared country data (after ready)
@@ -324,19 +326,24 @@ function program(gl, vs, fs) {
 function create(canvas, opts = {}) {
   const root = opts.root || 'assets/globe/';
   const hiRes = opts.hiRes ?? (Math.max(screen.width, screen.height) * (window.devicePixelRatio || 1) > 1800);
-  const gl = canvas.getContext('webgl', {premultipliedAlpha: true, alpha: true, antialias: true, depth: true});
-  const g = {canvas, gl, ok: !!gl, data: null, view: null, dpr: 1};
-  if (!gl) { g.ready = Promise.reject(new Error('no webgl')); g.ready.catch(() => {}); return g; }
-  const deriv = gl.getExtension('OES_standard_derivatives');
-  const prog = program(gl, VS, deriv ? FS : FS.replace(/#ifdef GL_OES[\s\S]*?#endif\n/, ''));
-  const aprog = program(gl, AVS, AFS);
+  const g = {canvas, gl: null, ok: false, lost: false, data: null, view: null, dpr: 1, w: 0, h: 0, onrestore: null};
   const lut = new Uint8Array(256 * 4 * 4);
-  let lutTex = null, dirtyLut = true;
+  let gl = null, prog = null, aprog = null, lutTex = null, dirtyLut = true, detailImgs = null;
+  try { gl = canvas.getContext('webgl', {premultipliedAlpha: true, alpha: true, antialias: true, depth: true}); } catch (e) { gl = null; }
+  g.gl = gl;
 
+  /* programs, and everything uploaded: built again if the context is lost and comes back */
+  function build() {
+    const deriv = gl.getExtension('OES_standard_derivatives');
+    prog = program(gl, VS, deriv ? FS : FS.replace(/#ifdef GL_OES[\s\S]*?#endif\n/, ''));
+    aprog = program(gl, AVS, AFS);
+  }
   const tex = (img, nearest) => {
     const t = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, t);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    // the id maps are data: never colour-managed
+    gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, nearest ? gl.NONE : gl.BROWSER_DEFAULT_WEBGL);
     gl.texImage2D(gl.TEXTURE_2D, 0, nearest ? gl.LUMINANCE : gl.RGB, nearest ? gl.LUMINANCE : gl.RGB, gl.UNSIGNED_BYTE, img);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
@@ -351,8 +358,7 @@ function create(canvas, opts = {}) {
     }
     return t;
   };
-  g.ready = loadShared(root, hiRes).then(d => {
-    g.data = d;
+  function upload(d) {
     g.baseTex = tex(d.base, false);
     g.idTex = tex(d.ids, true);
     lutTex = gl.createTexture();
@@ -361,22 +367,49 @@ function create(canvas, opts = {}) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    for (const c of d.countries) {
-      const o = c.i * 4;
-      lut[o] = c.land[0]; lut[o + 1] = c.land[1]; lut[o + 2] = c.land[2]; lut[o + 3] = 255;
-    }
     dirtyLut = true;
-    // mesh buffers
     const buf = (arr, target = gl.ARRAY_BUFFER) => { const b = gl.createBuffer(); gl.bindBuffer(target, b); gl.bufferData(target, arr, gl.STATIC_DRAW); return b; };
     g.bLL = buf(d.mesh.ll); g.bH = buf(d.mesh.hgt); g.bN = buf(d.mesh.nor);
     g.bIdx = buf(d.mesh.idx, gl.ELEMENT_ARRAY_BUFFER);
     g.bQuad = buf(new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]));
-    return g;
-  });
-  // the sharper Europe window, fetched once the globe is up (only the close-ups need it)
-  if (opts.detail) g.ready.then(() => Promise.all([loadImage(`${root}europe-base.webp`), loadImage(`${root}europe-ids.png`)]))
-    .then(([b, i]) => { g.detail = {base: tex(b, false), ids: tex(i, true), w: i.width, h: i.height}; })
-    .catch(() => {});
+  }
+  function uploadDetail() {
+    if (detailImgs) g.detail = {base: tex(detailImgs[0], false), ids: tex(detailImgs[1], true), w: detailImgs[1].width, h: detailImgs[1].height};
+  }
+
+  // Without WebGL (or if its programs won't build) the globe draws nothing and the page
+  // carries on without it: every method below stays safe to call.
+  if (gl) {
+    try { build(); g.ok = true; } catch (e) { console.warn('Peregrino globe:', e.message); }
+  }
+  if (g.ok) {
+    canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); g.lost = true; });
+    canvas.addEventListener('webglcontextrestored', () => {
+      try {
+        build();
+        if (g.data) upload(g.data);
+        uploadDetail();
+        g.lost = false;
+        if (g.onrestore) g.onrestore();
+      } catch (e) { g.ok = false; }
+    });
+    g.ready = loadShared(root, hiRes).then(d => {
+      g.data = d;
+      for (const c of d.countries) {
+        const o = c.i * 4;
+        lut[o] = c.land[0]; lut[o + 1] = c.land[1]; lut[o + 2] = c.land[2]; lut[o + 3] = 255;
+      }
+      upload(d);
+      return g;
+    });
+    // the sharper Europe window, fetched once the globe is up (only the close-ups need it)
+    if (opts.detail) g.ready.then(() => Promise.all([loadImage(`${root}europe-base.webp`), loadImage(`${root}europe-ids.png`)]))
+      .then(imgs => { detailImgs = imgs; uploadDetail(); })
+      .catch(() => {});
+  } else {
+    g.ready = Promise.reject(new Error('no webgl'));
+    g.ready.catch(() => {});
+  }
 
   function setLut(a3, row, rgb, amount) {
     const c = g.data && g.data.byA3[a3];
@@ -404,6 +437,7 @@ function create(canvas, opts = {}) {
   const SUN = norm([3, 5, 8]), FILL = norm([-4, -2, 4]);
   g.draw = (v) => {
     g.view = v;
+    if (!g.ok || g.lost) return;
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -494,5 +528,5 @@ function create(canvas, opts = {}) {
 function norm(v) { const l = Math.hypot(...v); return v.map(x => x / l); }
 function smoothstep(a, b, x) { const t = Math.min(Math.max((x - a) / (b - a), 0), 1); return t * t * (3 - 2 * t); }
 
-window.PeregrinoGlobe = {create, countries, viewBasis, geo, heightAt: (lon, lat) => heightAt(shared && shared.data && shared.data.height, lon, lat), D2R};
+window.PeregrinoGlobe = {create, countries, viewBasis, geo, heightAt: (lon, lat) => heightAt(loaded && loaded.height, lon, lat), D2R};
 })();

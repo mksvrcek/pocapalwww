@@ -21,6 +21,7 @@
    ============================================================= */
 (() => {
 'use strict';
+document.documentElement.classList.add('js');
 
 const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const $ = s => document.querySelector(s);
@@ -153,7 +154,10 @@ function countryAt(lon, lat) {
   for (const c of WORLD) {
     const b = c.box;
     if (lon < b[0] || lon > b[1] || lat < b[2] || lat > b[3]) continue;
-    for (const r of c.r) if (inRing(r, lon, lat)) return c.a3;
+    // outlines and holes (an enclave such as Lesotho) together, even-odd
+    let inside = false;
+    for (const r of c.r) if (inRing(r, lon, lat)) inside = !inside;
+    if (inside) return c.a3;
   }
   return null;
 }
@@ -180,7 +184,9 @@ const T = {
 };
 
 const story = $('#story');
-if (story) initStory();
+// each part on its own, so a failure in one never takes the rest of the page with it
+const guard = (name, f) => { try { f(); } catch (e) { console.error(`Peregrino: ${name}`, e); } };
+if (story) guard('journey', initStory);
 
 function initStory() {
   const stage = $('#stage');
@@ -354,7 +360,7 @@ function initStory() {
         }
         c.closePath();
       }
-      if (on.has(k.a3)) { c.fillStyle = '#fff'; c.fill(); } else { c.fillStyle = 'rgba(255,255,255,.07)'; c.fill(); c.stroke(); }
+      if (on.has(k.a3)) { c.fillStyle = '#fff'; c.fill('evenodd'); } else { c.fillStyle = 'rgba(255,255,255,.07)'; c.fill('evenodd'); c.stroke(); }
     }
     mapCanvas.dataset.summer = withSummer ? '1' : '';
   }
@@ -754,7 +760,9 @@ function initStory() {
     drawMap(false);
     dirty = true;
   });
+  worldReady.catch(() => {});
   globe.ready.catch(() => { failed = true; });
+  globe.onrestore = () => { dirty = true; };
   addEventListener('resize', measure);
   measure();
   // the cover's lines move once the type has loaded
@@ -768,12 +776,12 @@ function initStory() {
       const c = BASE_COUNT + events.length;
       dpCount.textContent = c; dpPct.textContent = `(${Math.round(c / 248 * 100)}%)`; dpTrips.textContent = 16;
       drawMap(true);
-    });
+    }).catch(() => {});
     Promise.all([globe.ready, worldReady]).then(drawStill).catch(() => {});
     return;
   }
-  new IntersectionObserver(([e]) => {
-    running = e.isIntersecting;
+  new IntersectionObserver(es => {
+    running = es[es.length - 1].isIntersecting;
     if (running && !raf) { last = performance.now(); raf = requestAnimationFrame(frame); }
   }).observe(story);
 }
@@ -782,7 +790,7 @@ function initStory() {
    2. THE TOUR
    ------------------------------------------------------------- */
 const tour = $('#tour');
-if (tour) initTour();
+if (tour) guard('tour', initTour);
 
 function initTour() {
   const rig = $('#rig'), screen = $('#tourScreen'), back = $('#artsBack'), front = $('#artsFront');
@@ -855,6 +863,15 @@ function initTour() {
       if (!this.root) return;
       if (this.busy) { this.queued = true; return; }
       this.busy = true;
+      try { await this.run(); }
+      catch (e) { /* a print that goes wrong leaves the printer free for the next */ }
+      finally {
+        this.el.classList.remove('is-printing', 'is-down');
+        this.busy = false;
+        if (this.queued) { this.queued = false; this.print(); }
+      }
+    },
+    async run() {
       if (this.filed) {
         const old = this.filed; this.filed = null;
         old.animate([{opacity: 1}, {opacity: 0, transform: getComputedStyle(old).transform + ' translateY(40px)'}], {duration: 320, easing: 'ease-in', fill: 'forwards'}).finished.then(() => old.remove());
@@ -899,21 +916,19 @@ function initTour() {
         {transform: 'rotate(-2.2deg)'},
       ], {duration: 780, easing: 'cubic-bezier(.22,.61,.36,1)'}).finished;
       this.filed = filed;
-      this.el.classList.remove('is-down');
-      this.busy = false;
-      if (this.queued) { this.queued = false; this.print(); }
     },
     restate(s) {
       this.state = s;
+      clearTimeout(this.tearTimer);
       if (!this.filed) return;
-      const f = this.filed.querySelector('.art-frame'), tk = f.querySelector('.tk'), fresh = this.make();
-      fresh.style.transform = tk.style.transform; fresh.style.transformOrigin = '0 0';
+      const tk = this.filed.querySelector('.tk'), fresh = this.make();
+      if (!tk) return;
+      const swap = () => { if (tk.parentNode) tk.parentNode.replaceChild(fresh, tk); };
       if (s === 'used' && !RM && !tk.classList.contains('is-used')) {
-        // the stub peels away along the perforation, then the ticket slides to centre
-        const stub = tk.querySelector('.tk-stub');
-        stub.style.opacity = '0'; stub.style.transform = 'translate(44px,16px) rotate(11deg)';
-        setTimeout(() => f.replaceChild(fresh, tk), 480);
-      } else f.replaceChild(fresh, tk);
+        // the stub tears away along the perforation and what is left slides to centre
+        tk.classList.add('is-used');
+        this.tearTimer = setTimeout(swap, 650);
+      } else swap();
     },
   };
   $$('#ticketKinds .chip').forEach(b => b.addEventListener('click', () => {
@@ -980,7 +995,10 @@ function initTour() {
     // the polaroids fan out on the phone's open side: away from the copy on a wide
     // screen, and on a narrow one (copy above) towards the middle of the screen
     if (arts.place) {
-      arts.place.style.left = mobile ? '92%' : '';
+      // they reach up to 196px past the phone's edge: tuck them in where the screen ends sooner
+      const room = (vw / 2 - X) / scale - 150;
+      const tuck = Math.max(0, Math.min(150, 196 - (room - 12)));
+      arts.place.style.left = mobile ? '92%' : `calc(-50% + ${tuck}px)`;
       [...arts.place.children].forEach((pl, i) => {
         pl._on = mobile ? `translate(${[10, 64, 24][i]}px, ${[0, 176, 340][i]}px) rotate(${[9, -5, 6][i]}deg)`
                         : `translate(${[-20, 34, -46][i]}px, ${[0, 176, 340][i]}px) rotate(${[-11, 6, -5][i]}deg)`;
@@ -1001,7 +1019,7 @@ function initTour() {
   const sides = stops.map(s => s.dataset.side === 'left' ? -1 : s.dataset.side === 'right' ? 1 : 0);
   function measure() {
     vw = innerWidth; vh = innerHeight;
-    mobile = vw < 760;
+    mobile = vw <= 760;      // as the CSS's max-width: 760px
     X = mobile ? Math.min(vw * .14, 60) : Math.min(vw * .245, 330);
     scale = mobile ? Math.min(.62, (vh * .5) / 612) : Math.min(1, (vh * .82) / 612);
     anchors = stops.map(s => { const r = s.getBoundingClientRect(); return r.top + scrollY + r.height / 2 - vh / 2; });
@@ -1126,14 +1144,13 @@ function initTour() {
     }
   }
 
-  Promise.all([ART.ready, mini.ready.catch(() => null)]).then(() => {
-    setupArtifacts();
-    measure();
-  });
+  measure();
+  ART.ready.then(() => { setupArtifacts(); active = -2; measure(); }).catch(() => {});
+  if (document.fonts) document.fonts.ready.then(measure);
   addEventListener('resize', measure);
   if (RM) return;
-  new IntersectionObserver(([e]) => {
-    running = e.isIntersecting;
+  new IntersectionObserver(es => {
+    running = es[es.length - 1].isIntersecting;
     if (running && !raf) { lastT = performance.now(); raf = requestAnimationFrame(frame); }
   }).observe(tour);
 }
@@ -1179,8 +1196,8 @@ ART.ready.then(() => {
 const ring = $('#ring');
 if (ring) {
   const days = 47, C = 2 * Math.PI * 50, out = $('#ringDays');
-  new IntersectionObserver(([e], o) => {
-    if (!e.isIntersecting) return;
+  new IntersectionObserver((es, o) => {
+    if (!es.some(e => e.isIntersecting)) return;
     o.disconnect();
     ring.style.strokeDashoffset = C * (1 - days / 90);
     const t0 = performance.now();

@@ -57,7 +57,7 @@ window.generate = function (world, W, region) {
     return t / m;
   }
 
-  // ---------- polygons ----------
+  // ---------- polygons (rings are outlines and holes: fill them even-odd) ----------
   function tracePolys(ctx, c, proj) {
     ctx.beginPath();
     for (const r of c.rings) {
@@ -74,7 +74,7 @@ window.generate = function (world, W, region) {
   const hm = canvas(HW, HH), hctx = hm.getContext('2d');
   hctx.fillStyle = '#000'; hctx.fillRect(0, 0, HW, HH);
   hctx.fillStyle = '#fff';
-  for (const c of world) { tracePolys(hctx, c, projH); hctx.fill(); }
+  for (const c of world) { tracePolys(hctx, c, projH); hctx.fill('evenodd'); }
   const hpx = hctx.getImageData(0, 0, HW, HH).data;
   const isLandH = new Uint8Array(HW * HH);
   for (let i = 0; i < HW * HH; i++) isLandH[i] = hpx[i * 4] > 128 ? 1 : 0;
@@ -188,7 +188,7 @@ window.generate = function (world, W, region) {
   // land mask at full resolution (smooth coastline for foam and to keep the glow off land)
   const lm = canvas(TW, TH), lctx = lm.getContext('2d');
   lctx.fillStyle = '#000'; lctx.fillRect(0, 0, TW, TH); lctx.fillStyle = '#fff';
-  for (const c of world) { tracePolys(lctx, c, projT); lctx.fill(); }
+  for (const c of world) { tracePolys(lctx, c, projT); lctx.fill('evenodd'); }
   const lpx = lctx.getImageData(0, 0, TW, TH).data;
   const land = new Uint8Array(TW * TH);
   for (let i = 0; i < TW * TH; i++) land[i] = lpx[i * 4] > 127 ? 1 : 0;
@@ -252,7 +252,7 @@ window.generate = function (world, W, region) {
     const col = landColor(c.a3);
     lut.push({i: k + 1, a3: c.a3, a2: c.a2, name: c.name, cont: c.cont, land: col});
     b.fillStyle = `rgb(${col})`;
-    tracePolys(b, c, projT); b.fill();
+    tracePolys(b, c, projT); b.fill('evenodd');
   });
 
   // ---------- effects: borders, coastal foam, ambient occlusion ----------
@@ -374,7 +374,7 @@ window.generate = function (world, W, region) {
     const w = x1 - x0, h = y1 - y0;
     if (w <= 0 || h <= 0) return;
     sctx.clearRect(x0, y0, w, h);
-    sctx.fillStyle = '#fff'; tracePolys(sctx, c, projT); sctx.fill();
+    sctx.fillStyle = '#fff'; tracePolys(sctx, c, projT); sctx.fill('evenodd');
     const px = sctx.getImageData(x0, y0, w, h).data;
     for (let yy = 0; yy < h; yy++) for (let xx = 0; xx < w; xx++) {
       if (px[(yy * w + xx) * 4 + 3] > 127) ids[(y0 + yy) * TW + x0 + xx] = k + 1;

@@ -41,7 +41,9 @@ function readWorld() {
   const meta = JSON.parse(fs.readFileSync(path.join(base, 'CountryKit/CountryData/CountryMetadata.json'), 'utf8'));
   const CONT = {'Europe': 'EU', 'Asia': 'AS', 'Africa': 'AF', 'North America': 'NA', 'South America': 'SA', 'Oceania': 'OC', 'Antarctica': 'AN', 'Seven seas (open ocean)': 'OC'};
   const cont = a2 => CONT[(meta[a2] || {}).continent || ''] || '??';
-  const polys = g => g.type === 'Polygon' ? [g.coordinates[0]] : g.coordinates.map(p => p[0]);
+  // every ring, holes included (South Africa round Lesotho, Italy round San Marino);
+  // everything that fills them does so even-odd
+  const polys = g => g.type === 'Polygon' ? g.coordinates : g.coordinates.flat(1);
   const r4 = v => Math.round(v * 1e4) / 1e4;
   const rings = g => polys(g).map(r => r.map(([x, y]) => [r4(x), r4(y)]));
   const out = [];
