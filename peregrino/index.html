@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Peregrino · Everywhere you've been, in one passport</title>
+<meta name="description" content="Peregrino is the travel journal for iPhone. Every country you visit gets a stamp, every journey gets a ticket, and your trips become postcards.">
+<meta name="theme-color" content="#05070d">
+<meta property="og:title" content="Peregrino · Everywhere you've been, in one passport">
+<meta property="og:description" content="The travel journal that stamps your passport for you.">
+<meta property="og:type" content="website">
+<link rel="icon" href="assets/favicon.png" type="image/png" sizes="64x64">
+<link rel="apple-touch-icon" href="assets/app-icon.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- one shared ink filter: every stamp on the page is drawn through it -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <filter id="ink" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves="2" seed="4" result="grain"/>
+      <feDisplacementMap in="SourceGraphic" in2="grain" scale="2.2" xChannelSelector="R" yChannelSelector="G" result="rough"/>
+      <feTurbulence type="fractalNoise" baseFrequency=".09" numOctaves="3" seed="11" result="blot"/>
+      <feColorMatrix in="blot" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -2.6 2.15" result="mask"/>
+      <feComposite in="rough" in2="mask" operator="in"/>
+    </filter>
+  </defs>
+</svg>
+
+<!-- ───────────────────────── nav ───────────────────────── -->
+<header class="nav" id="nav">
+  <div class="nav-inner">
+    <a class="nav-logo" href="#top" aria-label="Peregrino home">
+      <img class="nav-mark" src="assets/app-icon.png" alt="" width="256" height="256">
+      Peregrino
+    </a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="#passport">Passport</a>
+      <a href="#tickets">Tickets</a>
+      <a href="#journal">Journal</a>
+      <a href="#more">More</a>
+    </nav>
+    <a class="btn btn-sm" href="#get">Get the app</a>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ─────────────────── hero + the journey ───────────────────
+       One scroll-scrubbed run: the globe rises, flies a year of trips
+       (each country filling in as it is reached), then shrinks into the
+       phone's own globe. Everything is a function of scroll progress. -->
+  <section class="story" id="story">
+    <div class="story-track">
+      <div class="story-stage" id="stage">
+
+        <canvas class="sky" id="sky" aria-hidden="true"></canvas>
+        <canvas class="globe" id="globe" aria-hidden="true"></canvas>
+
+        <div class="hero-copy" id="heroCopy">
+          <p class="eyebrow">Peregrino</p>
+          <h1 class="h1">Everywhere you've been.<br><span class="hl">One passport.</span></h1>
+          <p class="sub">Every country you visit gets a stamp. Every journey gets a ticket. Your trips become postcards.</p>
+          <div class="hero-scrollhint" aria-hidden="true">
+            <span>Scroll to take off</span>
+            <span class="hint-line"></span>
+          </div>
+        </div>
+
+        <!-- the instruments while the journey plays -->
+        <div class="hud" id="hud" aria-hidden="true">
+          <div class="hud-stat"><b id="hudCountries">0</b><span>countries</span></div>
+          <div class="hud-stat"><b id="hudWorld">0%</b><span>of the world</span></div>
+          <div class="hud-stat"><b id="hudKm">0</b><span>km flown</span></div>
+        </div>
+        <div class="leg" id="leg" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>
+          <span id="legText">Prague</span>
+        </div>
+        <div class="stamp-pop" id="stampPop" aria-hidden="true"></div>
+
+        <!-- the phone the globe lands in -->
+        <div class="phone-wrap" id="phoneWrap" aria-hidden="true">
+          <div class="phone-glow"></div>
+          <div class="phone-screen">
+            <img class="phone-shot" src="assets/screens/stats.jpg" alt="" width="590" height="1278">
+          </div>
+          <img class="phone-frame" src="assets/phone-frame.webp" alt="" width="1470" height="3000">
+        </div>
+
+        <div class="nudge" id="nudge" aria-hidden="true">
+          <span>Keep scrolling</span>
+          <svg viewBox="0 0 16 16"><path d="M8 2.4v10.4M3.4 8.2 8 12.8l4.6-4.6"/></svg>
+        </div>
+
+        <div class="story-outro" id="storyOutro">
+          <h2 class="h2">A whole life of travel,<br><span class="hl">in your pocket.</span></h2>
+          <p class="sub sub-tight">Countries, trips, tickets and the photos in between. Filed as you go.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────────── paper body ─────────────────── -->
+  <div class="paper">
+
+    <!-- Today: the app noticing you've landed -->
+    <section class="feature" id="today">
+      <div class="feature-copy reveal">
+        <p class="kicker">Today</p>
+        <h2 class="h2">It notices<br>when you <span class="hl">land.</span></h2>
+        <p class="body">Open the app somewhere new and Peregrino spots it. One tap stamps the country into this year's passport, with the date already on it.</p>
+        <ul class="ticks">
+          <li>Where you are and what's next, at the top of the day</li>
+          <li>Trips, tickets and events coming up, counting down</li>
+        </ul>
+      </div>
+      <div class="feature-art reveal">
+        <div class="scene scene-today" id="todayScene">
+          <div class="device">
+            <div class="device-screen">
+              <img class="device-still" src="assets/screens/today.jpg" alt="The Peregrino Today screen, with Austria waiting to be stamped" width="590" height="1278" loading="lazy">
+            </div>
+            <img class="device-frame" src="assets/phone-frame.webp" alt="" width="1470" height="3000">
+          </div>
+          <div class="detect" aria-hidden="true">
+            <p class="detect-k">New country detected</p>
+            <p class="detect-t">You're in Austria</p>
+            <p class="detect-s">Vienna · located 2 hours ago</p>
+            <span class="detect-btn">Stamp it</span>
+          </div>
+          <div class="detect-stamp" id="todayStamp" aria-hidden="true"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────── the passport: second scroll-scrubbed run ───────────
+         The book is closed, opens on the data page, turns a leaf and the
+         stamps land on the spread one at a time. -->
+    <section class="pp" id="passport">
+      <div class="pp-track">
+        <div class="pp-stage">
+          <div class="pp-copy">
+            <p class="kicker">Passport</p>
+            <div class="pp-lines">
+              <div class="pp-line is-on" data-beat="0">
+                <h2 class="h2">Issued the moment<br><span class="hl">you open the app.</span></h2>
+                <p class="body">Your own Peregrino passport, in your name. Pick the cover, the ink and the pages.</p>
+              </div>
+              <div class="pp-line" data-beat="1">
+                <h2 class="h2">A data page<br><span class="hl">that keeps count.</span></h2>
+                <p class="body">Countries and territories out of 248, continents, trips, and the corner of the world you keep going back to.</p>
+              </div>
+              <div class="pp-line" data-beat="2">
+                <h2 class="h2">Every country,<br><span class="hl">stamped.</span></h2>
+                <p class="body">Each one inked in its own shape and language, dated the day you got there. Visited, lived, wishlist and planning, all kept apart.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="pp-art">
+            <div class="book" id="book">
+              <div class="book-body" id="bookBody">
+                <!-- spread underneath everything: the stamps -->
+                <div class="leaf leaf-base leaf-right pg pg-stamps" id="stampsRight"><span class="pg-no">5</span></div>
+                <!-- the turning leaf: visited flags on the front, stamps on the back -->
+                <div class="leaf leaf-turn" id="leafTurn">
+                  <div class="face face-front pg pg-visa">
+                    <p class="pg-head">Visited · Navštíveno · 방문</p>
+                    <div class="flags" id="flags"></div>
+                    <p class="pg-head pg-head-2">Residency</p>
+                    <div class="flags flags-few" id="flagsLived"></div>
+                    <p class="pg-side">Visa · Vizum · 비자</p>
+                    <span class="pg-no">3</span>
+                  </div>
+                  <div class="face face-back pg pg-stamps" id="stampsLeft"><span class="pg-no">4</span></div>
+                </div>
+                <!-- the cover: cover art outside, the data page inside -->
+                <div class="leaf leaf-cover" id="leafCover">
+                  <div class="face face-front cover">
+                    <p class="cover-t">Peregrino</p>
+                    <svg class="cover-mark" viewBox="0 0 64 64" aria-hidden="true">
+                      <circle cx="32" cy="32" r="22"/>
+                      <ellipse cx="32" cy="32" rx="9.5" ry="22"/>
+                      <path d="M10 32h44M13.5 21h37M13.5 43h37"/>
+                    </svg>
+                    <p class="cover-t cover-t-2">Passport</p>
+                    <p class="cover-sub">Passport · Pas · 여권</p>
+                    <span class="cover-chip" aria-hidden="true"></span>
+                  </div>
+                  <div class="face face-back datapage">
+                    <div class="dp-top">
+                      <p class="dp-title">Peregrino Passport</p>
+                      <p class="dp-sub">Passport · Pas · 여권</p>
+                    </div>
+                    <div class="dp-grid">
+                      <div>
+                        <p class="dp-k">Countries &amp; territories</p>
+                        <p class="dp-big"><b id="dpCount">0</b><span> / 248</span><em id="dpPct">(0%)</em></p>
+                        <div class="dp-row">
+                          <div><p class="dp-k">Continents</p><p class="dp-v"><b>3</b><span> / 7</span></p></div>
+                          <div><p class="dp-k">Total trips</p><p class="dp-v"><b id="dpTrips">0</b></p></div>
+                        </div>
+                        <div class="dp-row">
+                          <div><p class="dp-k">Top continent</p><p class="dp-v">Europe</p></div>
+                          <div><p class="dp-k">Member since</p><p class="dp-v">Apr 2026</p></div>
+                        </div>
+                      </div>
+                      <div class="dp-map">
+                        <p class="dp-k">Map · Mapa · 지도</p>
+                        <canvas id="dpMap" width="320" height="180"></canvas>
+                      </div>
+                    </div>
+                    <p class="mrz">P&lt;PGNTRAVELER&lt;&lt;PEREGRINO&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;<br>ISSUED04OCT26&lt;&lt;&lt;32V&lt;&lt;&lt;248T&lt;&lt;&lt;EU&lt;AS&lt;NA&lt;&lt;&lt;&lt;&lt;&lt;&lt;</p>
+                  </div>
+                </div>
+                <!-- left page under the cover once it is open: the inside of the back cover -->
+              </div>
+              <div class="book-shadow" aria-hidden="true"></div>
+            </div>
+            <p class="pp-legend" aria-hidden="true">
+              <span><i class="lg-v"></i>Visited</span>
+              <span><i class="lg-l"></i>Lived</span>
+              <span><i class="lg-w"></i>Wishlist</span>
+              <span><i class="lg-p"></i>Planning</span>
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tickets: a printer that prints the next journey -->
+    <section class="feature feature-flip" id="tickets">
+      <div class="feature-copy reveal">
+        <p class="kicker">Tickets</p>
+        <h2 class="h2">Every journey<br><span class="hl">gets a ticket.</span></h2>
+        <p class="body">Flights, trains, ferries, buses and walks, printed as you add them. Planned ones are pencilled in, booked ones count down, and once you've been the stub is torn.</p>
+        <div class="seg" role="radiogroup" aria-label="Ticket state" id="ticketState">
+          <button type="button" role="radio" aria-checked="false" data-state="planned">Planned</button>
+          <button type="button" role="radio" aria-checked="true"  data-state="booked">Booked</button>
+          <button type="button" role="radio" aria-checked="false" data-state="used">Used</button>
+        </div>
+      </div>
+      <div class="feature-art reveal">
+        <div class="printer-scene" id="printerScene">
+          <div class="printer" aria-hidden="true"><span class="printer-led"></span></div>
+          <div class="paper-out" id="paperOut" aria-live="polite"></div>
+        </div>
+        <div class="chips" role="group" aria-label="Kind of journey" id="ticketKinds">
+          <button class="chip" type="button" data-kind="flight" aria-pressed="true">Flight</button>
+          <button class="chip" type="button" data-kind="train" aria-pressed="false">Train</button>
+          <button class="chip" type="button" data-kind="ferry" aria-pressed="false">Ferry</button>
+          <button class="chip" type="button" data-kind="bus" aria-pressed="false">Bus</button>
+          <button class="chip" type="button" data-kind="event" aria-pressed="false">Event</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Stats: numbers that count up, by year -->
+    <section class="stats" id="stats">
+      <div class="stats-inner">
+        <div class="stats-head reveal">
+          <p class="kicker kicker-dark">Statistics</p>
+          <h2 class="h2">The numbers<br><span class="hl">behind the miles.</span></h2>
+        </div>
+        <div class="years" role="tablist" aria-label="Year" id="years">
+          <button type="button" role="tab" aria-selected="true" data-year="all">All time</button>
+          <button type="button" role="tab" aria-selected="false" data-year="2026">2026</button>
+          <button type="button" role="tab" aria-selected="false" data-year="2025">2025</button>
+          <button type="button" role="tab" aria-selected="false" data-year="2024">2024</button>
+        </div>
+        <div class="figs reveal" id="figs">
+          <div class="fig"><b data-k="countries">0</b><span>countries</span></div>
+          <div class="fig"><b data-k="world">0</b><span>of the world</span></div>
+          <div class="fig"><b data-k="continents">0</b><span>continents</span></div>
+          <div class="fig"><b data-k="days">0</b><span>days abroad</span></div>
+          <div class="fig"><b data-k="km">0</b><span>km travelled</span></div>
+          <div class="fig"><b data-k="journeys">0</b><span>journeys</span></div>
+        </div>
+        <div class="bars reveal" id="bars">
+          <p class="bars-h">By continent</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Journal: trips as luggage tags -->
+    <section class="feature" id="journal">
+      <div class="feature-copy reveal">
+        <p class="kicker">Journal</p>
+        <h2 class="h2">Your trips<br><span class="hl">become postcards.</span></h2>
+        <p class="body">Every trip gets a luggage tag: where you went, when, and the countries it took in. Open one and it's all there, the route, the tickets, the places and the photos you took on the way.</p>
+      </div>
+      <div class="feature-art reveal">
+        <div class="scene scene-tags">
+          <div class="device">
+            <div class="device-screen">
+              <img class="device-still" src="assets/screens/journal.jpg" alt="The Peregrino Journal, with upcoming trips as luggage tags" width="590" height="1278" loading="lazy">
+            </div>
+            <img class="device-frame" src="assets/phone-frame.webp" alt="" width="1470" height="3000">
+          </div>
+          <div class="tags" id="tags" aria-hidden="true"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- The rest of the app: a deck of screens -->
+    <section class="deck" id="screens" aria-roledescription="carousel" aria-label="More of the app">
+      <div class="deck-head reveal">
+        <h2 class="h2">Places, events, photos, <span class="hl">and more.</span></h2>
+      </div>
+      <div class="deck-rail" id="deck">
+        <ul class="deck-track">
+          <li class="deck-slide"><figure>
+            <div class="deck-device"><img class="deck-shot" src="assets/screens/place.jpg" alt="" loading="lazy" width="590" height="1278"><img class="deck-frame" src="assets/phone-frame.webp" alt="" width="1470" height="3000"></div>
+            <figcaption><b>Places</b> you stayed, ate and wandered, pinned where they are.</figcaption>
+          </figure></li>
+          <li class="deck-slide"><figure>
+            <div class="deck-device"><img class="deck-shot" src="assets/screens/events.jpg" alt="" loading="lazy" width="590" height="1278"><img class="deck-frame" src="assets/phone-frame.webp" alt="" width="1470" height="3000"></div>
+            <figcaption><b>Events</b> like concerts, festivals and conferences, ticketed like the journeys.</figcaption>
+          </figure></li>
+          <li class="deck-slide"><figure>
+            <div class="deck-device"><img class="deck-shot" src="assets/screens/photos.jpg" alt="" loading="lazy" width="590" height="1278"><img class="deck-frame" src="assets/phone-frame.webp" alt="" width="1470" height="3000"></div>
+            <figcaption><b>Photos</b> from your library, found by where and when you took them.</figcaption>
+          </figure></li>
+          <li class="deck-slide"><figure>
+            <div class="deck-device"><img class="deck-shot" src="assets/screens/country.jpg" alt="" loading="lazy" width="590" height="1278"><img class="deck-frame" src="assets/phone-frame.webp" alt="" width="1470" height="3000"></div>
+            <figcaption><b>Countries</b> with their capital, currency and the trips you took there.</figcaption>
+          </figure></li>
+          <li class="deck-slide"><figure>
+            <div class="deck-device"><img class="deck-shot" src="assets/screens/visa.jpg" alt="" loading="lazy" width="590" height="1278"><img class="deck-frame" src="assets/phone-frame.webp" alt="" width="1470" height="3000"></div>
+            <figcaption><b>Visas</b> on file, with the Schengen 90 out of 180 days counted for you.</figcaption>
+          </figure></li>
+          <li class="deck-slide"><figure>
+            <div class="deck-device"><img class="deck-shot" src="assets/screens/games.jpg" alt="" loading="lazy" width="590" height="1278"><img class="deck-frame" src="assets/phone-frame.webp" alt="" width="1470" height="3000"></div>
+            <figcaption><b>Games</b> like Pinpoint: find each country on the map, against the clock.</figcaption>
+          </figure></li>
+          <li class="deck-slide"><figure>
+            <div class="deck-device"><img class="deck-shot" src="assets/screens/customize.jpg" alt="" loading="lazy" width="590" height="1278"><img class="deck-frame" src="assets/phone-frame.webp" alt="" width="1470" height="3000"></div>
+            <figcaption><b>Customise</b> the passport cover, the globe and the inks with the miles you earn.</figcaption>
+          </figure></li>
+        </ul>
+      </div>
+      <div class="deck-controls">
+        <button class="rail-btn" type="button" data-dir="-1" aria-label="Previous screen" aria-controls="deck"></button>
+        <div class="deck-dots" id="deckDots" aria-hidden="true"></div>
+        <button class="rail-btn" type="button" data-dir="1" aria-label="Next screen" aria-controls="deck"></button>
+      </div>
+    </section>
+
+    <!-- The small things -->
+    <section class="bento" id="more">
+      <div class="bento-head reveal">
+        <p class="kicker">More in Peregrino</p>
+        <h2 class="h2">The admin of travel,<br>taken care of.</h2>
+      </div>
+      <div class="bento-grid">
+        <article class="tile tile-wide reveal">
+          <div class="tile-art tile-share" aria-hidden="true">
+            <div class="mini-pass"><b>LGW</b><i>✈</i><b>CPH</b><small>BA 2816 · 07:05</small></div>
+            <span class="share-arrow"></span>
+            <img src="assets/app-icon.png" alt="" width="256" height="256">
+          </div>
+          <h3>Share a flight straight in.</h3>
+          <p>Share an itinerary from Flighty and Peregrino reads the flight, the airports and the times, then prints the ticket for you.</p>
+        </article>
+        <article class="tile reveal">
+          <div class="tile-art tile-ring" aria-hidden="true">
+            <svg viewBox="0 0 120 120"><circle class="ring-bg" cx="60" cy="60" r="50"/><circle class="ring-fg" id="ring" cx="60" cy="60" r="50"/></svg>
+            <p><b id="ringDays">0</b><span>of 90 days</span></p>
+          </div>
+          <h3>Schengen, counted.</h3>
+          <p>The rolling 90 in 180 window, worked out from your trips, so you know how long you can stay.</p>
+        </article>
+        <article class="tile reveal">
+          <div class="tile-art tile-pins" aria-hidden="true">
+            <span class="pin pin-eu">EU</span><span class="pin pin-as">AS</span><span class="pin pin-na">NA</span>
+          </div>
+          <h3>Trophies worth pinning.</h3>
+          <p>Enamel pins for continents, firsts and streaks, and Game Center leaderboards for the map games.</p>
+        </article>
+        <article class="tile reveal">
+          <div class="tile-art tile-layers" aria-hidden="true">
+            <span>Country colours</span><span>Place pins</span><span>Travel arcs</span><span>Planes &amp; ships</span>
+          </div>
+          <h3>Your globe, your layers.</h3>
+          <p>Turn countries, pins, arcs and planes on or off, or flatten the globe into a map.</p>
+        </article>
+        <article class="tile reveal">
+          <div class="tile-art tile-photos" aria-hidden="true">
+            <img src="assets/photos/skyline.jpg" alt="" loading="lazy">
+            <img src="assets/photos/beach.jpg" alt="" loading="lazy">
+            <img src="assets/photos/lights.jpg" alt="" loading="lazy">
+          </div>
+          <h3>Photos near here.</h3>
+          <p>Open a place or a trip and the photos you took there are already waiting, pulled from your library by where and when.</p>
+        </article>
+        <article class="tile tile-wide reveal">
+          <div class="tile-art tile-cal" aria-hidden="true" id="miniCal"></div>
+          <h3>A calendar that remembers.</h3>
+          <p>See every trip, stay and event on one calendar, and scroll back through the months to find where you were on any day.</p>
+        </article>
+        <article class="tile reveal">
+          <div class="tile-art tile-game" aria-hidden="true">
+            <svg class="game-target" viewBox="0 0 64 64"><circle cx="32" cy="32" r="20"/><circle cx="32" cy="32" r="5"/><path d="M32 4v14M32 46v14M4 32h14M46 32h14"/></svg>
+            <span class="game-clock">0:07</span>
+          </div>
+          <h3>Pinpoint, against the clock.</h3>
+          <p>Tap each country on the map before time runs out. Six continents, and a best time to beat.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="cta" id="get">
+      <div class="cta-brand reveal">
+        <img class="cta-icon" src="assets/app-icon.png" alt="" width="256" height="256">
+        <p class="cta-name">Peregrino</p>
+      </div>
+      <h2 class="h2">Issue your passport.</h2>
+      <p class="body cta-body">Free on iPhone. The first stamp is on us.</p>
+      <div class="store-row">
+        <a class="store" href="#" aria-label="Download on the App Store">
+          <span class="store-icon"></span>
+          <span class="store-txt"><small>Download on the</small><strong>App Store</strong></span>
+        </a>
+      </div>
+    </section>
+
+    <section class="faq" id="faq" aria-labelledby="faqHead">
+      <h2 class="h2 faq-head reveal" id="faqHead">Questions. <span class="hl">Answered.</span></h2>
+      <div class="faq-list reveal">
+
+        <div class="faq-item">
+          <button class="faq-q" type="button" aria-expanded="false" aria-controls="faq-a1" id="faq-q1">
+            Does Peregrino track where I go?<span class="faq-mark" aria-hidden="true"></span>
+          </button>
+          <div class="faq-a" id="faq-a1" role="region" aria-labelledby="faq-q1">
+            <div><p>No. If you allow location, it checks which country you're in when you open the app, and offers a stamp if it's a new one. Leave location off and you add countries and trips yourself; everything else works the same.</p></div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" type="button" aria-expanded="false" aria-controls="faq-a2" id="faq-q2">
+            Can I add trips I took years ago?<span class="faq-mark" aria-hidden="true"></span>
+          </button>
+          <div class="faq-a" id="faq-a2" role="region" aria-labelledby="faq-q2">
+            <div><p>Yes. Add the trip with its dates and Peregrino pulls in the photos you took there from your library, so old trips fill out as quickly as new ones.</p></div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" type="button" aria-expanded="false" aria-controls="faq-a3" id="faq-q3">
+            What counts as a country?<span class="faq-mark" aria-hidden="true"></span>
+          </button>
+          <div class="faq-a" id="faq-a3" role="region" aria-labelledby="faq-q3">
+            <div><p>The passport counts 248 countries and territories, so places like Hong Kong, Greenland or the Faroe Islands get their own stamp.</p></div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" type="button" aria-expanded="false" aria-controls="faq-a4" id="faq-q4">
+            Is it just flights?<span class="faq-mark" aria-hidden="true"></span>
+          </button>
+          <div class="faq-a" id="faq-a4" role="region" aria-labelledby="faq-q4">
+            <div><p>No. Trains, ferries, buses and walks all get tickets, and so do concerts, festivals and conferences. Places you stayed or ate at have their own list too.</p></div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" type="button" aria-expanded="false" aria-controls="faq-a5" id="faq-q5">
+            Where is my travel history kept?<span class="faq-mark" aria-hidden="true"></span>
+          </button>
+          <div class="faq-a" id="faq-a5" role="region" aria-labelledby="faq-q5">
+            <div><p>On your iPhone. Your passport is yours, and nothing about where you have been is shown to anyone unless you share it.</p></div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <p>Peregrino</p>
+    <nav aria-label="Footer">
+      <a href="#">Privacy</a><a href="#">Terms</a><a href="#">Support</a><a href="#">Contact</a>
+    </nav>
+    <p class="footer-legal">Copyright © 2026 Michael Kimberly Svrcek. All rights reserved.</p>
+  </div>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

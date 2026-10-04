@@ -2,6 +2,11 @@
 
 Static single page. No build step, no backend. `public/` is the whole site.
 
+`peregrino/` beside it is a second site in the same style, for the Peregrino
+travel app. It has its own README; run it with
+`python3 dev-server.py 5174 peregrino`. `firebase.json` declares both as
+hosting targets, see **Deploy** below.
+
 ```
 public/
   index.html            structure + all copy
@@ -49,7 +54,9 @@ python3 -m http.server 5173 --directory public
 npm i -g firebase-tools
 firebase login
 firebase use --add            # pick/create your project
-firebase deploy --only hosting
+firebase target:apply hosting pocapal   <pocapal-site-id>     # once
+firebase target:apply hosting peregrino <peregrino-site-id>   # once
+firebase deploy --only hosting:pocapal     # or hosting:peregrino, or both with --only hosting
 ```
 
 ## The phone, twice over

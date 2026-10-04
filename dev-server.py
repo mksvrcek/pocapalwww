@@ -9,6 +9,7 @@ a change look like it did not apply.
 import functools, http.server, socketserver, sys
 
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 5173
+ROOT = sys.argv[2] if len(sys.argv) > 2 else "public"   # or "peregrino"
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     def end_headers(self):
@@ -18,6 +19,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         pass
 
 socketserver.TCPServer.allow_reuse_address = True
-with socketserver.TCPServer(("", PORT), functools.partial(Handler, directory="public")) as httpd:
-    print(f"serving public/ on http://localhost:{PORT}")
+with socketserver.TCPServer(("", PORT), functools.partial(Handler, directory=ROOT)) as httpd:
+    print(f"serving {ROOT}/ on http://localhost:{PORT}")
     httpd.serve_forever()

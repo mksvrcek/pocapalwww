@@ -1,17 +1,65 @@
 {
-  "hosting": {
-    "public": "public",
-    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-    "cleanUrls": true,
-    "headers": [
-      {
-        "source": "**/*.@(svg|png|jpg|jpeg|webp|woff2)",
-        "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
-      },
-      {
-        "source": "/**/*.@(html|css|js)",
-        "headers": [{ "key": "Cache-Control", "value": "public, max-age=300" }]
-      }
-    ]
-  }
+  "hosting": [
+    {
+      "target": "pocapal",
+      "public": "public",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "cleanUrls": true,
+      "headers": [
+        {
+          "source": "**/*.@(svg|png|jpg|jpeg|webp|woff2)",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=31536000, immutable"
+            }
+          ]
+        },
+        {
+          "source": "/**/*.@(html|css|js)",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=300"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "target": "peregrino",
+      "public": "peregrino",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**",
+        "README.md"
+      ],
+      "cleanUrls": true,
+      "headers": [
+        {
+          "source": "**/*.@(svg|png|jpg|jpeg|webp|woff2)",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=31536000, immutable"
+            }
+          ]
+        },
+        {
+          "source": "/**/*.@(html|css|js)",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=300"
+            }
+          ]
+        }
+      ]
+    }
+  ]
 }
